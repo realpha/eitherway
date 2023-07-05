@@ -1,6 +1,7 @@
 import { None, Option, Some } from "./option.ts";
 import {
   AssertFalse,
+  assertNotStrictEquals,
   assertStrictEquals,
   AssertTrue,
   Has,
@@ -11,7 +12,7 @@ import {
 
 type OptionValueType<O> = O extends Option<infer T> ? T : never;
 
-Deno.test("eitherway::Option::TypeTest", async (t) => {
+Deno.test("eitherway::Option::TypeTests", async (t) => {
   await t.step(
     "Option.from -> Nullish types stripped from inner return type",
     () => {
@@ -51,13 +52,54 @@ Deno.test("eitherway::Option::TypeTest", async (t) => {
     },
   );
 
-  await t.step("Option.FromFalsy -> Falsy types stripped from inner union return type", () => {
-    type LiteralUnion = "a" | "b" | "c" | "" | 0 ;
-    const input: LiteralUnion = "a";
-    const option = Option.fromFalsy(input as LiteralUnion);
+  await t.step(
+    "Option.FromFalsy -> Falsy types stripped from inner union return type",
+    () => {
+      type LiteralUnion = "a" | "b" | "c" | "" | 0;
+      const input: LiteralUnion = "a";
+      const option = Option.fromFalsy(input as LiteralUnion);
 
-    type returnTypePreservesTruthyUnion = AssertTrue<IsExact<typeof option, Option<"a"|"b"|"c">>>;
+      type returnTypePreservesTruthyUnion = AssertTrue<
+        IsExact<typeof option, Option<"a" | "b" | "c">>
+      >;
 
-    assertStrictEquals(option.isSome(), true);
+      assertStrictEquals(option.isSome(), true);
+    },
+  );
+});
+
+Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
+  await t.step("Some<T> -> Ctor doesn't accept Nullish types", () => {
+    type NullishUnion = string | undefined | null;
+
+    /**
+     * const nullish = undefined;
+     * const maybeNullish = (): NullishUnion => undefined;
+     * const notSome = Some(nullish); // -> Doesn't compile
+     * const tryMaybe = Some(maybeNullish()); // -> Doesn't compile
+     */
+
+    const input = "abc";
+    const some = Some(input);
+
+    type ParameterTypeIsNotNullable = AssertFalse<
+      IsNullable<Parameters<typeof Some>>
+    >;
+
+    assertStrictEquals(some.isSome(), true);
+  });
+
+  await t.step("Some<T> -> Logical combinators (&&, ||, ^)", async (t) => {
+    await t.step(".and -> Return type is inferred fron RHS", () => {
+      const lhs = Some("abc");
+      const rhs = Some(123) as Option<number>;
+      const res = lhs.and(rhs);
+
+      type IsInferredFromRhs = AssertTrue<
+        IsExact<OptionValueType<typeof rhs>, OptionValueType<typeof res>>
+      >;
+
+      assertStrictEquals(rhs.unwrap(), res.unwrap());
+    });
   });
 });

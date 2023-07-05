@@ -55,8 +55,8 @@ class _None implements IOption<never> {
   }
 }
 
-export type None = _None;
 export const None = Object.freeze(new _None());
+export type None = typeof None;
 
 class _Some<T> implements IOption<T> {
   #value: T;
@@ -114,7 +114,7 @@ export type Truthy<T> = Exclude<T, Falsy>
 
 
 export type Some<T> = _Some<T>;
-export const Some = <T>(value: NonNullish<T>) => new _Some(value);
+export const Some = <T>(value: NonNullish<T>): Some<NonNullish<T>> => new _Some(value);
 
 export type Option<T> = Some<T> | None;
 
