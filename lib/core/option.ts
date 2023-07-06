@@ -1,20 +1,26 @@
 interface IOption<T> {
   isSome: () => boolean;
   isNone: () => boolean;
-  map: <U>(mapFn: (arg: T) => U) => Option<U>;
-  mapOr: <U>(mapFn: (arg: T) => U, orValue: U) => Option<U>;
-  mapOrElse: <U>(mapFn: (arg: T) => U, orFn: () => U) => Option<U>;
+  map: <U>(mapFn: (arg: T) => NonNullish<U>) => Option<NonNullish<U>>;
+  mapOr: <U>(
+    mapFn: (arg: T) => NonNullish<U>,
+    orValue: NonNullish<U>,
+  ) => Option<NonNullish<U>>;
+  mapOrElse: <U>(
+    mapFn: (arg: T) => NonNullish<U>,
+    orFn: () => NonNullish<U>,
+  ) => Option<NonNullish<U>>;
   andThen: <U>(thenFn: (arg: T) => Option<U>) => Option<U>;
   unwrap: () => T | undefined;
-  unwrapOr: <U>(orValue: U) => T | U;
-  unwrapOrElse: <U>(orFn: () => U) => T | U;
-  and: <U>(rhs: Option<U>) => Option<T|U>;
-  or: <U>(rhs: Option<U>) => Option<T|U>;
-  xor: <U>(rhs: Option<U>) => Option<T|U>;
+  unwrapOr: <U>(orValue: NonNullish<U>) => T | NonNullish<U>;
+  unwrapOrElse: <U>(orFn: () => NonNullish<U>) => T | NonNullish<U>;
+  and: <U>(rhs: Option<U>) => Option<T> | Option<U>;
+  or: <U>(rhs: Option<U>) => Option<T> | Option<U>;
+  xor: <U>(rhs: Option<U>) => Option<T> | Option<U>;
 }
 
 class _None implements IOption<never> {
-  constructor(){}
+  constructor() {}
 
   isSome(): this is Some<never> {
     return false;
@@ -22,36 +28,42 @@ class _None implements IOption<never> {
   isNone(): this is None {
     return true;
   }
-  map<T, U>(_mapFn: (arg: T) => U): None {
+  map<U>(_mapFn: (arg: never) => NonNullish<U>): None {
     return this;
   }
-  mapOr<U>(_mapFn: (arg: never) => U, orValue: U): Option<U> {
-    return Option.from(orValue);
+  mapOr<U>(
+    _mapFn: (arg: never) => NonNullish<U>,
+    orValue: NonNullish<U>,
+  ): Some<NonNullish<U>> {
+    return Some(orValue);
   }
-  mapOrElse<U>(_mapFn: (arg: never) => U, orFn: () => U): Option<U> {
-    return Option.from(orFn());
+  mapOrElse<U>(
+    _mapFn: (arg: never) => U,
+    orFn: () => NonNullish<U>,
+  ): Some<NonNullish<U>> {
+    return Some(orFn());
   }
-  andThen<T, U>(_thenFn: (arg: T) => Option<U>): None {
+  andThen<U>(_thenFn: (arg: never) => Option<U>): None {
     return this;
   }
   unwrap() {
     return undefined;
   }
-  unwrapOr<U>(orValue: U) {
+  unwrapOr<U>(orValue: NonNullish<U>) {
     return orValue;
   }
-  unwrapOrElse<U>(orFn: () => U) {
+  unwrapOrElse<U>(orFn: () => NonNullish<U>) {
     return orFn();
   }
-  and<U>(_other: Option<U>): None {
+  and<U>(_other: Option<U>): Option<never> {
     return this;
   }
   or<U>(other: Option<U>): Option<U> {
     return other;
   }
   xor<U>(other: Option<U>): Option<U> {
-    if (other.isSome()) return other;
-    return this;
+    if (other.isSome()) return other as Option<U>;
+    return this as Option<U>;
   }
 }
 
@@ -70,51 +82,57 @@ class _Some<T> implements IOption<T> {
   isNone(): this is None {
     return false;
   }
-  map<U>(mapFn: (arg: T) => U): Some<U> {
-    return new _Some(mapFn(this.#value));
+  map<U>(mapFn: (arg: T) => NonNullish<U>): Option<NonNullish<U>> {
+    return Some(mapFn(this.#value));
   }
-  mapOr<U>(mapFn: (arg: T) => U, _orValue: U): Some<U> {
+  mapOr<U>(
+    mapFn: (arg: T) => NonNullish<U>,
+    _orValue: NonNullish<U>,
+  ): Option<NonNullish<U>> {
     return this.map(mapFn);
   }
-  mapOrElse<U>(mapFn: (arg: T) => U, _orFn: () => U): Some<U> {
+  mapOrElse<U>(
+    mapFn: (arg: T) => NonNullish<U>,
+    _orFn: () => NonNullish<U>,
+  ): Option<NonNullish<U>> {
     return this.map(mapFn);
   }
   andThen<U>(thenFn: (arg: T) => Option<U>): Option<U> {
     return thenFn(this.#value);
   }
-  and<U>(other: Option<U>): Option<U> {
-    return other;
-  }
-  or<U>(_other: Option<U>): Some<T> {
-    return this;
-  }
-  xor<U>(other: Option<U>): Option<T> {
-    if (other.isSome()) return None;
-    return this;
-  }
   unwrap(): T {
     return this.#value;
   }
-  unwrapOr<U>(_orValue: U): T {
+  unwrapOr<U>(_orValue: NonNullish<U>): T {
     return this.#value;
   }
-  unwrapOrElse<U>(_orFn: () => U): T {
+  unwrapOrElse<U>(_orFn: () => NonNullish<U>): T {
     return this.#value;
+  }
+  and<U>(other: Option<U>): Option<U> {
+    return other;
+  }
+  or<U>(_other: Option<U>): Option<T> {
+    return this;
+  }
+  xor<U>(other: Option<U>): Option<T> {
+    if (other.isSome()) return None as Option<T>;
+    return this;
   }
 }
 
-export type Nullish = null | undefined
-export type NonNullish<T> = Exclude<T, Nullish>
+export type Nullish = null | undefined;
+export type NonNullish<T> = Exclude<T, Nullish>;
 
 /**
  * Ref: https://developer.mozilla.org/en-US/docs/Glossary/Falsy
  */
 export type Falsy = Nullish | false | "" | 0 | -0 | 0n | -0n;
-export type Truthy<T> = Exclude<T, Falsy>
-
+export type Truthy<T> = Exclude<T, Falsy>;
 
 export type Some<T> = _Some<T>;
-export const Some = <T>(value: NonNullish<T>): Some<NonNullish<T>> => new _Some(value);
+export const Some = <T>(value: NonNullish<T>): Some<NonNullish<T>> =>
+  new _Some(value);
 
 export type Option<T> = Some<T> | None;
 
@@ -123,12 +141,14 @@ export namespace Option {
   export function from<T>(value: T): Option<NonNullish<T>> {
     return isNotNullish(value) ? Some(value) : None;
   }
-  export function fromFallable<T>(value: T | Error): Option<NonNullish<T>> {
+  export function fromFallible<T>(value: T | Error): Option<NonNullish<T>> {
     if (value instanceof Error) return None;
     return Option.from(value);
   }
-  export function fromFalsy<T>(value: T): Option<Truthy<T>> {
-    return (isTruthy(value) ? Some(value as NonNullish<T>) : None) as Option<Truthy<T>>;
+  export function fromCoercible<T>(value: T): Option<Truthy<T>> {
+    return (isTruthy(value) ? Some(value as NonNullish<T>) : None) as Option<
+      Truthy<T>
+    >;
   }
 }
 

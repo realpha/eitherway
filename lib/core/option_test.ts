@@ -55,36 +55,36 @@ Deno.test("eitherway::Option", async (t) => {
       assertStrictEquals(none.unwrap(), undefined);
     });
   });
-  await t.step("Option.fromFallabe -> returns Some for Truthy and FalsyNotNullish values", () => {
+  await t.step("Option.fromFallibe -> returns Some for Truthy and FalsyNotNullish values", () => {
     allInfallable.forEach(val => {
-      const some = Option.fromFallable(val);
+      const some = Option.fromFallible(val);
 
       assertEquals(some.isSome(), true, `${String(val)} should be Some`);
       assertEquals(some.isNone(), false, `${String(val)} should be Some`);
       assertStrictEquals(some.unwrap(), val);
     });
   });
-  await t.step("Option.fromFallabe -> returns None for Nullish and Error values", () => {
+  await t.step("Option.fromFallibe -> returns None for Nullish and Error values", () => {
     allFallable.forEach(val => {
-      const none = Option.fromFallable(val);
+      const none = Option.fromFallible(val);
 
       assertEquals(none.isSome(), false, `${String(val)} should be None`);
       assertEquals(none.isNone(), true, `${String(val)} should be None`);
       assertStrictEquals(none.unwrap(), undefined);
     });
   });
-  await t.step("Option.fromFalsy -> returns Some for Truthy values", () => {
+  await t.step("Option.fromCoercible -> returns Some for Truthy values", () => {
     allTruthy.forEach(val => {
-      const some = Option.fromFalsy(val);
+      const some = Option.fromCoercible(val);
 
       assertEquals(some.isSome(), true, `${String(val)} should be Some`);
       assertEquals(some.isNone(), false, `${String(val)} should be Some`);
       assertStrictEquals(some.unwrap(), val);
     });
   });
-  await t.step("Option.fromFalsy -> returns None for Falsy values", () => {
+  await t.step("Option.fromCoercible -> returns None for Falsy values", () => {
     allFalsy.forEach(val => {
-      const none = Option.fromFalsy(val);
+      const none = Option.fromCoercible(val);
 
       assertEquals(none.isSome(), false, `${String(val)} should be None`);
       assertEquals(none.isNone(), true, `${String(val)} should be None`);
