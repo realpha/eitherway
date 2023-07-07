@@ -259,41 +259,56 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
   });
 
   await t.step("Unwrap Methods", async (t) => {
-    await t.step(".unwrap() -> Return type is T or Nullish union (T | undefined)", () => {
-      const some = Some(123);
-      const someRes = some.unwrap();
-      const opt = Option.from(123 as number | undefined) 
-      const optRes = opt.unwrap();
+    await t.step(
+      ".unwrap() -> Return type is T or Nullish union (T | undefined)",
+      () => {
+        const some = Some(123);
+        const someRes = some.unwrap();
+        const opt = Option.from(123 as number | undefined);
+        const optRes = opt.unwrap();
 
-      type UnwrappedSomeIsNotNullable = AssertFalse<IsNullable<typeof someRes>>;
-      type UnwrappedOptionIsNullable = AssertTrue<IsNullable<typeof optRes>>;
-      type UnwrappedOptionIsUnion = AssertTrue<IsExact<typeof optRes, number | undefined>>;
+        type UnwrappedSomeIsNotNullable = AssertFalse<
+          IsNullable<typeof someRes>
+        >;
+        type UnwrappedOptionIsNullable = AssertTrue<IsNullable<typeof optRes>>;
+        type UnwrappedOptionIsUnion = AssertTrue<
+          IsExact<typeof optRes, number | undefined>
+        >;
 
-      assertStrictEquals(someRes, optRes);
-    });
+        assertStrictEquals(someRes, optRes);
+      },
+    );
     await t.step(".unwrapOr() -> Return type is T or union (T | U)", () => {
       const some = Some(123);
       const someRes = some.unwrapOr("123" as string);
-      const opt = Option.from(123 as number | undefined) 
+      const opt = Option.from(123 as number | undefined);
       const optRes = opt.unwrapOr("123" as string);
 
       type UnwrappedSomeIsNotNullable = AssertFalse<IsNullable<typeof someRes>>;
-      type UnwrappedSomeIsExact = AssertTrue<IsExact<typeof someRes, number>>
-      type UnwrappedOptionIsNotNullable = AssertFalse<IsNullable<typeof optRes>>;
-      type UnwrappedOptionIsUnion = AssertTrue<IsExact<typeof optRes, number | string>>;
+      type UnwrappedSomeIsExact = AssertTrue<IsExact<typeof someRes, number>>;
+      type UnwrappedOptionIsNotNullable = AssertFalse<
+        IsNullable<typeof optRes>
+      >;
+      type UnwrappedOptionIsUnion = AssertTrue<
+        IsExact<typeof optRes, number | string>
+      >;
 
       assertStrictEquals(someRes, optRes);
     });
     await t.step(".unwrapOrElse() -> Return type is T or union (T | U)", () => {
       const some = Some(123);
       const someRes = some.unwrapOrElse(() => "123" as string);
-      const opt = Option.from(123 as number | undefined) 
+      const opt = Option.from(123 as number | undefined);
       const optRes = opt.unwrapOrElse(() => "123" as string);
 
       type UnwrappedSomeIsNotNullable = AssertFalse<IsNullable<typeof someRes>>;
-      type UnwrappedSomeIsExact = AssertTrue<IsExact<typeof someRes, number>>
-      type UnwrappedOptionIsNotNullable = AssertFalse<IsNullable<typeof optRes>>;
-      type UnwrappedOptionIsUnion = AssertTrue<IsExact<typeof optRes, number | string>>;
+      type UnwrappedSomeIsExact = AssertTrue<IsExact<typeof someRes, number>>;
+      type UnwrappedOptionIsNotNullable = AssertFalse<
+        IsNullable<typeof optRes>
+      >;
+      type UnwrappedOptionIsUnion = AssertTrue<
+        IsExact<typeof optRes, number | string>
+      >;
 
       assertStrictEquals(someRes, optRes);
     });
