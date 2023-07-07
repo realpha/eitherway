@@ -65,6 +65,26 @@ class _None implements IOption<never> {
     if (other.isSome()) return other as Option<U>;
     return this as Option<U>;
   }
+  get [Symbol.toStringTag]() {
+    return "eitherway::Option::None";
+  }
+  *[Symbol.iterator](): IterableIterator<never> {
+    return undefined;
+  }
+  [Symbol.toPrimitive](hint: string) {
+    if (hint === "string") return "";
+    if (hint === "number") return 0;
+    return false;
+  }
+  toJSON() {
+    return undefined;
+  }
+  toString(): string {
+    return this[Symbol.toPrimitive]("string") as string;
+  }
+  valueOf(): number {
+    return this[Symbol.toPrimitive]("number") as number;
+  }
 }
 
 export const None = Object.freeze(new _None());
