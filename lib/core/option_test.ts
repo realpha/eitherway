@@ -7,6 +7,10 @@ import {
 } from "../../dev_deps.ts";
 import { None, Option, Some } from "./option.ts";
 
+/**
+ * Setup test value collections
+ */
+
 const str = "abc";
 const num = -123;
 const bnum = 6n;
@@ -21,21 +25,46 @@ const emptyStr = "";
 const zero = 0;
 const bnZero = 0n;
 
+class Wellknown {
+  constructor(public a = 1, public b = 2, private c = 3) {}
+  get [Symbol.toStringTag]() {
+    return "Well-known symbol and methods";
+  }
+  [Symbol.toPrimitive](hint: string) {
+    if (hint === "string") return this.toString();
+    return this.valueOf();
+  }
+  *[Symbol.iterator]() {
+    yield this.a;
+    yield this.b;
+  }
+  toJSON() {
+    return { ...this, c: "***" };
+  }
+  toString() {
+    return String(this.a + this.b + this.c);
+  }
+  valueOf() {
+    return this.a + this.b + this.c;
+  }
+}
+const wellknown = new Wellknown();
+
 const err = new Error("test::error");
 
 const falsyNotNullish = [false, NaN, emptyStr, zero, bnZero];
 const nullish = [null, undefined];
 
-const allTruthy = [str, num, bnum, inf, b, arr, rec, sym, date];
-// @ts-ignore-lines TS cannot match these heterogenous arrays
+const allTruthy = [str, num, bnum, inf, b, arr, rec, sym, date, wellknown];
+// @ts-ignore-lines These heterogenous arrays break type inference
 const allInfallible = allTruthy.concat(falsyNotNullish);
-// @ts-ignore-lines TS cannot match these heterogenous arrays
+// @ts-ignore-lines These heterogenous arrays break type inference
 const allNonNullish = allInfallible.concat([err]);
-// @ts-ignore-lines TS cannot match these heterogenous arrays
+// @ts-ignore-lines These heterogenous arrays break type inference
 const allFalsy = falsyNotNullish.concat(nullish);
-// @ts-ignore-lines TS cannot match these heterogenous arrays
+// @ts-ignore-lines These heterogenous arrays break type inference
 const allFallible = nullish.concat([err]);
-// @ts-ignore-lines TS cannot match these heterogenous arrays
+// @ts-ignore-lines These heterogenous arrays break type inference
 const allValues = allNonNullish.concat(nullish);
 
 Deno.test("eitherway::Option", async (t) => {
@@ -147,6 +176,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
         const someStr = Some("abc");
         const someArr = Some([1, 2, 3]);
         const someRec = Some({ [Symbol.toStringTag]: "TestRecord" });
+
         //https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag
         const resStatic = Object.prototype.toString.call(Some);
         const resStr = Object.prototype.toString.call(someStr);
@@ -180,54 +210,83 @@ Deno.test("eitherway::Option::Some", async (t) => {
         const iterResNum = num[Symbol.iterator]().next();
         const iterResRec = rec[Symbol.iterator]().next();
 
-        assertObjectMatch(copy, {
+        assertEquals(copy, {
           a: 1,
           num: Some(2),
           arr: Some([1, 2, 3]),
           rec: Some({ a: 1 }),
         });
-        assertObjectMatch(copyInner, {});
-        assertObjectMatch(copyInnerUnwrapped, { a: 1 });
-        assertArrayIncludes(arrCopy, [1, 2, 3]);
-        assertObjectMatch(iterResNum, { done: true, value: 2 });
-        assertObjectMatch(iterResRec, { done: true, value: { a: 1 } });
+        assertEquals(copyInner, {});
+        assertEquals(copyInnerUnwrapped, { a: 1 });
+        assertEquals(arrCopy, [1, 2, 3]);
+        assertEquals(iterResNum, { done: true, value: 2 });
+        assertEquals(iterResRec, { done: true, value: { a: 1 } });
       },
     );
-    // await t.step(
-    //   "[Symbol.toPrimitve]() -> supports all hints and returns falsy defaults",
-    //   () => {
-    //     const str = Some[Symbol.toPrimitive]("string");
-    //     const num = Some[Symbol.toPrimitive]("number");
-    //     const def = Some[Symbol.toPrimitive]("default");
-    //
-    //     assertStrictEquals(str, "");
-    //     assertStrictEquals(num, 0);
-    //     assertStrictEquals(def, false);
-    //   },
-    // );
-    // await t.step(
-    //   "toJSON() -> returns undefined, thus being stripped by JSON.stringify()",
-    //   () => {
-    //     const def = Some.toJSON();
-    //     const str = JSON.stringify(Some);
-    //     const rec = { a: "a", b: Some };
-    //     const recStr = JSON.stringify(rec);
-    //
-    //     assertStrictEquals(def, undefined);
-    //     assertStrictEquals(str, undefined);
-    //     assertStrictEquals(recStr, '{"a":"a"}');
-    //   },
-    // );
-    // await t.step("toString() -> return empty string", () => {
-    //   const str = Some.toString();
-    //
-    //   assertStrictEquals(str, "");
-    // });
-    // await t.step("valueOf() -> returns 0", () => {
-    //   const num = Some.valueOf();
-    //
-    //   assertStrictEquals(num, 0);
-    // });
+    await t.step(
+      "[Symbol.toPrimitve]() -> supports all hints and delegates to the underlying implementation",
+      () => {
+        const defaultHint = "default";
+        const stringHint = "string";
+        const numberHint = "number";
+        allNonNullish.filter((value) => !Number.isNaN(value)).forEach(
+          (value) => {
+            const some = Some(value);
+            const ref = Object(value); // Use object cocercion to access the well-known symbols also on primitve values
+
+            if (Symbol.toPrimitive in ref) {
+              const someDefaultCoercion = some[Symbol.toPrimitive](defaultHint);
+              const refDefaultCoercion = ref[Symbol.toPrimitive](defaultHint);
+              const someStringCoercion = some[Symbol.toPrimitive](stringHint);
+              const refStringCoercion = ref[Symbol.toPrimitive](stringHint);
+              const someNumberCoercion = some[Symbol.toPrimitive](numberHint);
+              const refNumberCoercion = ref[Symbol.toPrimitive](numberHint);
+
+              assertStrictEquals(someDefaultCoercion, refDefaultCoercion);
+              assertStrictEquals(someStringCoercion, refStringCoercion);
+              assertStrictEquals(someNumberCoercion, refNumberCoercion);
+            }
+          },
+        );
+      },
+    );
+    await t.step(
+      "toJSON() -> delegates to underlying implementation or returns the value itself",
+      () => {
+        /**
+         * Arrange non-nullish values which can be stringified
+         */
+        allNonNullish
+          .filter((value) => {
+            if (typeof value === "bigint") return false;
+            if (typeof value === "number" && Number.isNaN(value)) return false;
+            return true;
+          }).forEach(
+            (value) => {
+              const someJson = JSON.stringify(Some(value));
+              const refJson = JSON.stringify(value);
+
+              assertStrictEquals(someJson, refJson);
+            },
+          );
+      },
+    );
+    await t.step("toString() -> delegates to underlying implementation", () => {
+      allNonNullish.forEach((value) => {
+        const someStr = Some(value).toString();
+        const str = Object(value).toString();
+
+        assertStrictEquals(someStr, str);
+      });
+    });
+    await t.step("valueOf() -> delegates to underlying implementation", () => {
+      allNonNullish.forEach((value) => {
+        const someVal = Some(value).valueOf();
+        const val = Object(value).valueOf();
+
+        assertStrictEquals(someVal, val);
+      });
+    });
   });
 
   // await t.step("Some -> Coercions", async (t) => {
