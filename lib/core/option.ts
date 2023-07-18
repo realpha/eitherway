@@ -159,15 +159,18 @@ class _Some<T> implements IOption<T> {
     if (Symbol.iterator in target) yield* target;
     return this.#value;
   }
-  [Symbol.toPrimitive](hint: string) {
+  [Symbol.toPrimitive](hint: string): string | number | boolean {
     /**
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion
      */
+    if (isPrimitive(this.#value)) return this.#value;
+
     const target = Object(this.#value);
+
     if (Symbol.toPrimitive in target) {
       return target[Symbol.toPrimitive](hint);
     }
-    return this.#value;
+    return target.toString();
   }
   toJSON(): JsonRepr<T> {
     if (hasToJSON(this.#value)) return this.#value.toJSON() as JsonRepr<T>;
@@ -190,9 +193,14 @@ class _Some<T> implements IOption<T> {
 type HasToJSON<T> = T & { toJSON(): unknown };
 
 function hasToJSON<T>(arg: T): arg is HasToJSON<T> {
-  const j = "toJSON";
+  const method = "toJSON";
   const target = Object(arg);
-  return j in target && typeof target[j] === "function";
+  return method in target && typeof target[method] === "function";
+}
+
+function isPrimitive(arg: unknown): arg is string | number | boolean {
+  const type = typeof arg;
+  return type === "string" || type === "number" || type === "boolean";
 }
 
 // type Primitives = string | number | boolean | symbol | bigint | Date;
@@ -202,9 +210,7 @@ function hasToJSON<T>(arg: T): arg is HasToJSON<T> {
 //   | Map<unknown, unknown>
 //   | Record<string | number | symbol, unknown>;
 
-type JsonRepr<T> = T extends { toJSON(): infer R } ? R
-  : T extends {} ? T
-  : never;
+type JsonRepr<T> = T extends { toJSON(): infer R } ? R : T;
 
 type ToStringRepr<T> = T extends { toString(): infer R } ? R : never;
 type ValueRepr<T> = T extends { valueOf(): infer R } ? R : never;
@@ -228,7 +234,7 @@ function isTruthy<T>(arg: T): arg is Truthy<T> {
 
 /*
  * Module API
- * By leveraging declaration merging and the fact that types and values are
+ * By leveraging declaration merging and the fact that types and values
  * live in seperate namespaces, the API feels way more ergonomic
  */
 
@@ -237,8 +243,8 @@ export function Some<T>(value: NonNullish<T>): Some<NonNullish<T>> {
   return new _Some(value);
 }
 Object.defineProperty(Some, Symbol.hasInstance, {
-  value: <T>(instance: unknown): instance is Some<T> => {
-    return instance instanceof _Some;
+  value: <T>(lhs: unknown): lhs is Some<T> => {
+    return lhs instanceof _Some;
   },
 });
 Object.defineProperty(Some, Symbol.toStringTag, {
@@ -248,8 +254,8 @@ Object.defineProperty(Some, Symbol.toStringTag, {
 export type None = _None<never>;
 export const None = new _None() as None;
 Object.defineProperty(None, Symbol.hasInstance, {
-  value: (instance: unknown): instance is None => {
-    return instance instanceof _None;
+  value: (lhs: unknown): lhs is None => {
+    return lhs instanceof _None;
   },
 });
 Object.defineProperty(None, Symbol.toStringTag, {
@@ -262,11 +268,11 @@ export function Option<T>(value: T): Option<NonNullish<T>> {
   return isNotNullish(value) ? Some(value) : None;
 }
 /**
- * Unfortunately TypeScript still doesn't support ECMA standard for type narrowing
+ * Unfortunately TypeScript still doesn't support ECMA standard symbol for type narrowing
  * https://github.com/microsoft/TypeScript/issues/39064
  */
 Object.defineProperty(Option, Symbol.hasInstance, {
-  value: (lhs: any): lhs is Option<any> => {
+  value: (lhs: unknown): lhs is Option<unknown> => {
     return lhs instanceof _Some || lhs instanceof _None;
   },
 });
