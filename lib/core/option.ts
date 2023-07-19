@@ -74,6 +74,7 @@ class _None<T> implements IOption<never> {
   get [Symbol.toStringTag]() {
     return "eitherway::Option::None";
   }
+  //deno-lint-ignore require-yield 
   *[Symbol.iterator](): IterableIterator<never> {
     return undefined;
   }

@@ -2,6 +2,7 @@ import {
   assertArrayIncludes,
   assertEquals,
   assertExists,
+  assertNotEquals,
   assertNotStrictEquals,
   assertObjectMatch,
   assertStrictEquals,
@@ -289,9 +290,56 @@ Deno.test("eitherway::Option::Some", async (t) => {
       assertNotStrictEquals(isDoubled.unwrap(), defaultFn());
       assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
     });
-
     
+    await t.step(".andThen() -> returns new instance of Option", () => {
+      const double = (x: number) => Option(x * 2);
+      const toBeWrapped = 5;
+      const some = Some(toBeWrapped);
+
+      const maybeDoubled = some.andThen(double);
+
+      assertNotStrictEquals(maybeDoubled, some);
+      assertStrictEquals(maybeDoubled.unwrap(), double(toBeWrapped).unwrap());
+    });
   })
+
+  await t.step("Some<T> -> Unwrap methods", async (t) => {
+    await t.step(".unwrap() -> returns the wrapped value", () => {
+      const toBeWrapped = { some: "thing" };
+      const some = Some(toBeWrapped);
+
+      const unwrapped = some.unwrap();
+
+      assertExists(unwrapped);
+      assertStrictEquals(unwrapped, toBeWrapped);
+    });
+
+    await t.step(".unwrapOr() -> returns the wrapped value", () => {
+      const toBeWrapped = { some: "thing" };
+      const defaultValue = {};
+      const some = Some(toBeWrapped);
+
+      const unwrapped = some.unwrapOr(defaultValue);
+
+      assertExists(unwrapped);
+      assertNotEquals(unwrapped, defaultValue);
+      assertNotStrictEquals(unwrapped, defaultValue);
+      assertStrictEquals(unwrapped, toBeWrapped);
+    });
+
+    await t.step(".unwrapOrElse() -> returns the wrapped value", () => {
+      const toBeWrapped = { some: "thing" };
+      const defaultFn = () => ({});
+      const some = Some(toBeWrapped);
+
+      const unwrapped = some.unwrapOrElse(defaultFn);
+
+      assertExists(unwrapped);
+      assertNotEquals(unwrapped, defaultFn());
+      assertNotStrictEquals(unwrapped, defaultFn());
+      assertStrictEquals(unwrapped, toBeWrapped);
+    });
+  });
 
   await t.step("Some<T> -> JS well-known symbols and methods", async (t) => {
     await t.step(

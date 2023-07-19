@@ -3,6 +3,7 @@ import {
   AssertFalse,
   assertStrictEquals,
   AssertTrue,
+  assertType,
   Has,
   IsExact,
   IsNullable,
@@ -101,7 +102,9 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
 
     const union = opt.unwrap()
 
-    type IsUnion = AssertTrue<Has<typeof union, string | undefined>>;
+    type IsUnion = AssertTrue<IsExact<typeof union, string | undefined>>;
+
+    assertStrictEquals(opt.isSome(), true);
   });
 
   await t.step("Some<T> -> Logical combinators (&&, ||, ^)", async (t) => {
