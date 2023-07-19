@@ -153,7 +153,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "instanceof Option -> returns true for instances of Some & None",
+    "Option[Symbol.hasInstance] -> instanceof returns true for instances of Some & None",
     () => {
       allValues.forEach((val) => {
         const opt = Option.from(val);
@@ -170,6 +170,27 @@ Deno.test("eitherway::Option", async (t) => {
 
 Deno.test("eitherway::Option::Some", async (t) => {
   await t.step("Some<T> -> JS well-known symbols and methods", async (t) => {
+    await t.step(
+      "[Symbol.hasInstance]() -> instanceof returns true for instances of Some",
+      () => {
+        allNonNullish.forEach((value) => {
+          const some = Some(value);
+          const ref = value;
+
+          const isSomeInstance = some instanceof Some;
+          const isOptionInstance = some instanceof Option;
+          const isNotInstance = !(ref instanceof Some);
+
+          assertStrictEquals(isSomeInstance, true);
+          assertStrictEquals(isOptionInstance, true);
+          assertStrictEquals(isNotInstance, true);
+        });
+
+        const noneNeverIsSomeInstance = !(None instanceof Some);
+
+        assertStrictEquals(noneNeverIsSomeInstance, true);
+      },
+    );
     await t.step(
       "[Symbol.toStringTag]() -> returns FQN and is not nullish",
       () => {
@@ -196,7 +217,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
       },
     );
     await t.step(
-      "[Symbol.iterator]() -> supports object spread and conforms iterator protocol",
+      "[Symbol.iterator]() -> supports spread operator and conforms iterator protocol",
       () => {
         const num = Some(2);
         const arr = Some([1, 2, 3]);
@@ -288,96 +309,152 @@ Deno.test("eitherway::Option::Some", async (t) => {
       });
     });
   });
+  await t.step("Some<T> -> Coercions", async (t) => {
+    /**
+     * Implicit coercions make the JavaScript world go round, but are
+     * a constant source of error, confusion and frustration.
+     * Luckily, the transpiler will flag most occurences of implicit coercion
+     * where a primitive value is expected as error.
+     * The following steps are meant to demonstrate and document the
+     * behavior of Some<T> in these situations, given a wrapped value
+     * of type T.
+     * NEVER RELY on this behavior though, it's confusing!
+     * USE EXPLICIT methods or default values instead.
+     * DISREGARD THIS ADVICE AT YOUR OWN PERIL.
+     */
+    await t.step(
+      'Primitive coercion -> delegates to underlying implementation (ops: binary "+" [string concatenation & addition], loose equality, Date constructor)',
+      () => {
+        // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion
+        const primitiveStr = "This is " +
+          Some("nice, but still ") + Some({ weird: "behaviour." });
+        //@ts-ignore-lines for testing purposes
+        const primitiveSum = 42 + Some(41);
+        //@ts-ignore-lines for testing purposes
+        const primitiveCmp = 0 == Some(false);
+        //@ts-ignore-lines for testing purposes
+        const primitiveDate = new Date(Some(false));
+        //@ts-ignore-lines for testing purposes
+        const thisIsReallyFunny = 0 == Some(None);
 
-  // await t.step("Some -> Coercions", async (t) => {
-  //   await t.step(
-  //     'Primitive coercion -> returns false (ops: binary "+" [string concatenation & addition], loose equality, Date constructor)',
-  //     () => {
-  //       // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion
-  //       const primitiveStr = "This is " + Some;
-  //       //@ts-ignore-lines for testing purposes
-  //       const primitiveSum = Some + 42;
-  //       //@ts-ignore-lines for testing purposes
-  //       const primitiveCmp = 0 == Some;
-  //       //@ts-ignore-lines for testing purposes
-  //       const primitiveDate = new Date(Some);
-  //
-  //       const expectedStr = "This is false"; // false is further coerced to string
-  //       const expectedSum = 42; // false is further coerced to 0
-  //       const expectedCmp = true; // false is further coerced to 0 (LOLse equality... what a joke)
-  //       const expectedDate = new Date(0); //Again, false is further coerced to 0
-  //
-  //       assertStrictEquals(primitiveStr, expectedStr);
-  //       assertStrictEquals(primitiveSum, expectedSum);
-  //       assertStrictEquals(primitiveCmp, expectedCmp);
-  //       assertStrictEquals(primitiveDate.toString(), expectedDate.toString());
-  //     },
-  //   );
-  //   await t.step(
-  //     "String coercion -> returns empty string (ops: template literal, String constructor)",
-  //     () => {
-  //       const tmpl = `This is ${Some}`;
-  //       const ctor = "This is " + String(Some);
-  //
-  //       const expected = "This is ";
-  //
-  //       assertStrictEquals(
-  //         tmpl,
-  //         expected,
-  //       );
-  //       assertStrictEquals(ctor, expected);
-  //     },
-  //   );
-  //   await t.step(
-  //     'Number coercion -> returns 0 (ops: unary "+" and Number constructor)',
-  //     () => {
-  //       const sumRhsPlus = 42 + +Some;
-  //       const sumLhsPlus = +Some + 42;
-  //
-  //       const diffRhsPlus = 42 - +Some;
-  //       const diffLhsPlus = +Some - 42;
-  //
-  //       const prodRhsPlus = 42 * +Some;
-  //       const prodLhsPlus = +Some * 42;
-  //
-  //       const quotRhsPlus = 42 / +Some;
-  //       const quotLhsPlus = +Some / 42;
-  //
-  //       const sumRhsCtor = 42 + Number(Some);
-  //       const sumLhsCtor = Number(Some) + 42;
-  //
-  //       const diffRhsCtor = 42 - Number(Some);
-  //       const diffLhsCtor = Number(Some) - 42;
-  //
-  //       const prodRhsCtor = 42 * Number(Some);
-  //       const prodLhsCtor = Number(Some) * 42;
-  //
-  //       const quotRhsCtor = 42 / Number(Some);
-  //       const quotLhsCtor = Number(Some) / 42;
-  //
-  //       assertStrictEquals(sumRhsPlus, 42);
-  //       assertStrictEquals(sumLhsPlus, 42);
-  //       assertStrictEquals(sumRhsCtor, 42);
-  //       assertStrictEquals(sumLhsCtor, 42);
-  //       assertStrictEquals(diffRhsPlus, 42);
-  //       assertStrictEquals(diffLhsPlus, -42);
-  //       assertStrictEquals(diffRhsCtor, 42);
-  //       assertStrictEquals(diffLhsCtor, -42);
-  //       assertStrictEquals(prodRhsPlus, 0);
-  //       assertStrictEquals(prodLhsPlus, 0);
-  //       assertStrictEquals(prodRhsCtor, 0);
-  //       assertStrictEquals(prodLhsCtor, 0);
-  //       assertStrictEquals(quotRhsPlus, Infinity);
-  //       assertStrictEquals(quotLhsPlus, 0);
-  //       assertStrictEquals(quotRhsCtor, Infinity);
-  //       assertStrictEquals(quotLhsCtor, 0);
-  //     },
-  //   );
-  // });
+        const expectedStr = "This is nice, but still [object Object]"; // coerces to the underlying primitive representations
+        const expectedSum = 83; // coerces to the underlying primitive
+        const expectedCmp = true; // also here, but false is further coerced to 0 (LOLse equality... what a joke)
+        const expectedDate = new Date(0); //Again, false is further coerced to 0
+
+        assertStrictEquals(primitiveStr, expectedStr);
+        assertStrictEquals(primitiveSum, expectedSum);
+        assertStrictEquals(primitiveCmp, expectedCmp);
+        assertStrictEquals(primitiveDate.toString(), expectedDate.toString());
+        assertStrictEquals(thisIsReallyFunny, true);
+      },
+    );
+    await t.step(
+      "String coercion -> delegates to underlying implementation (ops: template literal, String constructor)",
+      () => {
+        /**
+         * Arrange non-nullish values which can actually be further coerced.
+         * Symbols are the only primitive values, where no further coercion can be performed.
+         * Therefore Some<Symbol> behaves exactly as Symbol in these situations.
+         * ```
+         * const sym = Symbol("test");
+         * const someSym = Some(sym);
+         *
+         * assertThrows(() => String(sym));
+         * assertThrows(() => String(someSym));
+         * ```
+         */
+        allNonNullish
+          .filter((value) => value !== sym)
+          .forEach((value) => {
+            const some = Some(value);
+            const ref = Object(value);
+
+            const tmpl = `${some}`;
+            const ctor = String(some);
+
+            const expected = ref.toString();
+
+            assertStrictEquals(tmpl, expected);
+            assertStrictEquals(ctor, expected);
+          });
+      },
+    );
+      await t.step(
+        'Number coercion -> delegates to underlying implementation (ops: unary "+" and Number constructor)',
+        () => {
+          const sumRhsPlus = 41 + +Some(1);
+          const sumLhsPlus = +Some("1") + 41;
+
+          const diffRhsPlus = 43 - +Some(1);
+          const diffLhsPlus = +Some("1") - -41;
+
+          const prodRhsPlus = 42 * +Some(1);
+          const prodLhsPlus = +Some("1") * 42;
+
+          const quotRhsPlus = 42 / +Some(1);
+          const quotLhsPlus = +Some("1") / (1/42);
+
+          const sumRhsCtor = 41 + Number(Some(1));
+          const sumLhsCtor = Number(Some("1")) + 41;
+
+          const diffRhsCtor = 43 - Number(Some(1));
+          const diffLhsCtor = Number(Some("1")) - -41;
+
+          const prodRhsCtor = 42 * Number(Some(1));
+          const prodLhsCtor = Number(Some("1")) * 42;
+
+          const quotRhsCtor = 42 / Number(Some(1));
+          const quotLhsCtor = Number(Some("1")) / (1/42);
+
+          assertStrictEquals(sumRhsPlus, 42);
+          assertStrictEquals(sumLhsPlus, 42);
+          assertStrictEquals(sumRhsCtor, 42);
+          assertStrictEquals(sumLhsCtor, 42);
+          assertStrictEquals(diffRhsPlus, 42);
+          assertStrictEquals(diffLhsPlus, 42);
+          assertStrictEquals(diffRhsCtor, 42);
+          assertStrictEquals(diffLhsCtor, 42);
+          assertStrictEquals(prodRhsPlus, 42);
+          assertStrictEquals(prodLhsPlus, 42);
+          assertStrictEquals(prodRhsCtor, 42);
+          assertStrictEquals(prodLhsCtor, 42);
+          assertStrictEquals(quotRhsPlus, 42);
+          assertStrictEquals(quotLhsPlus, 42);
+          assertStrictEquals(quotRhsCtor, 42);
+          assertStrictEquals(quotLhsCtor, 42);
+        },
+      );
+  });
 });
 
 Deno.test("eitherway::Option::None", async (t) => {
   await t.step("None -> JS well-known symbols and methods", async (t) => {
+    await t.step("[Symbol.hasInstance]() -> instanceof returns true for instances of None", () => {
+      allFalsy.forEach(value => {
+        const none = Option.fromCoercible(value);
+        const ref = Object(value);
+
+        // Typescript doesn't conform the ECMA spec here:
+        // https://github.com/microsoft/TypeScript/issues/39064
+        //deno-lint-ignore no-explicit-any
+        const isNoneInstance = none instanceof (None as any);
+        const isOptionInstance = none instanceof Option;
+        //deno-lint-ignore no-explicit-any
+        const isNotNoneInstance = !(ref instanceof (None as any));
+
+        assertStrictEquals(isNoneInstance, true);
+        assertStrictEquals(isOptionInstance, true);
+        assertStrictEquals(isNotNoneInstance, true);
+      });
+
+      const some = Some("thing");
+
+      //deno-lint-ignore no-explicit-any
+      const someIsNeverNoneInstance = !(some instanceof (None as any));
+      
+      assertStrictEquals(someIsNeverNoneInstance, true);
+    });
     await t.step(
       "[Symbol.toStringTag]() -> returns FQN and is not nullish",
       () => {
@@ -389,7 +466,7 @@ Deno.test("eitherway::Option::None", async (t) => {
       },
     );
     await t.step(
-      "[Symbol.iterator]() -> supports object spread and conforms iterator protocol",
+      "[Symbol.iterator]() -> supports spread operator and conforms iterator protocol",
       () => {
         const rec = { a: 1, b: None };
         const none = Option.from(undefined);
