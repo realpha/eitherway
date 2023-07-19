@@ -57,14 +57,19 @@ class _None<T> implements IOption<never> {
   unwrapOrElse<U>(orFn: () => NonNullish<U>) {
     return orFn();
   }
-  and<U>(_other: Option<U>): Option<never> {
+  and<U>(_rhs: Option<U>): Option<never> {
     return this;
   }
-  or<U>(other: Option<U>): Option<U> {
-    return other;
+  or<U>(rhs: Option<U>): Option<U> {
+    return rhs;
   }
-  xor<U>(other: Option<U>): Option<U> {
-    if (other.isSome()) return other as Option<U>;
+  xor<U>(rhs: Option<U>): Option<U> {
+    /**
+     * This cast is performed to prevent the unfolding of Option<T> union type
+     * under type inference in order to make the infernce work coherently in 
+     * all situations.
+     */
+    if (rhs.isSome()) return rhs as Option<U>;
     return this as Option<U>;
   }
   tap(tapFn: (arg: Option<never>) => void) {
@@ -133,18 +138,18 @@ class _Some<T> implements IOption<T> {
   unwrapOrElse<U>(_orFn: () => NonNullish<U>): T {
     return this.#value;
   }
-  and<U>(other: Option<U>): Option<U> {
-    return other;
+  and<U>(rhs: Option<U>): Option<U> {
+    return rhs;
   }
-  or<U>(_other: Option<U>): Option<T> {
+  or<U>(_rhs: Option<U>): Option<T> {
     return this;
   }
-  xor<U>(other: Option<U>): Option<T> {
-    if (other.isSome()) return None as Option<T>;
+  xor<U>(rhs: Option<U>): Option<T> {
+    if (rhs.isSome()) return None as Option<T>;
     return this;
   }
   tap(tapFn: (arg: Option<T>) => void): Option<T> {
-    tapFn(new _Some(this.#value));
+    tapFn(new _Some(structuredClone(this.#value)));
     return this;
   }
   get [Symbol.toStringTag]() {

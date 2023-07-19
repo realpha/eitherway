@@ -239,9 +239,9 @@ Deno.test("eitherway::Option::Some", async (t) => {
         const rhs3 = None as Option<string>;
 
         const res = lhs.and(rhs1).or(rhs2).xor(rhs3);
-        // here xor is actually a bitwise operator, but since 
-        // 0 and 1 are coercible to false and true respectively, 
-        // we can use this to emulate the non-exisitng logical 
+        // here xor is actually a bitwise operator, but since
+        // 0 and 1 are coercible to false and true respectively,
+        // we can use this to emulate the non-exisitng logical
         // xor operator.
         const equivalent = ((1 && 1) || 1) ^ 0;
 
@@ -254,43 +254,52 @@ Deno.test("eitherway::Option::Some", async (t) => {
   });
 
   await t.step("Some<T> -> Map methods", async (t) => {
-    await t.step(".map() -> returns new instance of Some with applied mapFn", () => {
-      const double = (x: number) => x * 2;
-      const toBeWrapped = 5;
-      const some = Some(toBeWrapped);
+    await t.step(
+      ".map() -> returns new instance of Some with applied mapFn",
+      () => {
+        const double = (x: number) => x * 2;
+        const toBeWrapped = 5;
+        const some = Some(toBeWrapped);
 
-      const isDoubled = some.map(double);
+        const isDoubled = some.map(double);
 
-      assertNotStrictEquals(isDoubled, some);
-      assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
-    });
+        assertNotStrictEquals(isDoubled, some);
+        assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
+      },
+    );
 
-    await t.step(".mapOr() -> returns new instance of Some with applied mapFn", () => {
-      const double = (x: number) => x * 2;
-      const toBeWrapped = 5;
-      const defaultValue = 11;
-      const some = Some(toBeWrapped);
+    await t.step(
+      ".mapOr() -> returns new instance of Some with applied mapFn",
+      () => {
+        const double = (x: number) => x * 2;
+        const toBeWrapped = 5;
+        const defaultValue = 11;
+        const some = Some(toBeWrapped);
 
-      const isDoubled = some.mapOr(double, defaultValue);
+        const isDoubled = some.mapOr(double, defaultValue);
 
-      assertNotStrictEquals(isDoubled, some);
-      assertNotStrictEquals(isDoubled.unwrap(), defaultValue);
-      assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
-    });
-    
-    await t.step(".mapOrElse() -> returns new instance of Some with applied mapFn", () => {
-      const double = (x: number) => x * 2;
-      const toBeWrapped = 5;
-      const defaultFn = () => 11;
-      const some = Some(toBeWrapped);
+        assertNotStrictEquals(isDoubled, some);
+        assertNotStrictEquals(isDoubled.unwrap(), defaultValue);
+        assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
+      },
+    );
 
-      const isDoubled = some.mapOrElse(double, defaultFn);
+    await t.step(
+      ".mapOrElse() -> returns new instance of Some with applied mapFn",
+      () => {
+        const double = (x: number) => x * 2;
+        const toBeWrapped = 5;
+        const defaultFn = () => 11;
+        const some = Some(toBeWrapped);
 
-      assertNotStrictEquals(isDoubled, some);
-      assertNotStrictEquals(isDoubled.unwrap(), defaultFn());
-      assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
-    });
-    
+        const isDoubled = some.mapOrElse(double, defaultFn);
+
+        assertNotStrictEquals(isDoubled, some);
+        assertNotStrictEquals(isDoubled.unwrap(), defaultFn());
+        assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
+      },
+    );
+
     await t.step(".andThen() -> returns new instance of Option", () => {
       const double = (x: number) => Option(x * 2);
       const toBeWrapped = 5;
@@ -301,7 +310,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
       assertNotStrictEquals(maybeDoubled, some);
       assertStrictEquals(maybeDoubled.unwrap(), double(toBeWrapped).unwrap());
     });
-  })
+  });
 
   await t.step("Some<T> -> Unwrap methods", async (t) => {
     await t.step(".unwrap() -> returns the wrapped value", () => {
@@ -339,6 +348,41 @@ Deno.test("eitherway::Option::Some", async (t) => {
       assertNotStrictEquals(unwrapped, defaultFn());
       assertStrictEquals(unwrapped, toBeWrapped);
     });
+  });
+
+  await t.step("Some<T> -> Convenience methods", async (t) => {
+    await t.step(
+      ".tap() -> tapFn receives cloned value wrapped in new instance of Option",
+      () => {
+        /**
+         * HOF to capture original value and option. 
+         *
+         * The returned function performs the assertions 
+         * when called by the .tap() method.
+         *
+         * Maybe oldschool, but IMO preferable to a mock in 
+         * this situation. 
+         */
+        const createTapFn = function <T>(
+          originalValue: T,
+          originalOption: Option<T>,
+        ): (opt: Option<T>) => void {
+          return (opt: Option<T>) => {
+            assertNotStrictEquals(originalValue, opt.unwrap());
+            assertNotStrictEquals(originalOption, opt);
+            assertEquals(originalValue, opt.unwrap());
+          };
+        };
+
+        const originalValue = { some: "thing" };
+        const originalOption = Some(originalValue);
+        const tapAssertionFn = createTapFn(originalValue, originalOption);
+
+        const returnedOption = originalOption.tap(tapAssertionFn);
+
+        assertStrictEquals(returnedOption, originalOption);
+      },
+    );
   });
 
   await t.step("Some<T> -> JS well-known symbols and methods", async (t) => {
