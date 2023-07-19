@@ -90,6 +90,20 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
     assertStrictEquals(some.isSome(), true);
   });
 
+  await t.step("Some<T> -> Type predicate narrows to Some" , () => {
+    const opt = Option.from("abc" as string | undefined);
+
+    if (opt.isSome()) {
+      const str = opt.unwrap();
+
+      type IsString = AssertTrue<IsExact<typeof str, string>>;
+    }
+
+    const union = opt.unwrap()
+
+    type IsUnion = AssertTrue<Has<typeof union, string | undefined>>;
+  });
+
   await t.step("Some<T> -> Logical combinators (&&, ||, ^)", async (t) => {
     await t.step(".and() -> Return type is inferred from RHS", () => {
       const lhs = Some("abc");

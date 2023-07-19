@@ -1,6 +1,6 @@
 interface IOption<T> {
-  isSome: () => boolean;
-  isNone: () => boolean;
+  isSome: () => this is Some<T>;
+  isNone: () => this is None;
   map: <U>(mapFn: (arg: T) => NonNullish<U>) => Option<NonNullish<U>>;
   mapOr: <U>(
     mapFn: (arg: T) => NonNullish<U>,
@@ -105,19 +105,19 @@ class _Some<T> implements IOption<T> {
   isNone(): this is None {
     return false;
   }
-  map<U>(mapFn: (arg: T) => NonNullish<U>): Option<NonNullish<U>> {
+  map<U>(mapFn: (arg: T) => NonNullish<U>): Some<NonNullish<U>> {
     return Some(mapFn(this.#value));
   }
   mapOr<U>(
     mapFn: (arg: T) => NonNullish<U>,
     _orValue: NonNullish<U>,
-  ): Option<NonNullish<U>> {
+  ): Some<NonNullish<U>> {
     return this.map(mapFn);
   }
   mapOrElse<U>(
     mapFn: (arg: T) => NonNullish<U>,
     _orFn: () => NonNullish<U>,
-  ): Option<NonNullish<U>> {
+  ): Some<NonNullish<U>> {
     return this.map(mapFn);
   }
   andThen<U>(thenFn: (arg: T) => Option<U>): Option<U> {
@@ -159,7 +159,7 @@ class _Some<T> implements IOption<T> {
     if (Symbol.iterator in target) yield* target;
     return this.#value;
   }
-  [Symbol.toPrimitive](hint: string): string | number | boolean {
+  [Symbol.toPrimitive](hint: string): string | number | boolean | symbol {
     /**
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion
      */
@@ -202,6 +202,7 @@ function isPrimitive(arg: unknown): arg is string | number | boolean {
   const type = typeof arg;
   return type === "string" || type === "number" || type === "boolean";
 }
+
 
 // type Primitives = string | number | boolean | symbol | bigint | Date;
 // type Collections =

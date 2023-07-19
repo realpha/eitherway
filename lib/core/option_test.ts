@@ -2,6 +2,7 @@ import {
   assertArrayIncludes,
   assertEquals,
   assertExists,
+  assertNotStrictEquals,
   assertObjectMatch,
   assertStrictEquals,
 } from "../../dev_deps.ts";
@@ -153,7 +154,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option[Symbol.hasInstance] -> instanceof returns true for instances of Some & None",
+    "Option[Symbol.hasInstance]() -> instanceof returns true for instances of Some & None",
     () => {
       allValues.forEach((val) => {
         const opt = Option.from(val);
@@ -169,6 +170,129 @@ Deno.test("eitherway::Option", async (t) => {
 });
 
 Deno.test("eitherway::Option::Some", async (t) => {
+  await t.step("Some<T> -> Type predicates", async (t) => {
+    await t.step(".isSome() -> returns true", () => {
+      const some = Some("thing");
+
+      const isSome = some.isSome();
+
+      assertStrictEquals(isSome, true);
+    });
+
+    await t.step(".isNone() -> returns false", () => {
+      const some = Some("thing");
+
+      const isNone = some.isNone();
+
+      assertStrictEquals(isNone, false);
+    });
+  });
+
+  await t.step("Some<T> -> Logical combinators (&&, ||, ^)", async (t) => {
+    await t.step(".and() -> returns RHS", () => {
+      const lhs = Some("thing");
+      const rhs = Some("thingelse");
+
+      const res = lhs.and(rhs);
+
+      assertStrictEquals(res, rhs);
+      assertStrictEquals(res.unwrap(), rhs.unwrap());
+    });
+
+    await t.step(".or() -> returns LHS", () => {
+      const lhs = Some("thing");
+      const rhs = Some("thingelse");
+
+      const res = lhs.or(rhs);
+
+      assertStrictEquals(res, lhs);
+      assertStrictEquals(res.unwrap(), lhs.unwrap());
+    });
+
+    await t.step(".xor() -> returns LHS if RHS is None", () => {
+      const lhs = Some("thing");
+      const rhs = None;
+
+      const res = lhs.xor(rhs);
+
+      assertStrictEquals(res, lhs);
+      assertStrictEquals(res.unwrap(), lhs.unwrap());
+    });
+
+    await t.step(".xor() -> returns None if LHS and RHS are Some", () => {
+      const lhs = Some("thing");
+      const rhs = Some("thingelse");
+
+      const res = lhs.xor(rhs);
+
+      assertStrictEquals(res, None);
+      assertStrictEquals(res.unwrap(), undefined);
+    });
+
+    await t.step(
+      "and().or().xor() -> chaining returns the equivalent result as logical operations on coercible values",
+      () => {
+        const lhs = Some("thing");
+        const rhs1 = Some("thingelse");
+        const rhs2 = Some("otherthing");
+        const rhs3 = None as Option<string>;
+
+        const res = lhs.and(rhs1).or(rhs2).xor(rhs3);
+        // here xor is actually a bitwise operator, but since 
+        // 0 and 1 are coercible to false and true respectively, 
+        // we can use this to emulate the non-exisitng logical 
+        // xor operator.
+        const equivalent = ((1 && 1) || 1) ^ 0;
+
+        assertStrictEquals(equivalent, 1);
+        assertStrictEquals(res.isSome(), Boolean(equivalent));
+        assertStrictEquals(res, rhs1);
+        assertStrictEquals(res.unwrap(), "thingelse");
+      },
+    );
+  });
+
+  await t.step("Some<T> -> Map methods", async (t) => {
+    await t.step(".map() -> returns new instance of Some with applied mapFn", () => {
+      const double = (x: number) => x * 2;
+      const toBeWrapped = 5;
+      const some = Some(toBeWrapped);
+
+      const isDoubled = some.map(double);
+
+      assertNotStrictEquals(isDoubled, some);
+      assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
+    });
+
+    await t.step(".mapOr() -> returns new instance of Some with applied mapFn", () => {
+      const double = (x: number) => x * 2;
+      const toBeWrapped = 5;
+      const defaultValue = 11;
+      const some = Some(toBeWrapped);
+
+      const isDoubled = some.mapOr(double, defaultValue);
+
+      assertNotStrictEquals(isDoubled, some);
+      assertNotStrictEquals(isDoubled.unwrap(), defaultValue);
+      assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
+    });
+    
+    await t.step(".mapOrElse() -> returns new instance of Some with applied mapFn", () => {
+      const double = (x: number) => x * 2;
+      const toBeWrapped = 5;
+      const defaultFn = () => 11;
+      const some = Some(toBeWrapped);
+
+      const isDoubled = some.mapOrElse(double, defaultFn);
+
+      assertNotStrictEquals(isDoubled, some);
+      assertNotStrictEquals(isDoubled.unwrap(), defaultFn());
+      assertStrictEquals(isDoubled.unwrap(), double(toBeWrapped));
+    });
+
+    
+  })
+
   await t.step("Some<T> -> JS well-known symbols and methods", async (t) => {
     await t.step(
       "[Symbol.hasInstance]() -> instanceof returns true for instances of Some",
@@ -191,6 +315,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
         assertStrictEquals(noneNeverIsSomeInstance, true);
       },
     );
+
     await t.step(
       "[Symbol.toStringTag]() -> returns FQN and is not nullish",
       () => {
@@ -216,6 +341,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
         );
       },
     );
+
     await t.step(
       "[Symbol.iterator]() -> supports spread operator and conforms iterator protocol",
       () => {
@@ -244,6 +370,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
         assertEquals(iterResRec, { done: true, value: { a: 1 } });
       },
     );
+
     await t.step(
       "[Symbol.toPrimitve]() -> supports all hints and delegates to the underlying implementation",
       () => {
@@ -271,8 +398,9 @@ Deno.test("eitherway::Option::Some", async (t) => {
         );
       },
     );
+
     await t.step(
-      "toJSON() -> delegates to underlying implementation or returns the value itself",
+      ".toJSON() -> delegates to underlying implementation or returns the value itself",
       () => {
         /**
          * Arrange non-nullish values which can be stringified
@@ -292,15 +420,20 @@ Deno.test("eitherway::Option::Some", async (t) => {
           );
       },
     );
-    await t.step("toString() -> delegates to underlying implementation", () => {
-      allNonNullish.forEach((value) => {
-        const someStr = Some(value).toString();
-        const str = Object(value).toString();
 
-        assertStrictEquals(someStr, str);
-      });
-    });
-    await t.step("valueOf() -> delegates to underlying implementation", () => {
+    await t.step(
+      ".toString() -> delegates to underlying implementation",
+      () => {
+        allNonNullish.forEach((value) => {
+          const someStr = Some(value).toString();
+          const str = Object(value).toString();
+
+          assertStrictEquals(someStr, str);
+        });
+      },
+    );
+
+    await t.step(".valueOf() -> delegates to underlying implementation", () => {
       allNonNullish.forEach((value) => {
         const someVal = Some(value).valueOf();
         const val = Object(value).valueOf();
@@ -309,6 +442,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
       });
     });
   });
+
   await t.step("Some<T> -> Coercions", async (t) => {
     /**
      * Implicit coercions make the JavaScript world go round, but are
@@ -349,6 +483,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
         assertStrictEquals(thisIsReallyFunny, true);
       },
     );
+
     await t.step(
       "String coercion -> delegates to underlying implementation (ops: template literal, String constructor)",
       () => {
@@ -380,81 +515,86 @@ Deno.test("eitherway::Option::Some", async (t) => {
           });
       },
     );
-      await t.step(
-        'Number coercion -> delegates to underlying implementation (ops: unary "+" and Number constructor)',
-        () => {
-          const sumRhsPlus = 41 + +Some(1);
-          const sumLhsPlus = +Some("1") + 41;
 
-          const diffRhsPlus = 43 - +Some(1);
-          const diffLhsPlus = +Some("1") - -41;
+    await t.step(
+      'Number coercion -> delegates to underlying implementation (ops: unary "+" and Number constructor)',
+      () => {
+        const sumRhsPlus = 41 + +Some(1);
+        const sumLhsPlus = +Some("1") + 41;
 
-          const prodRhsPlus = 42 * +Some(1);
-          const prodLhsPlus = +Some("1") * 42;
+        const diffRhsPlus = 43 - +Some(1);
+        const diffLhsPlus = +Some("1") - -41;
 
-          const quotRhsPlus = 42 / +Some(1);
-          const quotLhsPlus = +Some("1") / (1/42);
+        const prodRhsPlus = 42 * +Some(1);
+        const prodLhsPlus = +Some("1") * 42;
 
-          const sumRhsCtor = 41 + Number(Some(1));
-          const sumLhsCtor = Number(Some("1")) + 41;
+        const quotRhsPlus = 42 / +Some(1);
+        const quotLhsPlus = +Some("1") / (1 / 42);
 
-          const diffRhsCtor = 43 - Number(Some(1));
-          const diffLhsCtor = Number(Some("1")) - -41;
+        const sumRhsCtor = 41 + Number(Some(1));
+        const sumLhsCtor = Number(Some("1")) + 41;
 
-          const prodRhsCtor = 42 * Number(Some(1));
-          const prodLhsCtor = Number(Some("1")) * 42;
+        const diffRhsCtor = 43 - Number(Some(1));
+        const diffLhsCtor = Number(Some("1")) - -41;
 
-          const quotRhsCtor = 42 / Number(Some(1));
-          const quotLhsCtor = Number(Some("1")) / (1/42);
+        const prodRhsCtor = 42 * Number(Some(1));
+        const prodLhsCtor = Number(Some("1")) * 42;
 
-          assertStrictEquals(sumRhsPlus, 42);
-          assertStrictEquals(sumLhsPlus, 42);
-          assertStrictEquals(sumRhsCtor, 42);
-          assertStrictEquals(sumLhsCtor, 42);
-          assertStrictEquals(diffRhsPlus, 42);
-          assertStrictEquals(diffLhsPlus, 42);
-          assertStrictEquals(diffRhsCtor, 42);
-          assertStrictEquals(diffLhsCtor, 42);
-          assertStrictEquals(prodRhsPlus, 42);
-          assertStrictEquals(prodLhsPlus, 42);
-          assertStrictEquals(prodRhsCtor, 42);
-          assertStrictEquals(prodLhsCtor, 42);
-          assertStrictEquals(quotRhsPlus, 42);
-          assertStrictEquals(quotLhsPlus, 42);
-          assertStrictEquals(quotRhsCtor, 42);
-          assertStrictEquals(quotLhsCtor, 42);
-        },
-      );
+        const quotRhsCtor = 42 / Number(Some(1));
+        const quotLhsCtor = Number(Some("1")) / (1 / 42);
+
+        assertStrictEquals(sumRhsPlus, 42);
+        assertStrictEquals(sumLhsPlus, 42);
+        assertStrictEquals(sumRhsCtor, 42);
+        assertStrictEquals(sumLhsCtor, 42);
+        assertStrictEquals(diffRhsPlus, 42);
+        assertStrictEquals(diffLhsPlus, 42);
+        assertStrictEquals(diffRhsCtor, 42);
+        assertStrictEquals(diffLhsCtor, 42);
+        assertStrictEquals(prodRhsPlus, 42);
+        assertStrictEquals(prodLhsPlus, 42);
+        assertStrictEquals(prodRhsCtor, 42);
+        assertStrictEquals(prodLhsCtor, 42);
+        assertStrictEquals(quotRhsPlus, 42);
+        assertStrictEquals(quotLhsPlus, 42);
+        assertStrictEquals(quotRhsCtor, 42);
+        assertStrictEquals(quotLhsCtor, 42);
+      },
+    );
   });
 });
 
 Deno.test("eitherway::Option::None", async (t) => {
   await t.step("None -> JS well-known symbols and methods", async (t) => {
-    await t.step("[Symbol.hasInstance]() -> instanceof returns true for instances of None", () => {
-      allFalsy.forEach(value => {
-        const none = Option.fromCoercible(value);
-        const ref = Object(value);
+    await t.step(
+      "[Symbol.hasInstance]() -> instanceof returns true for instances of None",
+      () => {
+        allFalsy.forEach((value) => {
+          const none = Option.fromCoercible(value);
+          const ref = Object(value);
 
-        // Typescript doesn't conform the ECMA spec here:
-        // https://github.com/microsoft/TypeScript/issues/39064
+          // Typescript doesn't conform the ECMA spec here:
+          // https://github.com/microsoft/TypeScript/issues/39064
+          //deno-lint-ignore no-explicit-any
+          const isNoneInstance = none instanceof (None as any);
+          const isOptionInstance = none instanceof Option;
+          //deno-lint-ignore no-explicit-any
+          const isNotNoneInstance = !(ref instanceof (None as any));
+
+          assertStrictEquals(isNoneInstance, true);
+          assertStrictEquals(isOptionInstance, true);
+          assertStrictEquals(isNotNoneInstance, true);
+        });
+
+        const some = Some("thing");
+
         //deno-lint-ignore no-explicit-any
-        const isNoneInstance = none instanceof (None as any);
-        const isOptionInstance = none instanceof Option;
-        //deno-lint-ignore no-explicit-any
-        const isNotNoneInstance = !(ref instanceof (None as any));
+        const someIsNeverNoneInstance = !(some instanceof (None as any));
 
-        assertStrictEquals(isNoneInstance, true);
-        assertStrictEquals(isOptionInstance, true);
-        assertStrictEquals(isNotNoneInstance, true);
-      });
+        assertStrictEquals(someIsNeverNoneInstance, true);
+      },
+    );
 
-      const some = Some("thing");
-
-      //deno-lint-ignore no-explicit-any
-      const someIsNeverNoneInstance = !(some instanceof (None as any));
-      
-      assertStrictEquals(someIsNeverNoneInstance, true);
-    });
     await t.step(
       "[Symbol.toStringTag]() -> returns FQN and is not nullish",
       () => {
@@ -465,6 +605,7 @@ Deno.test("eitherway::Option::None", async (t) => {
         assertStrictEquals(res, "[object eitherway::Option::None]");
       },
     );
+
     await t.step(
       "[Symbol.iterator]() -> supports spread operator and conforms iterator protocol",
       () => {
@@ -491,6 +632,7 @@ Deno.test("eitherway::Option::None", async (t) => {
         assertObjectMatch(iterRes, { done: true, value: undefined });
       },
     );
+
     await t.step(
       "[Symbol.toPrimitve]() -> supports all hints and returns falsy defaults",
       () => {
@@ -503,8 +645,9 @@ Deno.test("eitherway::Option::None", async (t) => {
         assertStrictEquals(def, false);
       },
     );
+
     await t.step(
-      "toJSON() -> returns undefined, thus being stripped by JSON.stringify()",
+      ".toJSON() -> returns undefined, thus being stripped by JSON.stringify()",
       () => {
         const def = None.toJSON();
         const str = JSON.stringify(None);
@@ -516,12 +659,14 @@ Deno.test("eitherway::Option::None", async (t) => {
         assertStrictEquals(recStr, '{"a":"a"}');
       },
     );
-    await t.step("toString() -> return empty string", () => {
+
+    await t.step(".toString() -> return empty string", () => {
       const str = None.toString();
 
       assertStrictEquals(str, "");
     });
-    await t.step("valueOf() -> returns 0", () => {
+
+    await t.step(".valueOf() -> returns 0", () => {
       const num = None.valueOf();
 
       assertStrictEquals(num, 0);
@@ -543,7 +688,7 @@ Deno.test("eitherway::Option::None", async (t) => {
 
         const expectedStr = "This is false"; // false is further coerced to string
         const expectedSum = 42; // false is further coerced to 0
-        const expectedCmp = true; // false is further coerced to 0 (LOLse equality... what a joke)
+        const expectedCmp = true; // false is further coerced to 0
         const expectedDate = new Date(0); //Again, false is further coerced to 0
 
         assertStrictEquals(primitiveStr, expectedStr);
@@ -552,6 +697,7 @@ Deno.test("eitherway::Option::None", async (t) => {
         assertStrictEquals(primitiveDate.toString(), expectedDate.toString());
       },
     );
+
     await t.step(
       "String coercion -> returns empty string (ops: template literal, String constructor)",
       () => {
@@ -567,6 +713,7 @@ Deno.test("eitherway::Option::None", async (t) => {
         assertStrictEquals(ctor, expected);
       },
     );
+
     await t.step(
       'Number coercion -> returns 0 (ops: unary "+" and Number constructor)',
       () => {
