@@ -1,3 +1,23 @@
+import type {
+  JsonRepr,
+  NonNullish,
+  StringRepr,
+  Truthy,
+  ValueRepr,
+} from "./type_utils.ts";
+import {
+  hasToJSON,
+  isNotNullish,
+  isPrimitive,
+  isTruthy,
+} from "./type_utils.ts";
+
+/**
+ * ==============
+ * BASE INTERFACE
+ * ==============
+ */
+
 interface IOption<T> {
   isSome: () => this is Some<T>;
   isNone: () => this is None;
@@ -26,6 +46,12 @@ interface IOption<T> {
   [Symbol.toPrimitive](hint: string): string | number | boolean | symbol;
   [Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T>;
 }
+
+/**
+ * ==============
+ * IMPLEMENTATION 
+ * ==============
+ */
 
 // By declaring an unused, generic type parameter, we get a nicer alias.
 class _None<T = never> implements IOption<never> {
@@ -211,66 +237,36 @@ class _Some<T> implements IOption<T> {
   }
 }
 
-type HasToJSON<T> = T extends { toJSON(): JsonRepr<T> } ? T : never;
-
-function hasToJSON<T>(arg: T): arg is HasToJSON<T> {
-  const method = "toJSON";
-  const target = Object(arg);
-  return method in target && typeof target[method] === "function";
-}
-
-function isPrimitive(arg: unknown): arg is string | number | boolean {
-  const type = typeof arg;
-  return type === "string" || type === "number" || type === "boolean";
-}
-
-/**
- * Representation of how type T will be passed on to searialization to
- * JSON.stringify()
- *
- * The square brackets are used to prevent distribution over unions where
- * never is erased anyway and we can actuall match never, which is
- * necessary for None
- *
- * Reference:
- * https://www.typescriptlang.org/docs/handbook/2/conditional-types.html#distributive-conditional-types
- */
-type JsonRepr<T> = [T] extends { toJSON(): infer R } ? R
-  : [T] extends [never] ? undefined
-  : T;
-
-type StringRepr<T> = [T] extends { toString(): infer R } ? R
-  : [T] extends [never] ? string
-  : unknown;
-
-type ValueRepr<T> = [T] extends { valueOf(): infer R } ? R
-  : [T] extends [never] ? number
-  : unknown;
-
-type Nullish = null | undefined;
-/**
- * Ref: https://developer.mozilla.org/en-US/docs/Glossary/Falsy
- */
-type Falsy = Nullish | false | "" | 0 | -0 | 0n | -0n;
-
-export type Truthy<T> = Exclude<T, Falsy>;
-export type NonNullish<T> = Exclude<T, Nullish>;
-
-function isNotNullish<T>(arg: T): arg is NonNullish<T> {
-  return arg != null;
-}
-
-function isTruthy<T>(arg: T): arg is Truthy<T> {
-  return Boolean(arg);
-}
-
 /*
- * Module API
+ * ==============
+ *   MODULE API
+ * ==============
  * By leveraging declaration merging and the fact that types and values
  * live in seperate namespaces, the API feels way more ergonomic
  */
 
+//deno-lint-ignore-lines no-namespace
+
+
 export type Some<T> = _Some<T>;
+
+/**
+ *
+ * *Some<T> Factory*
+ * Some<T> represents the encapsulation of a value of type T.
+ *
+ * @example
+ * ```typescript
+ * const str = "thing";
+ * const some = Some(str);
+ *
+ * assert(some instanceof Some === true);
+ * assert(some.isSome() === true);
+ * assert(some.isNone() === false);
+ * assert(some.unwrap() === str);
+ * ```
+ *
+ */
 export function Some<T>(value: NonNullish<T>): Some<NonNullish<T>> {
   return new _Some(value);
 }
@@ -284,6 +280,23 @@ Object.defineProperty(Some, Symbol.toStringTag, {
 });
 
 export type None = _None<never>;
+/**
+ *
+ * *None*
+ * None represents the absence of a value.
+ *
+ * @example
+ * ```typescript
+ * const none = None;
+ *
+ * //TS Bug: https://github.com/microsoft/TypeScript/issues/39064
+ * assert(none instanceof (None as any) === true);
+ * assert(none.isNone() === true);
+ * assert(none.isSome() === false);
+ * assert(none.unwrap() === undefined);
+ * ```
+ *
+ */
 export const None = new _None() as None;
 Object.defineProperty(None, Symbol.hasInstance, {
   value: (lhs: unknown): lhs is None => {
@@ -296,6 +309,28 @@ Object.defineProperty(None, Symbol.toStringTag, {
 Object.freeze(None);
 
 export type Option<T> = Some<T> | None;
+
+/**
+ *
+ * *Option<T> Factory* 
+ * Option<T> represents:
+ *  - EITHER the encapsulation of a value of type T via Some<T>
+ *  - OR the absence of a value via None
+ *
+ * @example
+ * ```typescript
+ * const str: string | undefined = "thing";
+ * const undef: string | undefined = undefined;
+ *
+ * const some: Option<string> = Option(str);
+ * const none: Option<string> = Option(undef);
+ *
+ * assert(some instanceof Option === true);
+ * asserr(none instanceof Option === true);
+ * assert(some.isSome() === true);
+ * assert(none.isNone() === true);
+ * ```
+ */
 export function Option<T>(value: T): Option<NonNullish<T>> {
   return isNotNullish(value) ? Some(value) : None;
 }
@@ -312,8 +347,9 @@ Object.defineProperty(Option, Symbol.toStringTag, {
   value: "eitherway::Option",
 });
 
+
 //deno-lint-ignore no-namespace
-export namespace Option {
+export namespace Option { 
   export function from<T>(value: T): Option<NonNullish<T>> {
     return isNotNullish(value) ? Some(value) : None;
   }
