@@ -18,10 +18,17 @@ interface IOption<T> {
   or: <U>(rhs: Option<U>) => Option<T> | Option<U>;
   xor: <U>(rhs: Option<U>) => Option<T> | Option<U>;
   tap: (tapFn: (arg: Option<T>) => never) => Option<T>;
+  toJSON: () => JsonRepr<T>;
+  toString: () => StringRepr<T>;
+  valueOf: () => ValueRepr<T>;
+  toTag: () => string;
+  [Symbol.toStringTag]: string;
+  [Symbol.toPrimitive](hint: string): string | number | boolean | symbol;
+  [Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T>;
 }
 
 // By declaring an unused, generic type parameter, we get a nicer alias.
-class _None<T> implements IOption<never> {
+class _None<T = never> implements IOption<never> {
   constructor() {}
 
   isSome(): this is Some<never> {
@@ -57,20 +64,15 @@ class _None<T> implements IOption<never> {
   unwrapOrElse<U>(orFn: () => NonNullish<U>) {
     return orFn();
   }
-  and<U>(_rhs: Option<U>): Option<never> {
+  and<U>(_rhs: Option<U>): None {
     return this;
   }
-  or<U>(rhs: Option<U>): Option<U> {
+  or<U>(rhs: Option<U>): Some<U> | None {
     return rhs;
   }
-  xor<U>(rhs: Option<U>): Option<U> {
-    /**
-     * This cast is performed to prevent the unfolding of Option<T> union type
-     * under type inference in order to make the infernce work coherently in 
-     * all situations.
-     */
-    if (rhs.isSome()) return rhs as Option<U>;
-    return this as Option<U>;
+  xor<U>(rhs: Option<U>): Some<U> | None {
+    if (rhs.isSome()) return rhs;
+    return this;
   }
   tap(tapFn: (arg: Option<never>) => void) {
     tapFn(None);
@@ -79,23 +81,30 @@ class _None<T> implements IOption<never> {
   get [Symbol.toStringTag]() {
     return "eitherway::Option::None";
   }
-  //deno-lint-ignore require-yield 
+  //deno-lint-ignore require-yield
   *[Symbol.iterator](): IterableIterator<never> {
+    /**
+     * This is actually what we want, since returning from a generator implies
+     * that it's exhausted, i.e. { done: true, value: undefined }
+     */
     return undefined;
   }
-  [Symbol.toPrimitive](hint: string) {
+  [Symbol.toPrimitive](hint: string): string | number | boolean | symbol {
     if (hint === "string") return "";
     if (hint === "number") return 0;
     return false;
   }
-  toJSON(): undefined {
+  toJSON(): JsonRepr<never> {
     return undefined;
   }
-  toString(): string {
-    return this[Symbol.toPrimitive]("string") as string;
+  toString(): StringRepr<never> {
+    return "";
   }
-  valueOf(): number {
-    return this[Symbol.toPrimitive]("number") as number;
+  valueOf(): ValueRepr<never> {
+    return 0;
+  }
+  toTag(): string {
+    return Object.prototype.toString.call(this);
   }
 }
 
@@ -138,14 +147,14 @@ class _Some<T> implements IOption<T> {
   unwrapOrElse<U>(_orFn: () => NonNullish<U>): T {
     return this.#value;
   }
-  and<U>(rhs: Option<U>): Option<U> {
+  and<U>(rhs: Option<U>): Some<U> | None {
     return rhs;
   }
-  or<U>(_rhs: Option<U>): Option<T> {
+  or<U>(_rhs: Option<U>): Some<T> {
     return this;
   }
-  xor<U>(rhs: Option<U>): Option<T> {
-    if (rhs.isSome()) return None as Option<T>;
+  xor<U>(rhs: Option<U>): Some<T> | None {
+    if (rhs.isSome()) return None;
     return this;
   }
   tap(tapFn: (arg: Option<T>) => void): Option<T> {
@@ -158,9 +167,7 @@ class _Some<T> implements IOption<T> {
       : String(this.#value);
     return `eitherway::Option::Some<${innerTag}>`;
   }
-  *[Symbol.iterator](
-    this: Some<T>,
-  ): IterableIterator<T extends Iterable<infer U> ? U : T> {
+  *[Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T> {
     const target = Object(this.#value);
     if (Symbol.iterator in target) yield* target;
     return this.#value;
@@ -179,10 +186,15 @@ class _Some<T> implements IOption<T> {
     return target.toString();
   }
   toJSON(): JsonRepr<T> {
-    if (hasToJSON(this.#value)) return this.#value.toJSON() as JsonRepr<T>;
+    if (hasToJSON(this.#value)) return this.#value.toJSON();
+    /**
+     * This cast is necessary, because we need to retain the possibility of
+     * T being never for the corresponding method on None. We know that
+     * T != never for Some<T> though
+     */
     return this.#value as JsonRepr<T>;
   }
-  toString(): ToStringRepr<T> {
+  toString(): StringRepr<T> {
     /**
      * At run time this object coercion would happen implicitely anyway for primitive types
      */
@@ -194,9 +206,12 @@ class _Some<T> implements IOption<T> {
      */
     return Object(this.#value).valueOf();
   }
+  toTag(): string {
+    return Object.prototype.toString.call(this);
+  }
 }
 
-type HasToJSON<T> = T & { toJSON(): unknown };
+type HasToJSON<T> = T extends { toJSON(): JsonRepr<T> } ? T : never;
 
 function hasToJSON<T>(arg: T): arg is HasToJSON<T> {
   const method = "toJSON";
@@ -209,18 +224,28 @@ function isPrimitive(arg: unknown): arg is string | number | boolean {
   return type === "string" || type === "number" || type === "boolean";
 }
 
+/**
+ * Representation of how type T will be passed on to searialization to
+ * JSON.stringify()
+ *
+ * The square brackets are used to prevent distribution over unions where
+ * never is erased anyway and we can actuall match never, which is
+ * necessary for None
+ *
+ * Reference:
+ * https://www.typescriptlang.org/docs/handbook/2/conditional-types.html#distributive-conditional-types
+ */
+type JsonRepr<T> = [T] extends { toJSON(): infer R } ? R
+  : [T] extends [never] ? undefined
+  : T;
 
-// type Primitives = string | number | boolean | symbol | bigint | Date;
-// type Collections =
-//   | Array<unknown>
-//   | Set<unknown>
-//   | Map<unknown, unknown>
-//   | Record<string | number | symbol, unknown>;
+type StringRepr<T> = [T] extends { toString(): infer R } ? R
+  : [T] extends [never] ? string
+  : unknown;
 
-type JsonRepr<T> = T extends { toJSON(): infer R } ? R : T;
-
-type ToStringRepr<T> = T extends { toString(): infer R } ? R : never;
-type ValueRepr<T> = T extends { valueOf(): infer R } ? R : never;
+type ValueRepr<T> = [T] extends { valueOf(): infer R } ? R
+  : [T] extends [never] ? number
+  : unknown;
 
 type Nullish = null | undefined;
 /**

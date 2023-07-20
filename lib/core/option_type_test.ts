@@ -75,10 +75,15 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
     type NullishUnion = string | undefined | null;
 
     /**
+     * These examples don't compile:
+     *
      * const nullish = undefined;
      * const maybeNullish = (): NullishUnion => undefined;
-     * const notSome = Some(nullish); // -> Doesn't compile
-     * const tryMaybe = Some(maybeNullish()); // -> Doesn't compile
+     *
+     * const notSome = Some(nullish);
+     *                      ^^^^^^^
+     * const tryMaybe = Some(maybeNullish());
+     *                       ^^^^^^^^^^^^^^
      */
 
     const input = "abc";
@@ -87,11 +92,14 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
     type ParameterTypeIsNotNullable = AssertFalse<
       IsNullable<Parameters<typeof Some>>
     >;
+    type ParameterTypeCannotBeNullishUnion = AssertFalse<
+      Has<Parameters<typeof Some>, NullishUnion>
+    >;
 
     assertStrictEquals(some.isSome(), true);
   });
 
-  await t.step("Some<T> -> Type predicate narrows to Some" , () => {
+  await t.step("Some<T> -> Type predicate narrows to Some", () => {
     const opt = Option.from("abc" as string | undefined);
 
     if (opt.isSome()) {
@@ -100,14 +108,14 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
       type IsString = AssertTrue<IsExact<typeof str, string>>;
     }
 
-    const union = opt.unwrap()
+    const union = opt.unwrap();
 
     type IsUnion = AssertTrue<IsExact<typeof union, string | undefined>>;
 
     assertStrictEquals(opt.isSome(), true);
   });
 
-  await t.step("Some<T> -> Logical combinators (&&, ||, ^)", async (t) => {
+  await t.step("Some<T> -> Logical Combinators (&&, ||, ^)", async (t) => {
     await t.step(".and() -> Return type is inferred from RHS", () => {
       const lhs = Some("abc");
       const rhs = Some(123);
@@ -261,21 +269,13 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
           IsNullable<OptionType<AndThenParamReturnType>>
         >;
 
-        /**
-         * Example: This doesn't compile
-         * const mapFn = (n: number): string | undefined => n < 100 : "less" : undefined;
-         * const orFn = () => undefined;
-         * const fails = Some(99).mapOrElse(mapFn, orFn);
-         *                                  ^^^^^  ^^^^^
-         */
-
         assertStrictEquals(res.unwrap(), undefined);
         assertStrictEquals(res.isNone(), true);
       },
     );
   });
 
-  await t.step("Unwrap Methods", async (t) => {
+  await t.step("Some<T> -> Unwrap Methods", async (t) => {
     await t.step(
       ".unwrap() -> Return type is T or Nullish union (T | undefined)",
       () => {
