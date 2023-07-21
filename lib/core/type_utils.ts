@@ -6,7 +6,7 @@
 
 /**
  * Representation of how type T will be passed on to searialization to
- * JSON.stringify()
+ * `JSON.stringify()`
  *
  * The square brackets are used to prevent distribution over unions where
  * never is erased anyway and we can actuall match never, which is
@@ -20,14 +20,14 @@ export type JsonRepr<T> = [T] extends { toJSON(): infer R } ? R
   : T;
 
 /**
- * String representation of type T, i.e. the return value of <T>.toString()
+ * String representation of type T, i.e. the return type of <T>.toString()
  */
 export type StringRepr<T> = [T] extends { toString(): infer R } ? R
   : [T] extends [never] ? string
   : unknown;
 
 /**
- * Value representation of type T, i.e. the return value of <T>.valueOf()
+ * Value representation of type T, i.e. the return type of <T>.valueOf()
  */
 export type ValueRepr<T> = [T] extends { valueOf(): infer R } ? R
   : [T] extends [never] ? number

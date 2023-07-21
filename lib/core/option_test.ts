@@ -72,7 +72,6 @@ Deno.test("eitherway::Option", async (t) => {
   await t.step("Option() -> returns Some for NonNullish values", () => {
     allNonNullish.forEach((val) => {
       const some = Option(val);
-
       assertEquals(some.isSome(), true, `${String(val)} should be Some`);
       assertEquals(some.isNone(), false, `${String(val)} should be Some`);
       assertStrictEquals(some.unwrap(), val);
@@ -668,6 +667,11 @@ Deno.test("eitherway::Option::Some", async (t) => {
 });
 
 Deno.test("eitherway::Option::None", async (t) => {
+  await t.step("None -> Is a frozen contant", () => {
+    const isFrozen = Object.isFrozen(None);
+
+    assertStrictEquals(isFrozen, true);
+  });
   await t.step("None -> Type Predicates", async (t) => {
     await t.step(".isSome() -> returns false", () => {
       const isSome = None.isSome();
