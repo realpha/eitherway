@@ -44,7 +44,7 @@ interface IOption<T> {
   valueOf: () => ValueRepr<T>;
   toTag: () => string;
   [Symbol.toStringTag]: string;
-  [Symbol.toPrimitive](hint: string): string | number | boolean | symbol;
+  [Symbol.toPrimitive](hint?: string): string | number | boolean | symbol;
   [Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T>;
 }
 
@@ -97,17 +97,174 @@ class _None<T = never> implements IOption<never> {
   or<U>(rhs: Option<U>): Some<U> | None {
     return rhs;
   }
+  /**
+   * @description
+   * Useful when only one of two values should be present, but not both
+   * 
+   * ```markdown
+   * |  A  ^  B   | B: Some<U> |  B: None  |   
+   * |:----------:|:----------:|:---------:|
+   * | A: Some<T> |    None    |   Some<T> |
+   * | A:  None   |   Some<U>  |    None   |
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // A small config utility 
+   * // Contrived, but should do the trick
+   * type Path = string
+   * type Extra = {
+   *   workDir: Option<Path>;
+   *   homeDir: Option<Path>;
+   * }
+   * type Config = {
+   *   alias: string;
+   *   defaultCmd: string;
+   *   targetDir?: Path;
+   * }
+   * const createConfig = function(c: Config, ext: Extra): Config {
+   *   const { workDir, homeDir } = ext;
+   *   if (workDir.xor(homeDir).isNone()) return c;
+   *   // here it doesn't matter which of those is `Some`
+   *   return { ...c, targetDir: workDir.or(homeDir).unwrap() };
+   * }
+   *
+   * // Setup the parts
+   * const extra = { 
+   *   workDir: Some("~/workbench"),
+   *   homeDir: None,
+   * }
+   * const baseConfig = {
+   *   alias: "gcm",
+   *   defaultCmd: "git commit -m",
+   * }
+   * const config = createConfig(baseConfig, extra);
+   *
+   * assert(config.targetDir === "~/workbench");
+   * ```
+   */
   xor<U>(rhs: Option<U>): Some<U> | None {
     if (rhs.isSome()) return rhs;
     return this;
   }
+  /**
+   * @description
+   * Allows for performing side-effects transparently
+   * The `tapFn` receives a deep clone of `Option<T>`, by applying the
+   * `structuredClone()` function on the wrapped value
+   *
+   * This may have performance implications, dependending on the size of
+   * the wrapped value `<T>`, but ensures that the `tapFn` can never
+   * change or invalidate the state of the `Option<T>` instance
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/API/structuredClone}
+   *
+   * @example
+   * ```typescript
+   * type UserRecord = {
+   *   id: string;
+   *   name: string;
+   *   email: string;
+   * }
+   *
+   * const getUserRecord = function(id: string): UserRecord | undefined {
+   *   if (id !== "1") return undefined;
+   *   return { id: "1", name: "Allen", email: "allen@example.com" };
+   * }
+   *
+   * const logMut = function (opt: Option<UserRecord>) {
+   *   if (opt.isSome()) {
+   *     const rec = opt.unwrap();
+   *     delete rec.name;
+   *     delete rec.email;
+   *     console.log(JSON.stringify(rec));
+   *   }
+   *   console.log("No UserRecord present");
+   * };
+   * 
+   * const maybeUserRec = Option.from(getUserRecord("1"));
+   * const maybeEmail = maybeUserRec
+   *                     .tap(logMut) // "{"id":"1"}"
+   *                     .map((rec) => rec.email);
+   * 
+   *
+   * assert(maybeEmail.unwrap() === "allen@example.com");
+   * ```
+   */
   tap(tapFn: (arg: Option<never>) => void) {
     tapFn(None);
     return this;
   }
+  /**
+   * @description
+   * This well-known symbol is called by `Object.prototype.toString` to 
+   * obtain a string representation of a value's type
+   *
+   * This maybe useful for debugging or certain logs
+   *
+   * {@link Some#toTag} and {@link None#toTag} are useful short-hand
+   * methods in these scenarios
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag}
+   *
+   * @example
+   * ```typescript
+   * const rec = Some({ a: 1, b: 2 });
+   * const str = Some("abc");
+   * const none = None;
+   *
+   * const toString = Object.prototype.toString.call;
+   *
+   * assert(toString(rec) === "eitherway::Option::Some<[object Object]>");
+   * assert(toString(str) === "eitherway::Option::Some<abc>");
+   * assert(toString(none) === "eitherway::Option::None");
+   * assert(toString(Option) === "eitherway::Option");
+   * assert(toString(Some) === "eitherway::Option::Some");
+   * assert(toString(None) === "eitherway::Option::None");
+   * ```
+   */
   get [Symbol.toStringTag]() {
     return "eitherway::Option::None";
   }
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or exhausts
+   * the iterator by returning `{ done: true, value: T }` if `<T>` doesn't
+   * implement the iterator protocol
+   *
+   * `None` represents the empty iterator and yields the empty iterator result
+   * `{ done: true, value: undefined }`
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator}
+   *
+   * @example
+   * ```typescript
+   *
+   * const arr = [1, 2, 3];
+   * const someArr = Some(arr);
+   * const none = Option.from(undefined);
+   *
+   * const loop = () => {
+   *   let count = 0;
+   *   for (const _item of none) {
+   *     count += 1;
+   *   }
+   *   return count;
+   * };
+   * const arrCopy = [ ...someArr ];
+   * const noneArrCopy = [ ...none ];
+   * const iterCount = loop();
+   * const iterRes = none[Symbol.iterator]().next();
+   *
+   * const encode = JSON.stringify;
+   *
+   * assert(iterCount === 0);
+   * assert(iterRes.done === true);
+   * assert(iterRes.value === undefined);
+   * assert(encode(arrCopy) === encode(arr));
+   * assert(encode(noneArrCopy) === encode([]));
+   * ```
+   */
   //deno-lint-ignore require-yield
   *[Symbol.iterator](): IterableIterator<never> {
     /**
@@ -116,18 +273,57 @@ class _None<T = never> implements IOption<never> {
      */
     return undefined;
   }
-  [Symbol.toPrimitive](hint: string): string | number | boolean | symbol {
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or returns
+   * `<T>` if it already is a primitive value
+   *
+   * This method *ALWAYS* returns a primitive value, as required by the spec
+   *
+   * In case of `None` the spec required hints produce the following values:
+   *  - "string" -> ""
+   *  - "number" -> 0
+   *  - "default"? -> false
+   * 
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion}
+   *
+   */
+  [Symbol.toPrimitive](hint?: string): "" | 0 | false {
     if (hint === "string") return "";
     if (hint === "number") return 0;
     return false;
   }
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or returns
+   * the value itself if no implementation is present
+   *
+   * Returns `undefined` in case of `None`
+   *
+   * See the [`reference`]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#description}
+   *
+   * @example
+   * ```typescript
+   * const someNum = Some(1);
+   * const none = None;
+   * const rec = { a: someNum, b: none };
+   * const arr = [someNum, none];
+   *
+   * const encode = JSON.stringify;
+   *
+   * assert(encode(someNum) === "1");
+   * assert(encode(none) === undefined);
+   * assert(encode(rec) === encode({ a: 1 }));
+   * assert(encode(arr) === encode([1, null]));
+   * ``` 
+   */
   toJSON(): JsonRepr<never> {
     return undefined;
   }
   /**
    * @description
    * Delegates to the implementation of the wrapped value `<T>` or returns
-   * the empty string (i.e. `""`) in case of None
+   * the empty string (i.e. `""`) in case of `None`
    *
    * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString}\n
    *
@@ -151,12 +347,14 @@ class _None<T = never> implements IOption<never> {
   /**
    * @description
    * Delegates to the implementation of the wrapped value `<T>` or returns
-   * 0 in case of None
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf}\n
+   * 0 in case of `None`
    *
    * Be aware that there exists an asymmetry between `Some<T>` and `None`
    * for all types except `<number>` if `<T>` doesn't implement `.valueOf()`
    * for number coercion.
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf}
+   *
    *
    * @example
    * ```typescript
@@ -242,26 +440,197 @@ class _Some<T> implements IOption<T> {
   or<U>(_rhs: Option<U>): Some<T> {
     return this;
   }
+  /**
+   * @description
+   * Useful when only one of two values should be present, but not both
+   * 
+   * ```markdown
+   * |  A  ^  B   | B: Some<U> |  B: None  |   
+   * |:----------:|:----------:|:---------:|
+   * | A: Some<T> |    None    |   Some<T> |
+   * | A:  None   |   Some<U>  |    None   |
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // A small config utility 
+   * // Contrived, but should do the trick
+   * type Path = string
+   * type Extra = {
+   *   workDir: Option<Path>;
+   *   homeDir: Option<Path>;
+   * }
+   * type Config = {
+   *   alias: string;
+   *   defaultCmd: string;
+   *   targetDir?: Path;
+   * }
+   * const createConfig = function(c: Config, ext: Extra): Config {
+   *   const { workDir, homeDir } = ext;
+   *   if (workDir.xor(homeDir).isNone()) return c;
+   *   // here it doesn't matter which of those is `Some`
+   *   return { ...c, targetDir: workDir.or(homeDir).unwrap() };
+   * }
+   *
+   * // Setup the parts
+   * const extra = { 
+   *   workDir: Some("~/workbench"),
+   *   homeDir: None,
+   * }
+   * const baseConfig = {
+   *   alias: "gcm",
+   *   defaultCmd: "git commit -m",
+   * }
+   * const config = createConfig(baseConfig, extra);
+   *
+   * assert(config.targetDir === "~/workbench");
+   * ```
+   */
   xor<U>(rhs: Option<U>): Some<T> | None {
     if (rhs.isSome()) return None;
     return this;
   }
+  /**
+   * @description
+   * Allows for performing side-effects transparently
+   * The `tapFn` receives a deep clone of `Option<T>`, by applying the
+   * `structuredClone()` function on the wrapped value
+   *
+   * This may have performance implications, dependending on the size of
+   * the wrapped value `<T>`, but ensures that the `tapFn` can never
+   * change or invalidate the state of the `Option<T>` instance
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/API/structuredClone}
+   *
+   * @example
+   * ```typescript
+   * type UserRecord = {
+   *   id: string;
+   *   name: string;
+   *   email: string;
+   * }
+   *
+   * const getUserRecord = function(id: string): UserRecord | undefined {
+   *   if (id !== "1") return undefined;
+   *   return { id: "1", name: "Allen", email: "allen@example.com" };
+   * }
+   *
+   * const logMut = function (opt: Option<UserRecord>) {
+   *   if (opt.isSome()) {
+   *     const rec = opt.unwrap();
+   *     delete rec.name;
+   *     delete rec.email;
+   *     console.log(JSON.stringify(rec));
+   *   }
+   *   console.log("No UserRecord present");
+   * };
+   * 
+   * const maybeUserRec = Option.from(getUserRecord("1"));
+   * const maybeEmail = maybeUserRec
+   *                     .tap(logMut) // "{"id":"1"}"
+   *                     .map((rec) => rec.email);
+   * 
+   *
+   * assert(maybeEmail.unwrap() === "allen@example.com");
+   */
   tap(tapFn: (arg: Option<T>) => void): Option<T> {
     tapFn(new _Some(structuredClone(this.#value)));
     return this;
   }
+  /**
+   * @description
+   * This well-known symbol is called by `Object.prototype.toString` to 
+   * obtain a string representation of a value's type
+   *
+   * This maybe useful for debugging or certain logs
+   *
+   * {@link Some#toTag} and {@link None#toTag} are useful short-hand
+   * methods in these scenarios
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag}
+   *
+   * @example
+   * ```typescript
+   * const rec = Some({ a: 1, b: 2 });
+   * const str = Some("abc");
+   * const none = None;
+   *
+   * const toString = Object.prototype.toString.call;
+   *
+   * assert(toString(rec) === "eitherway::Option::Some<[object Object]>");
+   * assert(toString(str) === "eitherway::Option::Some<abc>");
+   * assert(toString(none) === "eitherway::Option::None");
+   * assert(toString(Option) === "eitherway::Option");
+   * assert(toString(Some) === "eitherway::Option::Some");
+   * assert(toString(None) === "eitherway::Option::None");
+   * ```
+   */
   get [Symbol.toStringTag]() {
     const innerTag = typeof this.#value === "object"
       ? Object.prototype.toString.call(this.#value)
       : String(this.#value);
     return `eitherway::Option::Some<${innerTag}>`;
   }
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or exhausts
+   * the iterator by returning `{ done: true, value: T }` if `<T>` doesn't
+   * implement the iterator protocol
+   *
+   * `None` represents the empty iterator and yields the empty iterator result
+   * `{ done: true, value: undefined }`
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator}
+   *
+   * @example
+   * ```typescript
+   *
+   * const arr = [1, 2, 3];
+   * const someArr = Some(arr);
+   * const none = Option.from(undefined);
+   *
+   * const loop = () => {
+   *   let count = 0;
+   *   for (const _item of none) {
+   *     count += 1;
+   *   }
+   *   return count;
+   * };
+   * const arrCopy = [ ...someArr ];
+   * const noneArrCopy = [ ...none ];
+   * const iterCount = loop();
+   * const iterRes = none[Symbol.iterator]().next();
+   *
+   * const encode = JSON.stringify;
+   *
+   * assert(iterCount === 0);
+   * assert(iterRes.done === true);
+   * assert(iterRes.value === undefined);
+   * assert(encode(arrCopy) === encode(arr));
+   * assert(encode(noneArrCopy) === encode([]));
+   * ```
+   */
   *[Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T> {
     const target = Object(this.#value);
     if (Symbol.iterator in target) yield* target;
     return this.#value;
   }
-  [Symbol.toPrimitive](hint: string): string | number | boolean | symbol {
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or returns
+   * `<T>` if it already is a primitive value
+   *
+   * This method *ALWAYS* returns a primitive value, as required by the spec
+   *
+   * In case of `None` the spec required hints produce the following values:
+   *  - "string" -> ""
+   *  - "number" -> 0
+   *  - "default"? -> false
+   * 
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion}
+   *
+   */
+  [Symbol.toPrimitive](hint?: string): string | number | boolean | symbol {
     /**
      * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion
      */
@@ -274,11 +643,35 @@ class _Some<T> implements IOption<T> {
     }
     return target.toString();
   }
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or returns
+   * the value itself if no implementation is present
+   *
+   * Returns `undefined` in case of `None`
+   *
+   * See the [`reference`]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#description}
+   *
+   * @example
+   * ```typescript
+   * const someNum = Some(1);
+   * const none = None;
+   * const rec = { a: someNum, b: none };
+   * const arr = [someNum, none];
+   *
+   * const encode = JSON.stringify;
+   *
+   * assert(encode(someNum) === "1");
+   * assert(encode(none) === undefined);
+   * assert(encode(rec) === encode({ a: 1 }));
+   * assert(encode(arr) === encode([1, null]));
+   * ``` 
+   */
   toJSON(): JsonRepr<T> {
     if (hasToJSON(this.#value)) return this.#value.toJSON();
     /**
      * This cast is necessary, because we need to retain the possibility of
-     * T being never for the corresponding method on None. We know that
+     * T being never for the corresponding method on `None`. We know that
      * T != never for Some<T> though
      */
     return this.#value as JsonRepr<T>;
@@ -286,9 +679,9 @@ class _Some<T> implements IOption<T> {
   /**
    * @description
    * Delegates to the implementation of the wrapped value `<T>` or returns
-   * the empty string (i.e. `""`) in case of None
+   * the empty string (i.e. `""`) in case of `None`
    *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString}\n
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString}
    *
    * @example
    * ```typescript
@@ -313,12 +706,14 @@ class _Some<T> implements IOption<T> {
   /**
    * @description
    * Delegates to the implementation of the wrapped value `<T>` or returns
-   * 0 in case of None
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf}\n
+   * 0 in case of `None`
    *
    * Be aware that there exists an asymmetry between `Some<T>` and `None`
    * for all types except `<number>` if `<T>` doesn't implement `.valueOf()`
    * for number coercion.
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf}
+   *
    *
    * @example
    * ```typescript
