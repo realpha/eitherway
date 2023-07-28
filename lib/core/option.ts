@@ -91,15 +91,106 @@ class _None<T = never> implements IOption<never> {
   unwrapOrElse<U>(orFn: () => NonNullish<U>) {
     return orFn();
   }
+  /**
+   * @description
+   * Logical AND ( && )
+   * Returns RHS if LHS is `Some<T>`
+   *
+   * ```markdown
+   * |  A  &&  B  | B: Some<U> |  B: None  |   
+   * |:----------:|:----------:|:---------:|
+   * | A: Some<T> |   Some<U>  |    None   |
+   * | A:  None   |    None    |    None   |
+   * ```
+   * 
+   * @example
+   * ```typescript
+   * // Given a config interface...
+   * type ConfigJSON = {
+   *   enableDebugLogs?: boolean;
+   *   enableTelemetry?: boolean;
+   *   enableCrahsReports?: boolean;
+   * }
+   * type Config = {
+   *   enableDebugLogs: Option<true>;
+   *   enableTelemetry: Option<true>;
+   *   enableCrahsReports: Option<true>;
+   * }
+   * function parseConfig(json: ConfigJSON): Config {
+   *   return {
+   *     enableDebugLogs: Option.fromCoercible(json.enableDebugLogs),
+   *     enableTelemetry: Option.fromCoercible(json.enableTelemetry),
+   *     enableCrashReports: Option.fromCoercible(json.enableCrahsReports),
+   *   };
+   * }
+   *
+   * // which may require an expensive setup...
+   * async function expensiveSetup(): Promise<void> {
+   *   // ...this might take a while...
+   * }
+   * async function selectiveSetup(c: Config): Promise<void> {
+   *   // match the options here etc
+   * }
+   *
+   * // ...its possible to decide whether or not the expnsive is necessary
+   * aync function main(): Promise<void> {
+   *   const configJSON = require("path/to/config.json");
+   *   const config = parseConfig(configJSON);
+   *
+   *   const { 
+   *     enableDebugLogs,
+   *     enableTelemetry,
+   *     enableCrahsReports,
+   *   } = config;
+   *
+   *   if (
+   *     enableDebugLogs
+   *      .and(enableTelemetry)
+   *      .and(enableCrahsReports)
+   *      .isSome()
+   *   ) {
+   *     await expensiveSetup();
+   *   } else {
+   *     await selectiveSetup(config);
+   *   }
+   *    
+   *   // ...continue
+   * }
+   * ```
+   */
   and<U>(_rhs: Option<U>): None {
     return this;
   }
+  /**
+   * @description
+   * Logical OR ( || )
+   * Returns LHS if LHS is `Some<T>`, otherwise returns RHS
+   *
+   * ```markdown
+   * |  A  ||  B  | B: Some<U> |  B: None  |   
+   * |:----------:|:----------:|:---------:|
+   * | A: Some<T> |   Some<T>  |  Some<T>  |
+   * | A:  None   |   Some<U>  |    None   |
+   * ```
+   *
+   * @example
+   * ```typescript
+   * const maybe = Option.from(undefined);
+   * const default = Option.from("default");
+   *
+   * const res = maybe.or(default).unwrap();
+   *
+   * assert(res === "default");
+   * ```
+   */
   or<U>(rhs: Option<U>): Some<U> | None {
     return rhs;
   }
   /**
    * @description
-   * Useful when only one of two values should be present, but not both
+   * Logical XOR ( ^ )
+   * Useful when only one of two values should be `Some`, but not both
+   * Returns `Some`, if only LHS or RHS is `Some`
    * 
    * ```markdown
    * |  A  ^  B   | B: Some<U> |  B: None  |   
@@ -124,8 +215,10 @@ class _None<T = never> implements IOption<never> {
    * }
    * const createConfig = function(c: Config, ext: Extra): Config {
    *   const { workDir, homeDir } = ext;
+   *
    *   if (workDir.xor(homeDir).isNone()) return c;
-   *   // here it doesn't matter which of those is `Some`
+   *
+   *   // here it doesn't matter which of these is `Some`
    *   return { ...c, targetDir: workDir.or(homeDir).unwrap() };
    * }
    *
@@ -434,15 +527,106 @@ class _Some<T> implements IOption<T> {
   unwrapOrElse<U>(_orFn: () => NonNullish<U>): T {
     return this.#value;
   }
+  /**
+   * @description
+   * Logical AND ( && )
+   * Returns RHS if LHS is `Some<T>`
+   *
+   * ```markdown
+   * |  A  &&  B  | B: Some<U> |  B: None  |   
+   * |:----------:|:----------:|:---------:|
+   * | A: Some<T> |   Some<U>  |    None   |
+   * | A:  None   |    None    |    None   |
+   * ```
+   * 
+   * @example
+   * ```typescript
+   * // Given a config interface...
+   * type ConfigJSON = {
+   *   enableDebugLogs?: boolean;
+   *   enableTelemetry?: boolean;
+   *   enableCrahsReports?: boolean;
+   * }
+   * type Config = {
+   *   enableDebugLogs: Option<true>;
+   *   enableTelemetry: Option<true>;
+   *   enableCrahsReports: Option<true>;
+   * }
+   * function parseConfig(json: ConfigJSON): Config {
+   *   return {
+   *     enableDebugLogs: Option.fromCoercible(json.enableDebugLogs),
+   *     enableTelemetry: Option.fromCoercible(json.enableTelemetry),
+   *     enableCrashReports: Option.fromCoercible(json.enableCrahsReports),
+   *   };
+   * }
+   *
+   * // which may require an expensive setup...
+   * async function expensiveSetup(): Promise<void> {
+   *   // ...this might take a while...
+   * }
+   * async function selectiveSetup(c: Config): Promise<void> {
+   *   // match the options here etc
+   * }
+   *
+   * // ...its possible to decide whether or not the expnsive is necessary
+   * aync function main(): Promise<void> {
+   *   const configJSON = require("path/to/config.json");
+   *   const config = parseConfig(configJSON);
+   *
+   *   const { 
+   *     enableDebugLogs,
+   *     enableTelemetry,
+   *     enableCrahsReports,
+   *   } = config;
+   *
+   *   if (
+   *     enableDebugLogs
+   *      .and(enableTelemetry)
+   *      .and(enableCrahsReports)
+   *      .isSome()
+   *   ) {
+   *     await expensiveSetup();
+   *   } else {
+   *     await selectiveSetup(config);
+   *   }
+   *    
+   *   // ...continue
+   * }
+   * ```
+   */
   and<U>(rhs: Option<U>): Some<U> | None {
     return rhs;
   }
+  /**
+   * @description
+   * Logical OR ( || )
+   * Returns LHS if LHS is `Some<T>`, otherwise returns RHS
+   *
+   * ```markdown
+   * |  A  ||  B  | B: Some<U> |  B: None  |   
+   * |:----------:|:----------:|:---------:|
+   * | A: Some<T> |   Some<T>  |  Some<T>  |
+   * | A:  None   |   Some<U>  |    None   |
+   * ```
+   *
+   * @example
+   * ```typescript
+   * const maybe = Option.from(undefined);
+   * const default = Option.from("default");
+   *
+   * const res = maybe.or(default).unwrap();
+   *
+   * assert(res === "default");
+   * ```
+   */
   or<U>(_rhs: Option<U>): Some<T> {
     return this;
   }
   /**
    * @description
-   * Useful when only one of two values should be present, but not both
+   * Logical XOR ( ^ )
+   * Useful when only one of two values should be `Some`, but not both
+   * Returns `Some`, if only LHS or RHS is `Some`
    * 
    * ```markdown
    * |  A  ^  B   | B: Some<U> |  B: None  |   
@@ -467,7 +651,9 @@ class _Some<T> implements IOption<T> {
    * }
    * const createConfig = function(c: Config, ext: Extra): Config {
    *   const { workDir, homeDir } = ext;
+   *
    *   if (workDir.xor(homeDir).isNone()) return c;
+   *
    *   // here it doesn't matter which of those is `Some`
    *   return { ...c, targetDir: workDir.or(homeDir).unwrap() };
    * }
