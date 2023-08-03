@@ -308,17 +308,52 @@ Deno.test("eitherway::Option::Some", async (t) => {
       assertNotStrictEquals(maybeDoubled, some);
       assertStrictEquals(maybeDoubled.unwrap(), double(toBeWrapped).unwrap());
     });
+    
+    await t.step("andThen() -> flattens nested Options", () => {
+      function greaterThanTen(n: number): Option<number> {
+        return n > 10  ? Some(n) : None;
+      }
+      
+      function identity<T>(x: Option<T>): Option<T> {
+        return x;
+      }
+      
+      const big = Option(100);
+      const nested = Option(big);
+      
+      
+      const flattened = nested
+        .andThen(identity<number>)
+        .andThen(greaterThanTen); 
+      
+      assertStrictEquals(flattened.isSome(), true);
+    });
   });
 
   await t.step("Some<T> -> Unwrap Methods", async (t) => {
     await t.step(".unwrap() -> returns the wrapped value", () => {
       const toBeWrapped = { some: "thing" };
       const some = Some(toBeWrapped);
+      const maybeStr = Option.from("something" as string | undefined);
+
+      function expect<T>(o: Option<T>): T {
+        if (o.isNone()) {
+          throw TypeError("Expected Some. Received: None!");
+        }
+        return o.unwrap();
+      }
+
+      function makeLoud(str: string): string {
+        return str.toUpperCase().concat("!!!");
+      }
 
       const unwrapped = some.unwrap();
+      const res = makeLoud(expect(maybeStr));
 
       assertExists(unwrapped);
+      assertExists(res);
       assertStrictEquals(unwrapped, toBeWrapped);
+      assertStrictEquals(res, "SOMETHING!!!");
     });
 
     await t.step(".unwrapOr() -> returns the wrapped value", () => {

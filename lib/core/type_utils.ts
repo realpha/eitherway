@@ -1,3 +1,4 @@
+import type { Option, Some } from "./option.ts";
 /**
  * ===============
  *      TYPES
@@ -43,9 +44,13 @@ export type Truthy<T> = Exclude<T, Falsy>;
 export type NonNullish<T> = Exclude<T, Nullish>;
 export type HasToJSON<T> = T extends { toJSON(): JsonRepr<T> } ? T : never;
 
+export type IsOption<O> = O extends Option<unknown> ? true : false;
+export type OptionType<O> = O extends Option<infer Inner> ? Inner : never;
+export type SomeType<S extends Option<unknown>> = S extends Some<infer Inner> ? Inner : never;
+
 /**
  * ===============
- * TYPE PREDICATES 
+ * TYPE PREDICATES
  * ===============
  */
 

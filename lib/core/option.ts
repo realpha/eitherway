@@ -1,3 +1,8 @@
+//deno-lint-ignore-file no-unused-vars
+/**
+ * NOTE: the "no-unused-vars" lint rule is ignored in order to ensure
+ * method signatures are symetrical
+ */
 import { assert } from "../deps.ts";
 import type {
   JsonRepr,
@@ -20,626 +25,419 @@ import {
  */
 
 interface IOption<T> {
-  isSome: () => this is Some<T>;
-  isNone: () => this is None;
-  map: <U>(mapFn: (arg: T) => NonNullish<U>) => Option<NonNullish<U>>;
-  mapOr: <U>(
-    mapFn: (arg: T) => NonNullish<U>,
-    orValue: NonNullish<U>,
-  ) => Option<NonNullish<U>>;
-  mapOrElse: <U>(
-    mapFn: (arg: T) => NonNullish<U>,
-    orFn: () => NonNullish<U>,
-  ) => Option<NonNullish<U>>;
-  andThen: <U>(thenFn: (arg: T) => Option<U>) => Option<U>;
-  unwrap: () => T | undefined;
-  unwrapOr: <U>(orValue: NonNullish<U>) => T | NonNullish<U>;
-  unwrapOrElse: <U>(orFn: () => NonNullish<U>) => T | NonNullish<U>;
-  and: <U>(rhs: Option<U>) => Option<T> | Option<U>;
-  or: <U>(rhs: Option<U>) => Option<T> | Option<U>;
-  xor: <U>(rhs: Option<U>) => Option<T> | Option<U>;
-  tap: (tapFn: (arg: Option<T>) => never) => Option<T>;
-  toJSON: () => JsonRepr<T>;
-  toString: () => StringRepr<T>;
-  valueOf: () => ValueRepr<T>;
-  toTag: () => string;
-  [Symbol.toStringTag]: string;
-  [Symbol.toPrimitive](hint?: string): string | number | boolean | symbol;
-  [Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T>;
-}
+  /**
+   * @description
+   * Type predicate - use this to narrow an `Option<T>` to `Some<T>`
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const maybeStr = Option.from("something" as string | undefined);
+   *
+   * function assertSome<T>(o: Option<T>): asserts o is Some<T> {
+   *   if(o.isSome()) return;
+   *   throw TypeError("Expected Some. Received: None!");
+   * }
+   *
+   * assertSome(maybeStr);
+   * const str: string = maybeStr.unwrap();
+   *
+   * assert(str === "something");
+   * ```
+   */
+  isSome(): this is Some<T>;
 
-/**
- * ==============
- * IMPLEMENTATION
- * ==============
- */
+  /**
+   * @description
+   * Type predicate - use this to narrow an `Option<T>` to `None`
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const maybeStr = Option.from("something" as string | undefined);
+   *
+   * function expect<T>(o: Option<T>): T {
+   *   if(o.isNone()) {
+   *     throw TypeError("Expected Some. Received: None!");
+   *   }
+   *   return o.unwrap() // here `Option<T>` is narrowed to `Some<T>`
+   * }
+   *
+   * const str: string = expect(maybeStr);
+   *
+   * assert(str === "something");
+   * ```
+   */
+  isNone(): this is None;
 
-// By declaring an unused, generic type parameter, we get a nicer alias.
-class _None<T = never> implements IOption<never> {
-  constructor() {}
+  /**
+   * @description
+   * Use this to transform `Some<T>` to `Some<U>` by applying the supplied
+   * `mapFn` to the immutable, wrapped value of type `<T>`
+   * Produces a new instance of `Some`
+   *
+   * In case of `None`, this method short-circuits and returns `None`
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const toUpperCase = String.prototype.toUpperCase.call;
+   * const some = Some("something");
+   * const none = None;
+   *
+   * const someUppercased = some.map(toUpperCase);
+   * const stillNone = none.map(toUpperCase);
+   *
+   * assert(someUppercased.isSome() === true);
+   * assert(stillNone.isNone() === true);
+   * assert(someUppercased.unwrap() === "SOMETHING");
+   * ```
+   */
+  map<U>(mapFn: (arg: Readonly<T>) => NonNullish<U>): Option<NonNullish<U>>;
 
-  isSome(): this is Some<never> {
-    return false;
-  }
-  isNone(): this is None {
-    return true;
-  }
-  map<U>(_mapFn: (arg: never) => NonNullish<U>): None {
-    return this;
-  }
+  /**
+   * @description
+   * Same as `.map()`, but in case of `None`, a new instance of `Some` wrapping
+   * the provided `orValue` of type `<U>` will be returned
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const toUpperCase = String.prototype.toUpperCase.call;
+   * const orValue = "SOMETHING";
+   * const some = Some("something");
+   * const none = None;
+   *
+   * const someUppercased = some.mapOr(toUpperCase, orValue);
+   * const someOrValue = none.mapOr(toUpperCase, orValue);
+   *
+   * assert(someUppercased.isSome() === true);
+   * assert(someOrValue.isSome() === true);
+   * assert(someUppercased.unwrap() === "SOMETHING");
+   * assert(someOrValue.unwrap() === "SOMETHING");
+   * ```
+   */
   mapOr<U>(
-    _mapFn: (arg: never) => NonNullish<U>,
+    mapFn: (arg: Readonly<T>) => NonNullish<U>,
     orValue: NonNullish<U>,
-  ): Some<NonNullish<U>> {
-    return Some(orValue);
-  }
+  ): Some<NonNullish<U>>;
+
+  /**
+   * @description
+   * Same as `.map()`, but in case of `None`, a new instance of `Some` wrapping
+   * the return value of the provided `orFn` will be returned
+   *
+   * Use this if the fallback value is expensive to produce
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const toUpperCase = String.prototype.toUpperCase.call;
+   * const orFn = () => "SOMETHING";
+   * const some = Some("something");
+   * const none = None;
+   *
+   * const someUppercased = some.mapOr(toUpperCase, orFn);
+   * const someDefault = none.mapOr(toUpperCase, orFn);
+   *
+   * assert(someUppercased.isSome() === true);
+   * assert(someDefault.isSome() === true);
+   * assert(someUppercased.unwrap() === "SOMETHING");
+   * assert(someDefault.unwrap() === "SOMETHING");
+   * ```
+   */
   mapOrElse<U>(
-    _mapFn: (arg: never) => U,
+    mapFn: (arg: Readonly<T>) => NonNullish<U>,
     orFn: () => NonNullish<U>,
-  ): Some<NonNullish<U>> {
-    return Some(orFn());
-  }
-  andThen<U>(_thenFn: (arg: never) => Option<U>): None {
-    return this;
-  }
-  unwrap() {
-    return undefined;
-  }
-  unwrapOr<U>(orValue: NonNullish<U>) {
-    return orValue;
-  }
-  unwrapOrElse<U>(orFn: () => NonNullish<U>) {
-    return orFn();
-  }
+  ): Some<NonNullish<U>>;
+
+  /**
+   * @description
+   * Use this to produce a new `Option` instance from the wrapped value or
+   * flatten a nested `Option`
+   *
+   * Given `Some<T>`, applies the supplied `thenFn` to the wrapped value of
+   * type `<T>`, which produces a new `Option<U>`
+   *
+   * In case of `None`, this method short-circuits and returns `None`
+   *
+   * This is equivalent to the canonical `flatMap()` method in traditional
+   * functional idioms, thus it can be used to flatten instances of 
+   * `Option<Option<T>>` to `Option<T>`
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * function randomize(n: number): Option<number> {
+   *   return Option.from(Math.random() * n);
+   * }
+   *
+   * function greaterThanTen(n: number): Option<number> {
+   *   return n > 10  ? Some(n) : None;
+   * }
+   *
+   * function identity<T>(x: Option<T>): Option<T> {
+   *   return x;
+   * }
+   *
+   * const none = Option.fromCoercible(0);
+   * const small = Option(10);
+   * const big = Option(100);
+   * const nested = Option(big);
+   *
+   * const alwaysNone = none
+   *   .andThen(randomize)         // -> None; `randomize()` didn't get called
+   *   .andThen(greaterThanTen);   // -> same as above
+   *
+   * const less = small
+   *   .andThen(randomize)         // -> Some<number>
+   *   .andThen(greaterThanTen);   // -> None
+   *
+   * const greater = big
+   *   .andThen(randomize)         // -> Some<number>
+   *   .andThen(greaterThanTen);   // -> Some<number>
+   *
+   * const flattened = nested      // -> Some<Some<number>>
+   *   .andThen(identity<number>)  // -> Some<number>
+   *   .andThen(greaterThanTen);   // -> Some<number>
+   *
+   * assert(alwaysNone.isNone() === true);
+   * assert(less.isNone() === true);
+   * assert(greater.isSome() === true);
+   * assert(flattened.isSome() === true);
+   * ```
+   */
+  andThen<U>(thenFn: (arg: T) => Option<U>): Option<U>;
+
+  /**
+   * @description
+   * Use this to get the wrapped value out of an `Option` instance
+   *
+   * Returns the wrapped value of type `<T>` in case of `Some<T>` OR
+   * `undefined` in case of `None`
+   *
+   * It is necessary, to narrow an instance of `Option<T>` to `Some<T>`
+   * in order to narrow the return value of `.unwrap()`
+   *
+   * In contrast to other implementations, this method NEVER throws an
+   * exception
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const maybeStr = Option.from("something" as string | undefined);
+   * const maybeUndef = Option.from(undefined as string | undefined);
+   *
+   * // This is in fact a type assertion
+   * function expect<T>(o: Option<T>): T {
+   *   if(o.isNone()) {
+   *     throw TypeError("Expected Some. Received: None!");
+   *   }
+   *   return o.unwrap() // here `Option<T>` is narrowed to `Some<T>`
+   * }
+   *
+   * function makeLoud(str: string): string {
+   *   return str.toUpperCase().concat("!!!");
+   * }
+   *
+   * const str: string = makeLoud(expect(maybeStr));
+   * const undef: string | undefined = maybeUndef.unwrap();
+
+   * assert(str === "SOMETHING!!!");
+   * assert(undef === undefined);
+   * ```
+   */
+  unwrap(): T | undefined;
+
+  /**
+   * @description
+   * Same as `.unwrap()`, but with a fallback value
+   *
+   * Returns the wrapped value of type `<T>` or returns a fallback value of
+   * type `<U>` in case of `None`
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const orValue = "some";
+   * const none = None;
+   * const some = Some("thing");
+   *
+   * const res = none.unwrapOr(orValue) + some.unwrapOr(orValue);
+   *
+   * assert(res === "something");
+   * ```
+   */
+  unwrapOr<U>(orValue: NonNullish<U>): T | NonNullish<U>;
+
+  /**
+   * @description
+   * Same as `.unwrap()`, but with a fallback function
+   *
+   * Returns the value of type `<T>` or lazily produces a value of type `<U>` in
+   * case of `None`
+   *
+   * Use this if the fallback value is expensive to produce
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const orElseFn = () => "some";
+   * const none = None;
+   * const some = Some("thing");
+   *
+   * const res = none.unwrapOrElse(orElseFn) + some.unwrapOrElse(orElseFn);
+   *
+   * assert(res === "something");
+   * ```
+   */
+  unwrapOrElse<U>(orFn: () => NonNullish<U>): T | NonNullish<U>;
+
   /**
    * @description
    * Logical AND ( && )
    * Returns RHS if LHS is `Some<T>`
    *
    * ```markdown
-   * |  A  &&  B  | B: Some<U> |  B: None  |   
-   * |:----------:|:----------:|:---------:|
-   * | A: Some<T> |   Some<U>  |    None   |
-   * | A:  None   |    None    |    None   |
+   * |  LHS  &&  RHS  | RHS: Some<U> |  RHS: None  |
+   * |:--------------:|:------------:|:-----------:|
+   * |  LHS: Some<T>  |    Some<U>   |     None    |
+   * |  LHS:  None    |      None    |     None    |
    * ```
-   * 
+   *
    * @example
    * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
    * // Given a config interface...
    * type ConfigJSON = {
    *   enableDebugLogs?: boolean;
    *   enableTelemetry?: boolean;
-   *   enableCrahsReports?: boolean;
+   *   enableCrashReports?: boolean;
    * }
    * type Config = {
    *   enableDebugLogs: Option<true>;
    *   enableTelemetry: Option<true>;
-   *   enableCrahsReports: Option<true>;
+   *   enableCrashReports: Option<true>;
    * }
    * function parseConfig(json: ConfigJSON): Config {
    *   return {
    *     enableDebugLogs: Option.fromCoercible(json.enableDebugLogs),
    *     enableTelemetry: Option.fromCoercible(json.enableTelemetry),
-   *     enableCrashReports: Option.fromCoercible(json.enableCrahsReports),
+   *     enableCrashReports: Option.fromCoercible(json.enableCrashReports),
    *   };
    * }
    *
    * // which may require an expensive setup...
    * async function expensiveSetup(): Promise<void> {
    *   // ...this might take a while...
+   *   return;
    * }
    * async function selectiveSetup(c: Config): Promise<void> {
-   *   // match the options here etc
+   *   // ...match the options here etc
+   *   return;
    * }
    *
    * // ...its possible to decide whether or not the expnsive is necessary
-   * aync function main(): Promise<void> {
-   *   const configJSON = require("path/to/config.json");
-   *   const config = parseConfig(configJSON);
+   * async function main(): Promise<void> {
+   *   const configJSON = await import("path/to/config.json", {
+   *     assert: { type: "json" },
+   *   });
+   *   const config = parseConfig(configJSON as ConfigJSON);
    *
-   *   const { 
+   *   const {
    *     enableDebugLogs,
    *     enableTelemetry,
-   *     enableCrahsReports,
+   *     enableCrashReports,
    *   } = config;
    *
    *   if (
    *     enableDebugLogs
    *      .and(enableTelemetry)
-   *      .and(enableCrahsReports)
+   *      .and(enableCrashReports)
    *      .isSome()
    *   ) {
    *     await expensiveSetup();
    *   } else {
    *     await selectiveSetup(config);
    *   }
-   *    
-   *   // ...continue
+   *
+   *   return;
    * }
    * ```
    */
-  and<U>(_rhs: Option<U>): None {
-    return this;
-  }
+  and<U>(rhs: Option<U>): Some<T> | Some<U> | None;
+
   /**
    * @description
    * Logical OR ( || )
    * Returns LHS if LHS is `Some<T>`, otherwise returns RHS
    *
    * ```markdown
-   * |  A  ||  B  | B: Some<U> |  B: None  |   
-   * |:----------:|:----------:|:---------:|
-   * | A: Some<T> |   Some<T>  |  Some<T>  |
-   * | A:  None   |   Some<U>  |    None   |
+   * |  LHS  ||  RHS  | RHS: Some<U> |  RHS: None  |
+   * |:--------------:|:------------:|:-----------:|
+   * |  LHS: Some<T>  |    Some<T>   |   Some<T>   |
+   * |  LHS:  None    |    Some<U>   |    None     |
    * ```
    *
    * @example
    * ```typescript
-   * const maybe = Option.from(undefined);
-   * const default = Option.from("default");
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
    *
-   * const res = maybe.or(default).unwrap();
+   * const maybe = Option.from(undefined);
+   * const fallback = Option.from("default");
+   *
+   * const res = maybe.or(fallback).unwrap();
    *
    * assert(res === "default");
    * ```
    */
-  or<U>(rhs: Option<U>): Some<U> | None {
-    return rhs;
-  }
+  or<U>(rhs: Option<U>): Some<T> | Some<U> | None;
+
   /**
    * @description
    * Logical XOR ( ^ )
    * Useful when only one of two values should be `Some`, but not both
    * Returns `Some`, if only LHS or RHS is `Some`
-   * 
+   *
    * ```markdown
-   * |  A  ^  B   | B: Some<U> |  B: None  |   
-   * |:----------:|:----------:|:---------:|
-   * | A: Some<T> |    None    |   Some<T> |
-   * | A:  None   |   Some<U>  |    None   |
+   * |  LHS  ^  RHS   | RHS: Some<U> |  RHS: None  |
+   * |:--------------:|:------------:|:-----------:|
+   * |  LHS: Some<T>  |     None     |    Some<T>  |
+   * |  LHS:  None    |    Some<U>   |     None    |
    * ```
    *
    * @example
    * ```typescript
-   * // A small config utility 
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * // A small config utility
    * // Contrived, but should do the trick
+   *
    * type Path = string
-   * type Extra = {
-   *   workDir: Option<Path>;
-   *   homeDir: Option<Path>;
-   * }
-   * type Config = {
-   *   alias: string;
-   *   defaultCmd: string;
-   *   targetDir?: Path;
-   * }
-   * const createConfig = function(c: Config, ext: Extra): Config {
-   *   const { workDir, homeDir } = ext;
    *
-   *   if (workDir.xor(homeDir).isNone()) return c;
-   *
-   *   // here it doesn't matter which of these is `Some`
-   *   return { ...c, targetDir: workDir.or(homeDir).unwrap() };
-   * }
-   *
-   * // Setup the parts
-   * const extra = { 
-   *   workDir: Some("~/workbench"),
-   *   homeDir: None,
-   * }
-   * const baseConfig = {
-   *   alias: "gcm",
-   *   defaultCmd: "git commit -m",
-   * }
-   * const config = createConfig(baseConfig, extra);
-   *
-   * assert(config.targetDir === "~/workbench");
-   * ```
-   */
-  xor<U>(rhs: Option<U>): Some<U> | None {
-    if (rhs.isSome()) return rhs;
-    return this;
-  }
-  /**
-   * @description
-   * Allows for performing side-effects transparently
-   * The `tapFn` receives a deep clone of `Option<T>`, by applying the
-   * `structuredClone()` function on the wrapped value
-   *
-   * This may have performance implications, dependending on the size of
-   * the wrapped value `<T>`, but ensures that the `tapFn` can never
-   * change or invalidate the state of the `Option<T>` instance
-   *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/API/structuredClone}
-   *
-   * @example
-   * ```typescript
-   * type UserRecord = {
-   *   id: string;
-   *   name: string;
-   *   email: string;
-   * }
-   *
-   * const getUserRecord = function(id: string): UserRecord | undefined {
-   *   if (id !== "1") return undefined;
-   *   return { id: "1", name: "Allen", email: "allen@example.com" };
-   * }
-   *
-   * const logMut = function (opt: Option<UserRecord>) {
-   *   if (opt.isSome()) {
-   *     const rec = opt.unwrap();
-   *     delete rec.name;
-   *     delete rec.email;
-   *     console.log(JSON.stringify(rec));
-   *   }
-   *   console.log("No UserRecord present");
-   * };
-   * 
-   * const maybeUserRec = Option.from(getUserRecord("1"));
-   * const maybeEmail = maybeUserRec
-   *                     .tap(logMut) // "{"id":"1"}"
-   *                     .map((rec) => rec.email);
-   * 
-   *
-   * assert(maybeEmail.unwrap() === "allen@example.com");
-   * ```
-   */
-  tap(tapFn: (arg: Option<never>) => void) {
-    tapFn(None);
-    return this;
-  }
-  /**
-   * @description
-   * This well-known symbol is called by `Object.prototype.toString` to 
-   * obtain a string representation of a value's type
-   *
-   * This maybe useful for debugging or certain logs
-   *
-   * {@link Some#toTag} and {@link None#toTag} are useful short-hand
-   * methods in these scenarios
-   *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag}
-   *
-   * @example
-   * ```typescript
-   * const rec = Some({ a: 1, b: 2 });
-   * const str = Some("abc");
-   * const none = None;
-   *
-   * const toString = Object.prototype.toString.call;
-   *
-   * assert(toString(rec) === "eitherway::Option::Some<[object Object]>");
-   * assert(toString(str) === "eitherway::Option::Some<abc>");
-   * assert(toString(none) === "eitherway::Option::None");
-   * assert(toString(Option) === "eitherway::Option");
-   * assert(toString(Some) === "eitherway::Option::Some");
-   * assert(toString(None) === "eitherway::Option::None");
-   * ```
-   */
-  get [Symbol.toStringTag]() {
-    return "eitherway::Option::None";
-  }
-  /**
-   * @description
-   * Delegates to the implementation of the wrapped value `<T>` or exhausts
-   * the iterator by returning `{ done: true, value: T }` if `<T>` doesn't
-   * implement the iterator protocol
-   *
-   * `None` represents the empty iterator and yields the empty iterator result
-   * `{ done: true, value: undefined }`
-   *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator}
-   *
-   * @example
-   * ```typescript
-   *
-   * const arr = [1, 2, 3];
-   * const someArr = Some(arr);
-   * const none = Option.from(undefined);
-   *
-   * const loop = () => {
-   *   let count = 0;
-   *   for (const _item of none) {
-   *     count += 1;
-   *   }
-   *   return count;
-   * };
-   * const arrCopy = [ ...someArr ];
-   * const noneArrCopy = [ ...none ];
-   * const iterCount = loop();
-   * const iterRes = none[Symbol.iterator]().next();
-   *
-   * const encode = JSON.stringify;
-   *
-   * assert(iterCount === 0);
-   * assert(iterRes.done === true);
-   * assert(iterRes.value === undefined);
-   * assert(encode(arrCopy) === encode(arr));
-   * assert(encode(noneArrCopy) === encode([]));
-   * ```
-   */
-  //deno-lint-ignore require-yield
-  *[Symbol.iterator](): IterableIterator<never> {
-    /**
-     * This is actually what we want, since returning from a generator implies
-     * that it's exhausted, i.e. { done: true, value: undefined }
-     */
-    return undefined;
-  }
-  /**
-   * @description
-   * Delegates to the implementation of the wrapped value `<T>` or returns
-   * `<T>` if it already is a primitive value
-   *
-   * This method *ALWAYS* returns a primitive value, as required by the spec
-   *
-   * In case of `None` the spec required hints produce the following values:
-   *  - "string" -> ""
-   *  - "number" -> 0
-   *  - "default"? -> false
-   * 
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion}
-   *
-   */
-  [Symbol.toPrimitive](hint?: string): "" | 0 | false {
-    if (hint === "string") return "";
-    if (hint === "number") return 0;
-    return false;
-  }
-  /**
-   * @description
-   * Delegates to the implementation of the wrapped value `<T>` or returns
-   * the value itself if no implementation is present
-   *
-   * Returns `undefined` in case of `None`
-   *
-   * See the [`reference`]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#description}
-   *
-   * @example
-   * ```typescript
-   * const someNum = Some(1);
-   * const none = None;
-   * const rec = { a: someNum, b: none };
-   * const arr = [someNum, none];
-   *
-   * const encode = JSON.stringify;
-   *
-   * assert(encode(someNum) === "1");
-   * assert(encode(none) === undefined);
-   * assert(encode(rec) === encode({ a: 1 }));
-   * assert(encode(arr) === encode([1, null]));
-   * ``` 
-   */
-  toJSON(): JsonRepr<never> {
-    return undefined;
-  }
-  /**
-   * @description
-   * Delegates to the implementation of the wrapped value `<T>` or returns
-   * the empty string (i.e. `""`) in case of `None`
-   *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString}\n
-   *
-   * @example
-   * ```typescript
-   * const arr = [1];
-   * const someArr = Some(arr);
-   * const someStr = Some("abc");
-   * const empty = None;
-   *
-   * assert(arr.toString() === "1");
-   * assert(someArr.toString() === "1");
-   * assert(someStr.toString() === "abc");
-   * assert(empty.toString() === "");
-   * assert(String(arr) === String(someArr));
-   * ```
-   */
-  toString(): StringRepr<never> {
-    return "";
-  }
-  /**
-   * @description
-   * Delegates to the implementation of the wrapped value `<T>` or returns
-   * 0 in case of `None`
-   *
-   * Be aware that there exists an asymmetry between `Some<T>` and `None`
-   * for all types except `<number>` if `<T>` doesn't implement `.valueOf()`
-   * for number coercion.
-   *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf}
-   *
-   *
-   * @example
-   * ```typescript
-   * const num = Some(1);
-   * const numStr = Some("1");
-   * const str = Some("abc");
-   * const zero = None;
-   *
-   * assert(num.valueOf() === 1);
-   * assert(zero.valueOf() === 0);
-   * assert(numStr.valueOf() === "1");
-   * assert(Number(num) === 1);
-   * assert(Number(zero) === 0);
-   * assert(Number(numStr) === 1);
-   * assert(Number.isNaN(Number("abc")));
-   * assert(Number.isNaN(Number(str)));
-   * ```
-   */
-  valueOf(): ValueRepr<never> {
-    return 0;
-  }
-  /**
-   * @description
-   * Use this to get the full string tag
-   * Short-hand for `Object.prototype.toString.call(option)`
-   *
-   * @example 
-   * ```typescript
-   * const someTag = Some("thing").toTag();
-   * const noneTag = None.toTag();
-   *
-   * assert(someTag === "[object eitherway::Option::Some<thing>]");
-   * assert(noneTag === "[object eitherway::Option::None]");
-   * ```
-   */
-  toTag(): string {
-    return Object.prototype.toString.call(this);
-  }
-}
-
-class _Some<T> implements IOption<T> {
-  #value: T;
-  constructor(value: T) {
-    this.#value = value;
-  }
-
-  isSome(): this is Some<T> {
-    return true;
-  }
-  isNone(): this is None {
-    return false;
-  }
-  map<U>(mapFn: (arg: T) => NonNullish<U>): Some<NonNullish<U>> {
-    return Some(mapFn(this.#value));
-  }
-  mapOr<U>(
-    mapFn: (arg: T) => NonNullish<U>,
-    _orValue: NonNullish<U>,
-  ): Some<NonNullish<U>> {
-    return this.map(mapFn);
-  }
-  mapOrElse<U>(
-    mapFn: (arg: T) => NonNullish<U>,
-    _orFn: () => NonNullish<U>,
-  ): Some<NonNullish<U>> {
-    return this.map(mapFn);
-  }
-  andThen<U>(thenFn: (arg: T) => Option<U>): Option<U> {
-    return thenFn(this.#value);
-  }
-  unwrap(): T {
-    return this.#value;
-  }
-  unwrapOr<U>(_orValue: NonNullish<U>): T {
-    return this.#value;
-  }
-  unwrapOrElse<U>(_orFn: () => NonNullish<U>): T {
-    return this.#value;
-  }
-  /**
-   * @description
-   * Logical AND ( && )
-   * Returns RHS if LHS is `Some<T>`
-   *
-   * ```markdown
-   * |  A  &&  B  | B: Some<U> |  B: None  |   
-   * |:----------:|:----------:|:---------:|
-   * | A: Some<T> |   Some<U>  |    None   |
-   * | A:  None   |    None    |    None   |
-   * ```
-   * 
-   * @example
-   * ```typescript
-   * // Given a config interface...
-   * type ConfigJSON = {
-   *   enableDebugLogs?: boolean;
-   *   enableTelemetry?: boolean;
-   *   enableCrahsReports?: boolean;
-   * }
-   * type Config = {
-   *   enableDebugLogs: Option<true>;
-   *   enableTelemetry: Option<true>;
-   *   enableCrahsReports: Option<true>;
-   * }
-   * function parseConfig(json: ConfigJSON): Config {
-   *   return {
-   *     enableDebugLogs: Option.fromCoercible(json.enableDebugLogs),
-   *     enableTelemetry: Option.fromCoercible(json.enableTelemetry),
-   *     enableCrashReports: Option.fromCoercible(json.enableCrahsReports),
-   *   };
-   * }
-   *
-   * // which may require an expensive setup...
-   * async function expensiveSetup(): Promise<void> {
-   *   // ...this might take a while...
-   * }
-   * async function selectiveSetup(c: Config): Promise<void> {
-   *   // match the options here etc
-   * }
-   *
-   * // ...its possible to decide whether or not the expnsive is necessary
-   * aync function main(): Promise<void> {
-   *   const configJSON = require("path/to/config.json");
-   *   const config = parseConfig(configJSON);
-   *
-   *   const { 
-   *     enableDebugLogs,
-   *     enableTelemetry,
-   *     enableCrahsReports,
-   *   } = config;
-   *
-   *   if (
-   *     enableDebugLogs
-   *      .and(enableTelemetry)
-   *      .and(enableCrahsReports)
-   *      .isSome()
-   *   ) {
-   *     await expensiveSetup();
-   *   } else {
-   *     await selectiveSetup(config);
-   *   }
-   *    
-   *   // ...continue
-   * }
-   * ```
-   */
-  and<U>(rhs: Option<U>): Some<U> | None {
-    return rhs;
-  }
-  /**
-   * @description
-   * Logical OR ( || )
-   * Returns LHS if LHS is `Some<T>`, otherwise returns RHS
-   *
-   * ```markdown
-   * |  A  ||  B  | B: Some<U> |  B: None  |   
-   * |:----------:|:----------:|:---------:|
-   * | A: Some<T> |   Some<T>  |  Some<T>  |
-   * | A:  None   |   Some<U>  |    None   |
-   * ```
-   *
-   * @example
-   * ```typescript
-   * const maybe = Option.from(undefined);
-   * const default = Option.from("default");
-   *
-   * const res = maybe.or(default).unwrap();
-   *
-   * assert(res === "default");
-   * ```
-   */
-  or<U>(_rhs: Option<U>): Some<T> {
-    return this;
-  }
-  /**
-   * @description
-   * Logical XOR ( ^ )
-   * Useful when only one of two values should be `Some`, but not both
-   * Returns `Some`, if only LHS or RHS is `Some`
-   * 
-   * ```markdown
-   * |  A  ^  B   | B: Some<U> |  B: None  |   
-   * |:----------:|:----------:|:---------:|
-   * | A: Some<T> |    None    |   Some<T> |
-   * | A:  None   |   Some<U>  |    None   |
-   * ```
-   *
-   * @example
-   * ```typescript
-   * // A small config utility 
-   * // Contrived, but should do the trick
-   * type Path = string
+   * // Only one of those SHOULD be `Some`
    * type Extra = {
    *   workDir: Option<Path>;
    *   homeDir: Option<Path>;
@@ -659,7 +457,7 @@ class _Some<T> implements IOption<T> {
    * }
    *
    * // Setup the parts
-   * const extra = { 
+   * const extra = {
    *   workDir: Some("~/workbench"),
    *   homeDir: None,
    * }
@@ -672,15 +470,14 @@ class _Some<T> implements IOption<T> {
    * assert(config.targetDir === "~/workbench");
    * ```
    */
-  xor<U>(rhs: Option<U>): Some<T> | None {
-    if (rhs.isSome()) return None;
-    return this;
-  }
+  xor<U>(rhs: Option<U>): Some<T> | Some<U> | None;
+
   /**
    * @description
-   * Allows for performing side-effects transparently
+   * Use this to perform side-effects transparently
+   *
    * The `tapFn` receives a deep clone of `Option<T>`, by applying the
-   * `structuredClone()` function on the wrapped value
+   * `structuredClone()` algorithm on the wrapped value
    *
    * This may have performance implications, dependending on the size of
    * the wrapped value `<T>`, but ensures that the `tapFn` can never
@@ -690,6 +487,9 @@ class _Some<T> implements IOption<T> {
    *
    * @example
    * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
    * type UserRecord = {
    *   id: string;
    *   name: string;
@@ -708,55 +508,123 @@ class _Some<T> implements IOption<T> {
    *     delete rec.email;
    *     console.log(JSON.stringify(rec));
    *   }
-   *   console.log("No UserRecord present");
+   *   console.log("No UserRecord found!");
    * };
-   * 
+   *
    * const maybeUserRec = Option.from(getUserRecord("1"));
    * const maybeEmail = maybeUserRec
-   *                     .tap(logMut) // "{"id":"1"}"
+   *                     .tap(logMut) // stdout: "{"id":"1"}"
    *                     .map((rec) => rec.email);
-   * 
    *
    * assert(maybeEmail.unwrap() === "allen@example.com");
    */
-  tap(tapFn: (arg: Option<T>) => void): Option<T> {
-    tapFn(new _Some(structuredClone(this.#value)));
-    return this;
-  }
+  tap(tapFn: (arg: Option<T>) => void): Option<T>;
+
   /**
    * @description
-   * This well-known symbol is called by `Object.prototype.toString` to 
-   * obtain a string representation of a value's type
-   *
-   * This maybe useful for debugging or certain logs
-   *
-   * {@link Some#toTag} and {@link None#toTag} are useful short-hand
-   * methods in these scenarios
-   *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag}
+   * Use this to get the full string tag
+   * Short-hand for `Object.prototype.toString.call(option)`
    *
    * @example
    * ```typescript
-   * const rec = Some({ a: 1, b: 2 });
-   * const str = Some("abc");
-   * const none = None;
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
    *
-   * const toString = Object.prototype.toString.call;
+   * const someTag = Some("thing").toTag();
+   * const noneTag = None.toTag();
    *
-   * assert(toString(rec) === "eitherway::Option::Some<[object Object]>");
-   * assert(toString(str) === "eitherway::Option::Some<abc>");
-   * assert(toString(none) === "eitherway::Option::None");
-   * assert(toString(Option) === "eitherway::Option");
-   * assert(toString(Some) === "eitherway::Option::Some");
-   * assert(toString(None) === "eitherway::Option::None");
+   * assert(someTag === "[object eitherway::Option::Some<thing>]");
+   * assert(noneTag === "[object eitherway::Option::None]");
    * ```
    */
-  get [Symbol.toStringTag]() {
-    const innerTag = typeof this.#value === "object"
-      ? Object.prototype.toString.call(this.#value)
-      : String(this.#value);
-    return `eitherway::Option::Some<${innerTag}>`;
-  }
+  toTag(): string;
+
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or returns
+   * a deep copy of the value itself, if no implementation is present
+   *
+   * Returns `undefined` in case of `None`
+   *
+   * See the [`reference`]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#description}
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const someNum = Some(1);
+   * const none = None;
+   * const rec = { a: someNum, b: none };
+   * const arr = [someNum, none];
+   *
+   * const encode = JSON.stringify;
+   *
+   * assert(encode(someNum) === "1");
+   * assert(encode(none) === undefined);
+   * assert(encode(rec) === encode({ a: 1 }));
+   * assert(encode(arr) === encode([1, null]));
+   * ```
+   */
+  toJSON(): JsonRepr<T>;
+
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or returns
+   * the empty string (i.e. `""`) in case of `None`
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString}
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const arr = [1];
+   * const someArr = Some(arr);
+   * const someStr = Some("abc");
+   * const empty = None;
+   *
+   * assert(arr.toString() === "1");
+   * assert(someArr.toString() === "1");
+   * assert(someStr.toString() === "abc");
+   * assert(empty.toString() === "");
+   * assert(String(arr) === String(someArr));
+   * ```
+   */
+  toString(): StringRepr<T>;
+
+  /**
+   * @description
+   * Delegates to the implementation of the wrapped value `<T>` or returns
+   * 0 in case of `None`
+   *
+   * Be aware that there exists an asymmetry between `Some<T>` and `None`
+   * for all types except `<number>` if `<T>` doesn't implement `.valueOf()`
+   * for number coercion.
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf}
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const num = Some(1);
+   * const numStr = Some("1");
+   * const str = Some("abc");
+   * const zero = None;
+   *
+   * assert(num.valueOf() === 1);
+   * assert(zero.valueOf() === 0);
+   * assert(numStr.valueOf() === "1");
+   * assert(Number(numStr) === 1);
+   * assert(Number.isNaN(Number("abc")));
+   * assert(Number.isNaN(Number(str)));
+   * ```
+   */
+  valueOf(): ValueRepr<T>;
+
   /**
    * @description
    * Delegates to the implementation of the wrapped value `<T>` or exhausts
@@ -770,6 +638,8 @@ class _Some<T> implements IOption<T> {
    *
    * @example
    * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
    *
    * const arr = [1, 2, 3];
    * const someArr = Some(arr);
@@ -796,11 +666,8 @@ class _Some<T> implements IOption<T> {
    * assert(encode(noneArrCopy) === encode([]));
    * ```
    */
-  *[Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T> {
-    const target = Object(this.#value);
-    if (Symbol.iterator in target) yield* target;
-    return this.#value;
-  }
+  [Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T>;
+
   /**
    * @description
    * Delegates to the implementation of the wrapped value `<T>` or returns
@@ -812,47 +679,185 @@ class _Some<T> implements IOption<T> {
    *  - "string" -> ""
    *  - "number" -> 0
    *  - "default"? -> false
-   * 
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion}
    *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion}
    */
-  [Symbol.toPrimitive](hint?: string): string | number | boolean | symbol {
-    /**
-     * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion
-     */
-    if (isPrimitive(this.#value)) return this.#value;
+  [Symbol.toPrimitive](hint?: string): string | number | boolean | symbol;
 
-    const target = Object(this.#value);
-
-    if (Symbol.toPrimitive in target) {
-      return target[Symbol.toPrimitive](hint);
-    }
-    return target.toString();
-  }
   /**
    * @description
-   * Delegates to the implementation of the wrapped value `<T>` or returns
-   * the value itself if no implementation is present
+   * This well-known symbol is called by `Object.prototype.toString` to
+   * obtain a string representation of a value's type
    *
-   * Returns `undefined` in case of `None`
+   * This maybe useful for debugging or certain logs
    *
-   * See the [`reference`]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify#description}
+   * The [`.toTag()`]{@link this#toTag} method is a useful short-hand in these scenarios
+   *
+   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag}
    *
    * @example
    * ```typescript
-   * const someNum = Some(1);
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const rec = Some({ a: 1, b: 2 });
+   * const str = Some("abc");
    * const none = None;
-   * const rec = { a: someNum, b: none };
-   * const arr = [someNum, none];
    *
-   * const encode = JSON.stringify;
+   * const toString = Object.prototype.toString;
    *
-   * assert(encode(someNum) === "1");
-   * assert(encode(none) === undefined);
-   * assert(encode(rec) === encode({ a: 1 }));
-   * assert(encode(arr) === encode([1, null]));
-   * ``` 
+   * assert(toString.call(rec) === "eitherway::Option::Some<[object Object]>");
+   * assert(toString.call(str) === "eitherway::Option::Some<abc>");
+   * assert(toString.call(none) === "eitherway::Option::None");
+   * assert(toString.call(Option) === "eitherway::Option");
+   * assert(toString.call(Some) === "eitherway::Option::Some");
+   * assert(toString.call(None) === "eitherway::Option::None");
+   * ```
    */
+  [Symbol.toStringTag]: string;
+}
+
+/**
+ * ==============
+ * IMPLEMENTATION
+ * ==============
+ */
+
+// By declaring an unused, generic type parameter, we get a nicer alias.
+class _None<T = never> implements IOption<never> {
+  isSome(): this is Some<never> {
+    return false;
+  }
+  isNone(): this is None {
+    return true;
+  }
+  map<U>(mapFn: (arg: never) => NonNullish<U>): None {
+    return this;
+  }
+  mapOr<U>(
+    mapFn: (arg: never) => NonNullish<U>,
+    orValue: NonNullish<U>,
+  ): Some<NonNullish<U>> {
+    return Some(orValue);
+  }
+  mapOrElse<U>(
+    mapFn: (arg: never) => U,
+    orFn: () => NonNullish<U>,
+  ): Some<NonNullish<U>> {
+    return Some(orFn());
+  }
+  andThen<U>(thenFn: (arg: never) => Option<U>): None {
+    return this;
+  }
+  unwrap() {
+    return undefined;
+  }
+  unwrapOr<U>(orValue: NonNullish<U>) {
+    return orValue;
+  }
+  unwrapOrElse<U>(orFn: () => NonNullish<U>) {
+    return orFn();
+  }
+  and<U>(rhs: Option<U>): None {
+    return this;
+  }
+  or<U>(rhs: Option<U>): Option<U> {
+    return rhs;
+  }
+  xor<U>(rhs: Option<U>): Some<U> | None {
+    if (rhs.isSome()) return rhs;
+    return this;
+  }
+  tap(tapFn: (arg: Option<never>) => void) {
+    tapFn(None);
+    return this;
+  }
+  toTag(): string {
+    return Object.prototype.toString.call(this);
+  }
+  toJSON(): JsonRepr<never> {
+    return undefined;
+  }
+  toString(): StringRepr<never> {
+    return "";
+  }
+  valueOf(): ValueRepr<never> {
+    return 0;
+  }
+  //deno-lint-ignore require-yield
+  *[Symbol.iterator](): IterableIterator<never> {
+    /**
+     * This is actually what we want, since returning from a generator implies
+     * that it's exhausted, i.e. { done: true, value: undefined }
+     */
+    return undefined;
+  }
+  [Symbol.toPrimitive](hint?: string): "" | 0 | false {
+    if (hint === "string") return "";
+    if (hint === "number") return 0;
+    return false;
+  }
+  get [Symbol.toStringTag]() {
+    return "eitherway::Option::None";
+  }
+}
+
+class _Some<T> implements IOption<T> {
+  #value: T;
+  constructor(value: T) {
+    this.#value = value;
+  }
+
+  isSome(): this is Some<T> {
+    return true;
+  }
+  isNone(): this is None {
+    return false;
+  }
+  map<U>(mapFn: (arg: Readonly<T>) => NonNullish<U>): Some<NonNullish<U>> {
+    return Some(mapFn(this.#value));
+  }
+  mapOr<U>(
+    mapFn: (arg: Readonly<T>) => NonNullish<U>,
+    orValue: NonNullish<U>,
+  ): Some<NonNullish<U>> {
+    return this.map(mapFn);
+  }
+  mapOrElse<U>(
+    mapFn: (arg: Readonly<T>) => NonNullish<U>,
+    orFn: () => NonNullish<U>,
+  ): Some<NonNullish<U>> {
+    return this.map(mapFn);
+  }
+  andThen<U>(thenFn: (arg: T) => Option<U>): Option<U> {
+    return thenFn(this.#value);
+  }
+  unwrap(): T {
+    return this.#value;
+  }
+  unwrapOr<U>(orValue: NonNullish<U>): T {
+    return this.#value;
+  }
+  unwrapOrElse<U>(orFn: () => NonNullish<U>): T {
+    return this.#value;
+  }
+  and<U>(rhs: Option<U>): Some<U> | None {
+    return rhs;
+  }
+  or<U>(rhs: Option<U>): Some<T> {
+    return this;
+  }
+  xor<U>(rhs: Option<U>): Some<T> | None {
+    if (rhs.isSome()) return None;
+    return this;
+  }
+  tap(tapFn: (arg: Option<T>) => void): Option<T> {
+    tapFn(Some(structuredClone(this.#value)));
+    return this;
+  }
+  toTag(): string {
+    return Object.prototype.toString.call(this);
+  }
   toJSON(): JsonRepr<T> {
     if (hasToJSON(this.#value)) return this.#value.toJSON();
     /**
@@ -862,82 +867,38 @@ class _Some<T> implements IOption<T> {
      */
     return this.#value as JsonRepr<T>;
   }
-  /**
-   * @description
-   * Delegates to the implementation of the wrapped value `<T>` or returns
-   * the empty string (i.e. `""`) in case of `None`
-   *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString}
-   *
-   * @example
-   * ```typescript
-   * const arr = [1];
-   * const someArr = Some(arr);
-   * const someStr = Some("abc");
-   * const empty = None;
-   *
-   * assert(arr.toString() === "1");
-   * assert(someArr.toString() === "1");
-   * assert(someStr.toString() === "abc");
-   * assert(empty.toString() === "");
-   * assert(String(arr) === String(someArr));
-   * ```
-   */
   toString(): StringRepr<T> {
     /**
      * At run time this object coercion would happen implicitely anyway for primitive types
      */
     return Object(this.#value).toString();
   }
-  /**
-   * @description
-   * Delegates to the implementation of the wrapped value `<T>` or returns
-   * 0 in case of `None`
-   *
-   * Be aware that there exists an asymmetry between `Some<T>` and `None`
-   * for all types except `<number>` if `<T>` doesn't implement `.valueOf()`
-   * for number coercion.
-   *
-   * See the [reference]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/valueOf}
-   *
-   *
-   * @example
-   * ```typescript
-   * const num = Some(1);
-   * const numStr = Some("1");
-   * const str = Some("abc");
-   * const zero = None;
-   *
-   * assert(num.valueOf() === 1);
-   * assert(zero.valueOf() === 0);
-   * assert(numStr.valueOf() === "1");
-   * assert(Number(numStr) === 1);
-   * assert(Number.isNaN(Number("abc")));
-   * assert(Number.isNaN(Number(str)));
-   * ```
-   */
   valueOf(): ValueRepr<T> {
     /**
      * At run time this object coercion would happen implicitely anyway for primitive types
      */
     return Object(this.#value).valueOf();
   }
-  /**
-   * @description
-   * Use this to get the full string tag
-   * Short-hand for `Object.prototype.toString.call(option)`
-   *
-   * @example 
-   * ```typescript
-   * const someTag = Some("thing").toTag();
-   * const noneTag = None.toTag();
-   *
-   * assert(someTag === "[object eitherway::Option::Some<thing>]");
-   * assert(noneTag === "[object eitherway::Option::None]");
-   * ```
-   */
-  toTag(): string {
-    return Object.prototype.toString.call(this);
+  *[Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T> {
+    const target = Object(this.#value);
+    if (Symbol.iterator in target) yield* target;
+    return this.#value;
+  }
+  [Symbol.toPrimitive](hint?: string): string | number | boolean | symbol {
+    if (isPrimitive(this.#value)) return this.#value;
+
+    const target = Object(this.#value);
+
+    if (Symbol.toPrimitive in target) {
+      return target[Symbol.toPrimitive](hint);
+    }
+    return target.toString();
+  }
+  get [Symbol.toStringTag]() {
+    const innerTag = typeof this.#value === "object"
+      ? Object.prototype.toString.call(this.#value)
+      : String(this.#value);
+    return `eitherway::Option::Some<${innerTag}>`;
   }
 }
 
@@ -954,33 +915,37 @@ export type Some<T> = _Some<T>;
 /**
  * *Some<T> Factory*
  * @description
- * `Some<T>` represents the encapsulation of a value of type `<T>`.
+ * `Some<T>` represents the encapsulation of a value of type `<T>`
  * An instance of `Some` can only be constructed from non-nullish values,
- * so the construction explicitely asserts that the value is not nullish.
+ * so the construction explicitely asserts that the value is not nullish
+ *
  * Use {@link Option} to create a value of type `Option<T>` if T can be
  * nullish.
+ *
  * Be aware that this is not only a compile time check, but also enforced
  * at runtime.
  *
- * `Some<T>` is a thin wrapper around `<T>`, in addition to the API one would 
+ * `Some<T>` is a thin wrapper around `<T>`, in addition to the API one would
  * expect, it implements the iterator protocol and delegates to the underlying
  * implementations of `<T>` when:
  *   - used as an IterableIterator (returns `<T>` if not implemented)
  *   - [coerced]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion}
  *   - encoded as JSON via JSON.stringify()
- * 
+ *
  * Please checkout {@link None} for the opposite case.
- * 
  *
  * @throws {AssertionError}
  *
  * @example
  * ```typescript
+ * import { assert } from "../deps.ts";
+ * import { Option, None, Some } from "./option.ts";
+ *
  * const str = "thing";
  * const some = Some(str);
  * const rec = { some };
- * const arr = [ ...some ]; //`String.prototype[@@iterator]()` -> UTF-8 codepoints  
- * 
+ * const arr = [ ...some ]; //`String.prototype[@@iterator]()` -> UTF-8 codepoints
+ *
  * const encode = JSON.stringify;
  *
  * assert(some instanceof Some === true);
@@ -995,7 +960,7 @@ export type Some<T> = _Some<T>;
 export function Some<T>(value: NonNullish<T>): Some<NonNullish<T>> {
   assert(
     isNotNullish(value),
-    `${Some} -> Cannot construct Some with a nullish value. Received: ${value}`,
+    `${Some} -> Cannot construct Some with a nullish value`,
   );
   return new _Some(value);
 }
@@ -1008,12 +973,14 @@ Object.defineProperty(Some, Symbol.toStringTag, {
   value: "eitherway::Option::Some",
 });
 
-export type None = _None<never>;
+export type None = _None;
+
 /**
  * *None*
  * @description
  * None represents the absence of a value and is the opinionated, composable
  * equivalent of `undefined` with "sane" defaults.
+ *
  * It can be [coerced to the falsy representation of primitive types]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion}
  * Furthermore, it implements the iterator protocol and returns `undefined`
  * when it gets JSON encoded via JSON.stringify()
@@ -1022,6 +989,9 @@ export type None = _None<never>;
  *
  * @example
  * ```typescript
+ * import { assert } from "../deps.ts";
+ * import { Option, None, Some } from "./option.ts";
+ *
  * const none = None;
  * const rec = { a: 1, b: none };
  * const arr = [ ...none ];
@@ -1036,7 +1006,7 @@ export type None = _None<never>;
  * assert(String(none) === "");
  * assert(Number(none) === 0);
  * assert(none[Symbol.toPrimitive]() === false);
- * assert(Boolean(none) === true); //object always evaluate to true 
+ * assert(Boolean(none) === true); //object always evaluate to true
  * assert(encode(rec) === encode({ a: 1 }));
  * assert(arr.length === 0);
  * ```
@@ -1059,10 +1029,10 @@ export type Option<T> = Some<T> | None;
  * @function Option
  * @description
  * Option<T> represents:
- *  - EITHER the encapsulation of a value of type T via Some<T>
+ *  - EITHER the encapsulation of a value of type `<T>` via `Some<T>`
  *  - OR the absence of a value via None
  *
- * It's the composable equivalent of the union <T | undefined>
+ * It's the composable equivalent of the union `<T | undefined>`
  * Furthermore, it's important to note that T itself must not be
  * nullish. So it's impossible to end up with an instance of
  * Some<null | undefined>. This is enforced by the Option<T>
@@ -1078,6 +1048,9 @@ export type Option<T> = Some<T> | None;
  *
  * @example
  * ```typescript
+ * import { assert } from "../deps.ts";
+ * import { Option, None, Some } from "./option.ts";
+ *
  * const str: string | undefined = "thing";
  * const undef: string | undefined = undefined;
  *
@@ -1114,6 +1087,9 @@ export namespace Option {
    *
    * @example
    * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
    * const str: string | undefined = "thing";
    * const undef: string | undefined = undefined;
    *
@@ -1129,15 +1105,21 @@ export namespace Option {
   export function from<T>(value: T): Option<NonNullish<T>> {
     return isNotNullish(value) ? Some(value) : None;
   }
+
   /**
    * @description
+   * Use this if instances of `Error` should be evaluated to `None`
+   *
    * Behaves like Option.from() but also returns None for instances of Error
    *
    * @example
    * ```typescript
-   * const str: string | undefined = "thing";
-   * const undef: string | undefined = undefined;
-   * const err: string | Error = new Error();
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const str = "thing" as string | undefined;
+   * const undef = undefined as string | undefined;
+   * const err = new Error() as string | Error;
    *
    * const some: Option<string> = Option.fromFallible(str);
    * const none: Option<string> = Option.fromFallible(undef);
@@ -1155,13 +1137,19 @@ export namespace Option {
     if (value instanceof Error) return None;
     return Option.from(value);
   }
+
   /**
    * @description
+   * Use this if all falsy values should be evaluated to `None`
+   *
    * Behaves like Option.from() but returns None for falsy values
    * This is also reflected in the return type in case of unions
    *
    * @example
    * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
    * type Bit = 1 | 0;
    * type Maybe = "thing" | "";
    * const str = "" as Maybe;
@@ -1177,7 +1165,7 @@ export namespace Option {
    * ```
    */
   export function fromCoercible<T>(value: T): Option<Truthy<T>> {
-    if (isTruthy(value)) return new _Some(value);
+    if (isTruthy(value)) return Option.from(value);
     return None;
   }
 }

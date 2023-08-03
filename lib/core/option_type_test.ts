@@ -3,11 +3,9 @@ import {
   AssertFalse,
   assertStrictEquals,
   AssertTrue,
-  assertType,
   Has,
   IsExact,
   IsNullable,
-  NotHas,
 } from "../../dev_deps.ts";
 
 type IsOption<O> = O extends Option<unknown> ? true : false;
@@ -24,6 +22,7 @@ Deno.test("eitherway::Option::TypeTests", async (t) => {
       type returnTypeIsNullable = AssertFalse<
         IsNullable<OptionType<typeof option>>
       >;
+
       assertStrictEquals(option.isSome(), true);
     },
   );
