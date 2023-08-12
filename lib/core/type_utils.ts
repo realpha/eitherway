@@ -39,14 +39,17 @@ export type Nullish = null | undefined;
  * Ref: https://developer.mozilla.org/en-US/docs/Glossary/Falsy
  */
 export type Falsy = Nullish | false | "" | 0 | -0 | 0n;
+export type Fallible<E> = E extends Error ? E : never;
 
 export type Truthy<T> = Exclude<T, Falsy>;
 export type NonNullish<T> = Exclude<T, Nullish>;
+export type Infallible<T> = Exclude<T, Nullish | Fallible<T>>
 export type HasToJSON<T> = T extends { toJSON(): JsonRepr<T> } ? T : never;
 
 export type IsOption<O> = O extends Option<unknown> ? true : false;
 export type OptionType<O> = O extends Option<infer Inner> ? Inner : never;
 export type SomeType<S extends Option<unknown>> = S extends Some<infer Inner> ? Inner : never;
+export type NonReadonly<T> = T extends Readonly<infer U> ? U : T;
 
 /**
  * ===============
@@ -60,6 +63,11 @@ export function isNotNullish<T>(arg: T): arg is NonNullish<T> {
 
 export function isTruthy<T>(arg: T): arg is Truthy<T> {
   return Boolean(arg);
+}
+
+export function isInfallible<T>(arg: T): arg is Infallible<T> {
+  if (arg == null || arg instanceof Error) return false;
+  return true;
 }
 
 export function hasToJSON<T>(arg: T): arg is HasToJSON<T> {

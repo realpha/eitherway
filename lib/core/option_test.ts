@@ -245,6 +245,108 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
+    "Option.apply() -> returns the correct result for variadic functions",
+    () => {
+      type UserRecord = {
+        name: string;
+        email: string;
+        role: string;
+        org: string;
+        lastSeen: Date;
+        scopes: string[];
+      };
+      const record: UserRecord = {
+        name: "Allen",
+        email: "allen@example.com",
+        role: "Staff",
+        org: "Sales",
+        lastSeen: new Date(2023, 2, 23),
+        scopes: ["read:sales", "write:sales", "read:customer"],
+      };
+
+      const extractScopes = (rec: UserRecord): string[] => rec.scopes;
+      const maybeAction = Option.from(extractScopes);
+      const maybeRec = Option.from(record);
+
+      const maybeScopes = Option.apply(maybeAction, maybeRec);
+
+      assertStrictEquals(maybeScopes.isSome(), true);
+    },
+  );
+  await t.step(
+    "Option.lift() -> composes functions and constructors correctly",
+    () => {
+      function chainDivide(n: number, ...divisors: number[]) {
+        return divisors.reduce((acc, divisor) => acc /= divisor, n);
+      }
+
+      function getDivident(): Option<number> {
+        return Option.from(42);
+      }
+      function getDivisors(): Option<number[]> {
+        return Option.from([7, 3, 2]);
+      }
+
+      function wrappedDiv(n: number, ...divisors: number[]) {
+        const res = chainDivide(n, ...divisors);
+
+        if (
+          res === 0 || Number.isNaN(res) || !Number.isFinite(res)
+        ) return None;
+        return Some(res);
+      }
+
+      const liftedDiv = Option.lift(chainDivide, Option.fromCoercible);
+
+      const divident = getDivident();
+      const divisors = getDivisors();
+      const args = divident.zip(divisors);
+
+      const someWrapped = args.andThen((args) =>
+        wrappedDiv(args[0], ...args[1])
+      );
+      const someLifted = args.andThen((args) => liftedDiv(args[0], ...args[1]));
+
+      assertStrictEquals(someWrapped.isSome(), true);
+      assertStrictEquals(someLifted.isSome(), true);
+      assertStrictEquals(someWrapped.unwrap(), 1);
+      assertStrictEquals(someLifted.unwrap(), 1);
+    },
+  );
+  await t.step("Option.lift() -> allows for composition of custom Option constructors", () => {
+      type Left<L> = { tag: "Left"; value: L };
+      type Right<R> = { tag: "Right"; value: R };
+      type Either<L, R> = Left<L> | Right<R>;
+      type Numeric<T> =  T extends number | bigint ? T : never;
+      type NonNumeric<T> = NonNullable<Exclude<T, Numeric<T>>>;
+      function isNonNumeric<T>(arg: T): arg is NonNumeric<T> {
+        if (arg == null || typeof arg === "number" || typeof arg === "bigint") return false;
+        return true;
+      }
+
+      function fromEither<L, R>(
+        e?: Either<L, R>,
+      ): Option<NonNumeric<R>> {
+        if (e?.tag === "Right" && isNonNumeric(e?.value)) return Some(e.value);
+        return None;
+      }
+
+      function tupleToEither(arg: Readonly<[string, number | boolean]>): Either<typeof arg[0], typeof arg[1]> {
+        return { tag: "Right", value: arg[1] };
+      }
+
+      function getTuple(): [string, number | boolean] {
+        return ["something", true];
+      }
+
+      const lifted = Option.lift(tupleToEither, fromEither);
+
+      const res = Option.from(getTuple()).andThen(lifted);
+
+      assertStrictEquals(res.isSome(), true);
+      assertStrictEquals(res.unwrap(), true);
+  });
+  await t.step(
     "Option[Symbol.hasInstance]() -> instanceof returns true for instances of Some & None",
     () => {
       allValues.forEach((val) => {
@@ -410,7 +512,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
       const nested = Option(big);
 
       const flattened = nested
-        .andThen(Option.identity<number>)
+        .andThen(Option.id<number>)
         .andThen(greaterThanTen);
 
       assertStrictEquals(flattened.isSome(), true);
@@ -1122,7 +1224,7 @@ Deno.test("eitherway::Option::None", async (t) => {
     );
 
     await t.step(
-      'Number coercion -> returns 0 (ops: unary "+" and Number constructor)',
+      'Number coercion -> returhs 0 (ops: unary "+" and Number constructor)',
       () => {
         const sumRhsPlus = 42 + +None;
         const sumLhsPlus = +None + 42;

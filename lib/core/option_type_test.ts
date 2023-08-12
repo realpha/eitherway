@@ -1,5 +1,6 @@
-import type { InferredSomeType, InferredOptionTypes, OptionIdentity } from "./option.ts";
+import type { InferredOptionTypes, InferredSomeType } from "./option.ts";
 import { None, Option, Some } from "./option.ts";
+import type { NonNullish } from "./type_utils.ts";
 import {
   AssertFalse,
   assertStrictEquals,
@@ -12,10 +13,13 @@ import {
 
 type IsOption<O> = O extends Option<unknown> ? true : false;
 type OptionType<O> = O extends Option<infer T> ? T : never;
-type SomeType<S extends Readonly<Option<unknown>>> = S extends Readonly<Some<infer T>> ? T : never;
+type SomeType<S extends Readonly<Option<unknown>>> = S extends
+  Readonly<Some<infer T>> ? T : never;
 
 Deno.test("eitherway::Option::TypeHelpers::TypeTests", async (t) => {
-  await t.step("InferredOptionTypes<O> -> Inferres T[] from Option<T>[]", () => {
+  await t.step(
+    "InferredOptionTypes<O> -> Inferres T[] from Option<T>[]",
+    () => {
       type StrictTuple = Readonly<[string, number, boolean]>;
       const correctTuple = [
         Option("some" as string),
@@ -23,15 +27,20 @@ Deno.test("eitherway::Option::TypeHelpers::TypeTests", async (t) => {
         Option(true as boolean),
       ] as const;
 
-      assertType<IsExact<InferredOptionTypes<typeof correctTuple>, StrictTuple>>(true);
-  });
+      assertType<
+        IsExact<InferredOptionTypes<typeof correctTuple>, StrictTuple>
+      >(true);
+    },
+  );
 
   await t.step("InferredSomeType<O> -> Inferres T from Option<T>", () => {
-    type StrictOption = Readonly<Option<number[]>>
-    type NormalOption = Option<Record<string, string>>
+    type StrictOption = Readonly<Option<number[]>>;
+    type NormalOption = Option<Record<string, string>>;
 
     assertType<IsExact<InferredSomeType<StrictOption>, number[]>>(true);
-    assertType<IsExact<InferredSomeType<NormalOption>, Record<string, string>>>(true);
+    assertType<IsExact<InferredSomeType<NormalOption>, Record<string, string>>>(
+      true,
+    );
   });
 });
 
@@ -121,53 +130,119 @@ Deno.test("eitherway::Option::TypeTests", async (t) => {
     },
   );
 
-  await t.step("Option.all() -> Array types are correctly inferred and retain constraints", () => {
-    type TestArray = ReadonlyArray<string>;
-    type TestArrayMut = Array<string>;
-    const optArray: ReadonlyArray<Option<string>> = Array.of(..."option").map((
-      char,
-    ) => Option(char));
-    const optArrayMut: Array<Option<string>> = Array.of(..."option").map((
-      char,
-    ) => Option(char));
+  await t.step(
+    "Option.all() -> Array types are correctly inferred and retain constraints",
+    () => {
+      type TestArray = ReadonlyArray<string>;
+      type TestArrayMut = Array<string>;
+      const optArray: ReadonlyArray<Option<string>> = Array.of(..."option").map(
+        (
+          char,
+        ) => Option(char),
+      );
+      const optArrayMut: Array<Option<string>> = Array.of(..."option").map((
+        char,
+      ) => Option(char));
 
-    const collected = Option.all(optArray);
-    const collectedMut = Option.all(optArrayMut);
+      const collected = Option.all(optArray);
+      const collectedMut = Option.all(optArrayMut);
 
-    if (collected.isSome() && collectedMut.isSome()) {
-      const unwrapped = collected.unwrap();
-      const unwrappedMut = collectedMut.unwrap();
+      if (collected.isSome() && collectedMut.isSome()) {
+        const unwrapped = collected.unwrap();
+        const unwrappedMut = collectedMut.unwrap();
 
-      assertType<IsExact<typeof unwrapped, TestArray>>(true);
-      assertType<IsExact<typeof unwrappedMut, TestArrayMut>>(true);
-    } else {
-      throw TypeError("Unreachable");
-    }
-  });
+        assertType<IsExact<typeof unwrapped, TestArray>>(true);
+        assertType<IsExact<typeof unwrappedMut, TestArrayMut>>(true);
+      } else {
+        throw TypeError("Unreachable");
+      }
+    },
+  );
 
-  await t.step("Option.identity() -> identity type is correctly inferred", () => {
-    const opt = Option("some");
-    const nested = Option(opt);
-    const strict = Option("some") as Readonly<Option<string>>;
+  await t.step(
+    "Option.identity() -> identity type is correctly inferred",
+    () => {
+      const opt = Option("some");
+      const nested = Option(opt);
+      const strict = Option("some") as Readonly<Option<string>>;
 
-    const identity = Option.identity(opt);
-    const nestedIdentity = Option.identity(nested);
-    const strictIdentity = Option.identity(strict);
+      const identity = Option.id(opt);
+      const nestedIdentity = Option.id(nested);
+      const strictIdentity = Option.id(strict);
 
-    assertType<IsExact<typeof identity, Option<string>>>(true);
-    assertType<IsExact<typeof nestedIdentity, Option<Option<string>>>>(true);
-    assertType<IsExact<typeof strictIdentity, Option<string>>>(true);
-  });
+      assertType<IsExact<typeof identity, Option<string>>>(true);
+      assertType<IsExact<typeof nestedIdentity, Option<Option<string>>>>(true);
+      assertType<IsExact<typeof strictIdentity, Option<string>>>(true);
+    },
+  );
 
   await t.step("Option.lift() -> Fn type is correctly inferred", () => {
-    const isNonZeroInt = (n: number): boolean => {
+    const isNonZeroInt = (n: number): boolean | undefined => {
       if (Number.isSafeInteger(n) && n > 0) return true;
       return false;
-    }
+    };
 
-    const expectedReturnType = Option.fromCoercible(false as boolean);
+    const isNotFortyTwo = function (
+      n: number,
+    ): boolean | undefined | Error | TypeError {
+      if (n === 42) return Error("Cannot be 42");
+      return isNonZeroInt(n);
+    };
 
-    const lifted = Option.lift(isNonZeroInt, Option.fromCoercible);
+    const lifted = Option.lift(isNonZeroInt);
+    const liftedWithCoercible = Option.lift(isNonZeroInt, Option.fromCoercible);
+    const liftedWithFallible = Option.lift(isNotFortyTwo, Option.fromFallible);
+
+    assertType<IsExact<typeof lifted, (n: number) => Option<boolean>>>(true);
+    assertType<
+      IsExact<typeof liftedWithCoercible, (n: number) => Option<true>>
+    >(true);
+    assertType<
+      IsExact<typeof liftedWithFallible, (n: number) => Option<boolean>>
+    >(true);
+  });
+
+  await t.step(
+    "Option.lift() -> Fn type is correctly inferred from custom Option ctor",
+    () => {
+      type Left<L> = { tag: "Left"; value: L };
+      type Right<R> = { tag: "Right"; value: R };
+      type Either<L, R> = Left<L> | Right<R>;
+      type Numeric<T> = T extends number | bigint ? T : never;
+      type NonNumeric<T> = NonNullish<Exclude<T, Numeric<T>>>;
+      function isNonNumeric<T>(arg: T): arg is NonNumeric<T> {
+        if (arg == null || typeof arg === "number" || typeof arg === "bigint") {
+          return false;
+        }
+        return true;
+      }
+
+      function fromEither<L, R>(
+        e?: Either<L, R>,
+      ): Option<NonNumeric<R>> {
+        if (e?.tag === "Right" && isNonNumeric(e?.value)) return Some(e.value);
+        return None;
+      }
+
+      function tupleToEither(
+        arg: Readonly<[string, number | boolean]>,
+      ): Either<typeof arg[0], typeof arg[1]> {
+        return { tag: "Right", value: arg[1] };
+      }
+
+      const lifted = Option.lift(tupleToEither, fromEither);
+
+      assertType<
+        IsExact<Parameters<typeof lifted>, Parameters<typeof tupleToEither>>
+      >(true);
+      assertType<
+        IsExact<
+          ReturnType<typeof lifted>,
+          ReturnType<typeof fromEither<string, number | boolean>>
+        >
+      >(true);
+    },
+  );
 });
 
 Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
