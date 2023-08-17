@@ -1,14 +1,13 @@
 //deno-lint-ignore-file no-unused-vars
 /**
  * NOTE: the "no-unused-vars" lint rule is ignored in order to ensure
- * method signatures are symetrical
+ * method parameter names are symetrical
  */
 import { assert } from "../deps.ts";
 import type {
   Infallible,
   JsonRepr,
   NonNullish,
-  NonReadonly,
   StringRepr,
   Truthy,
   ValueRepr,
@@ -368,7 +367,7 @@ export interface IOption<T> {
    * import { Option, None, Some } from "./option.ts";
    * 
    * type LogArgs = [boolean, string];
-   * function produceDebugEntry(args: LogArgs): Option<Record<string, string>> {
+   * function produceLogEntry(args: LogArgs): Option<Record<string, string>> {
    *   return Option({
    *       lvl: args[0] ? "debug" : "info",
    *       msg: args[1],
@@ -379,10 +378,10 @@ export interface IOption<T> {
    * const logMsg = Some("I am here!");
    * const none = Option.fromCoercible("");
    *
-   * const maybeDebugEntry = debug.zip(logMsg).andThen(produceDebugEntry);
-   * const stillNone = debug.zip(none).andThen(produceDebugEntry);
+   * const maybeLogEntry = debug.zip(logMsg).andThen(produceLogEntry);
+   * const stillNone = debug.zip(none).andThen(produceLogEntry);
    *
-   * assert(maybeDebugEntry.isSome() === true);
+   * assert(maybeLogEntry.isSome() === true);
    * assert(stillNone.isNone() === true);
    * ```
    */

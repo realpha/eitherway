@@ -80,3 +80,19 @@ export function isPrimitive(arg: unknown): arg is string | number | boolean {
   const type = typeof arg;
   return type === "string" || type === "number" || type === "boolean";
 }
+
+/**
+ * ===============
+ *   DECORATORS 
+ * ===============
+ */
+
+export function callable<T extends new(...args: any[]) => any, Ctx extends ClassDecoratorContext<T>, R>(
+  ctor: T,
+  ctx: Ctx
+) {
+  if (ctx.kind !== "class") return;
+  return function(...args: ConstructorParameters<T>): InstanceType<T> {
+    return new ctor(...args);
+  };
+}
