@@ -6,8 +6,6 @@ import { Err, Ok, Result } from "../core/result.ts";
 type Future<T, E> = PromiseLike<Result<T, E>>;
 type Either<T, E> = Result<T, E> | Future<T, E>;
 type ExecutorFn<T, E> = ConstructorParameters<typeof Promise<Result<T, E>>>[0];
-type InnerUnion<T, E> = T | E | Result<T, E>;
-type ThenParameters<T, E> = Parameters<Promise<Result<T, E>>["then"]>;
 
 function noop(arg: unknown) {}
 
@@ -16,9 +14,16 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     super(executor);
   }
 
+  /**
+   * =======================
+   *    TASK CONSTRUCTORS
+   * =======================
+   */
+
   static of<T, E>(
     value: Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
+    if (value instanceof Task) return value;
     return new Task<T, E>((resolve) => resolve(value));
   }
 
@@ -59,15 +64,51 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     }
   }
 
+  /**
+   * ======================
+   *  TASK ASYNC OPERATORS
+   * ======================
+   */ 
+
+  static id<T, E>() {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return idTask(res);
+    }
+  }
+
+  static clone<T, E>() {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return cloneTask(res);
+    }
+  }
+
   static map<T, T2, E>(mapFn: (v: T) => T2 | PromiseLike<T2>) {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
-      return Task.of(mapTaskSuccess(res, mapFn));
+      return mapTaskSuccess(res, mapFn);
+    };
+  }
+
+  static mapOr<T, T2, E>(
+    mapFn: (v: T) => T2 | PromiseLike<T2>,
+    orValue: T2 | PromiseLike<T2>,
+  ) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return mapTaskSuccessOr(res, mapFn, orValue);
+    };
+  }
+
+  static mapOrElse<T, T2, E>(
+    mapFn: (v: T) => T2 | PromiseLike<T2>,
+    elseFn: (e: E) => T2 | PromiseLike<T2>,
+  ) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return mapTaskSuccessOrElse(res, mapFn, elseFn);
     };
   }
 
   static mapErr<E, E2, T>(mapFn: (v: E) => E2 | PromiseLike<E2>) {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
-      return Task.of(mapTaskFailure(res, mapFn));
+      return mapTaskFailure(res, mapFn);
     };
   }
 
@@ -75,12 +116,97 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     thenFn: (v: T) => Result<T2, E | E2> | PromiseLike<Result<T2, E | E2>>,
   ) {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
-      return Task.of(chainTaskSuccess(res, thenFn));
+      return chainTaskSuccess(res, thenFn);
     };
+  }
+
+  static orElse<E, T2, E2, T>(
+    elseFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return chainTaskFailure(res, elseFn);
+    };
+  }
+
+  static zip<T2, E2, T, E>(
+    rhs: Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return zipTask(res, rhs);
+    };
+  }
+
+  static tap<T, E>(tapFn: (v: Result<T, E>) => PromiseLike<void>) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return tapTask(res, tapFn);
+    };
+  }
+
+  static trip<T, T2, E2, E>(
+    tripFn: (e: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return tripTask(res, tripFn);
+    };
+  }
+
+  static rise<E, T2, E2, T>(
+    riseFn: (e: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return riseTask(res, riseFn);
+    };
+  }
+
+  static unwrap<T, E>() {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return unwrapTask(res);
+    }
+  }
+
+  static unwrapOr<T, E, T2>(orValue: T2 | PromiseLike<T2>) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return unwrapTaskOr(res, orValue);
+    }
+  }
+
+  static unwrapOrElse<T, E, T2>(elseFn: (e: E) => T2 | PromiseLike<T2>) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return unwrapTaskOrElse(res, elseFn);
+    }
+  }
+
+
+  /**
+   * ======================
+   * TASK INSTANCE METHODS 
+   * ======================
+   */ 
+
+  id(): Task<T, E> {
+    return this;
+  }
+
+  clone(): Task<T, E> {
+    return Task.of(cloneTask(this));
   }
 
   map<T2>(mapFn: (v: T) => T2 | PromiseLike<T2>): Task<T2, E> {
     return Task.of(mapTaskSuccess(this, mapFn));
+  }
+
+  mapOr<T2>(
+    mapFn: (v: T) => T2 | PromiseLike<T2>,
+    orValue: T2 | PromiseLike<T2>,
+  ): Task<T2, never> {
+    return Task.of(mapTaskSuccessOr(this, mapFn, orValue));
+  }
+
+  mapOrElse<T2>(
+    mapFn: (v: T) => T2 | PromiseLike<T2>,
+    orFn: (e: E) => T2 | PromiseLike<T2>,
+  ): Task<T2, never> {
+    return Task.of(mapTaskSuccessOrElse(this, mapFn, orFn));
   }
 
   mapErr<E2>(mapFn: (v: E) => E2 | PromiseLike<E2>): Task<T, E2> {
@@ -93,11 +219,53 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return Task.of(chainTaskSuccess(this, thenFn));
   }
 
-  // map<U>(fn: (t: T) => U | Promise<U>): Task<U, E> {
-  //   const task = this;
-  //
-  //
-  // }
+  orElse<T2, E2>(
+    elseFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T | T2, E2> {
+    return Task.of(chainTaskFailure(this, elseFn));
+  }
+
+  zip<T2, E2>(
+    rhs: Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<[T, T2], E | E2> {
+    return Task.of(zipTask(this, rhs));
+  }
+
+  tap(tapFn: (v: Result<T, E>) => PromiseLike<void>): Task<T, E> {
+    return Task.of(tapTask(this, tapFn));
+  }
+
+  trip<T2, E2>(
+    tripFn: (v: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T, E | E2> {
+    return Task.of(tripTask(this, tripFn));
+  }
+
+  rise<T2, E2>(
+    riseFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T | T2, E> {
+    return Task.of(riseTask(this, riseFn));
+  }
+
+  unwrap(): Promise<T | E> {
+    return unwrapTask(this);
+  }
+
+  unwrapOr<T2>(orValue: T2 | PromiseLike<T2>): Promise<T | T2> {
+    return unwrapTaskOr(this, orValue);
+  }
+
+  unwrapOrElse<T2>(orFn: (e: E) => T2 | PromiseLike<T2>): Promise<T | T2> {
+    return unwrapTaskOrElse(this, orFn);
+  }
+}
+
+async function idTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {
+  return task;
+}
+
+async function cloneTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {
+  return (await task).clone();
 }
 
 async function mapTaskSuccess<T, E, T2>(
@@ -107,9 +275,35 @@ async function mapTaskSuccess<T, E, T2>(
   const res = await task;
   if (res.isErr()) return res;
 
-  const mappedOk = await mapFn(res.unwrap());
+  const mapped = await mapFn(res.unwrap());
 
-  return Ok(mappedOk);
+  return Ok(mapped);
+}
+
+async function mapTaskSuccessOr<T, E, T2>(
+  task: Either<T, E>,
+  mapFn: (v: T) => T2 | PromiseLike<T2>,
+  orValue: T2 | PromiseLike<T2>,
+): Promise<Result<T2, never>> {
+  const res = await task;
+
+  const mapped = res.isErr() ? await orValue : await mapFn(res.unwrap());
+
+  return Ok(mapped);
+}
+
+async function mapTaskSuccessOrElse<T, E, T2>(
+  task: Either<T, E>,
+  mapFn: (v: T) => T2 | PromiseLike<T2>,
+  orFn: (e: E) => T2 | PromiseLike<T2>,
+): Promise<Result<T2, never>> {
+  const res = await task;
+
+  const mapped = res.isErr()
+    ? await orFn(res.unwrap())
+    : await mapFn(res.unwrap());
+
+  return Ok(mapped);
 }
 
 async function mapTaskFailure<T, E, E2>(
@@ -186,4 +380,28 @@ async function riseTask<T, E, T2, E2>(
   const rhs = await riseFn(res.unwrap());
 
   return rhs.or(res);
+}
+
+async function unwrapTask<T, E>(task: Either<T, E>): Promise<T | E> {
+  return (await task).unwrap();
+}
+
+async function unwrapTaskOr<T, E, T2>(
+  task: Either<T, E>,
+  orValue: T2 | PromiseLike<T2>,
+): Promise<T | T2> {
+  const res = await task;
+
+  if (res.isOk()) return res.unwrap();
+  return orValue;
+}
+
+async function unwrapTaskOrElse<T, E, T2>(
+  task: Either<T, E>,
+  orFn: (e: E) => T2 | PromiseLike<T2>,
+): Promise<T | T2> {
+  const res = await task;
+
+  if (res.isOk()) return res.unwrap();
+  return orFn(res.unwrap());
 }
