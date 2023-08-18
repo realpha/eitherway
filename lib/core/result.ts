@@ -41,7 +41,9 @@ class _Ok<T> implements IResult<T, never> {
   isErr(): this is Err<never> { 
     return false;
   }
-  id(): Ok<T> { return this; }
+  id(): Ok<T> { 
+    return this; 
+  }
   and<T2, E2>(rhs: Result<T2, E2>): Result<T2, E2> {
     return rhs;
   }
@@ -65,10 +67,6 @@ class _Ok<T> implements IResult<T, never> {
   }
   orElse<T2, E2>(elseFn: (err: never) => Result<T2, E2>): Result<T2, E2> | Ok<T> {
       return this;
-  }
-  tap(tapFn: (value: Ok<T>) => void): Ok<T> {
-    tapFn(this.clone());
-    return this;
   }
   unwrap(): T { 
     return this.#value; 
@@ -100,6 +98,10 @@ class _Ok<T> implements IResult<T, never> {
     return rhs.and(this);
   }
   rise<T2, E2>(riseFn: (err: never) => Result<T2, E2>): Ok<T> {
+    return this;
+  }
+  tap(tapFn: (value: Ok<T>) => void): Ok<T> {
+    tapFn(this.clone());
     return this;
   }
 }

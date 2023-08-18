@@ -260,6 +260,14 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   }
 }
 
+/**
+ * Helper functions to leverage the same functionality in operators 
+ * and instance methods
+ *
+ * @internal
+ *
+ */
+
 async function idTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {
   return task;
 }
