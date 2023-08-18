@@ -1,73 +1,57 @@
-#eitherway
+# eitherway
 
-| *Y*et *A*nother *R*ust *I*nspired *O*ption *A*nd *R*esult *I*mplementation
+| *Y*et *A*nother *R*ust *I*nspired *O*ption *A*nd *R*esult *I*mplementation 
 (**YARIOARI**)
 
-##Motivation
+## Design Goals
 
-The benefits of typesafe error handling and composability, provided are provided
-by Rust's `Option<T>` and `Result<T, E>` types have been widely recognized over
-the past years. Something functional programmers, have appreciated even longer
-via their use of sum types generally and the Either Monad specifically.
-Typescript users have since experienced hefty feature greed and immediately
-started to roll their own implementations. We _probably_ don't need another
-**YARIOARI**. There are [plenty of libraries](#prior-art) available, which have
-tried to port these types to Typescript and have done so quite successfully
-already. As said, these libraries are splendid for the most part, nevertheless,
-when really trying to work with them, it sometimes feels clunky or overly
-complex, at best unidiomatic. This is especially true, when working in an async
-context. Additionally, anybody who has tried to onboard new team members or
-juniors, who are unfamiliar with `Either<L,R>` et al., might have experienced,
-how difficult it can be to get used to it. Typescript also has great union type
-support. Unfortunately, working with union types requires quite a lot of
-boilerplate and defensive programming, which can be abstracted away elegantly by
-the use of a monadic interface. Given all the degrees of freedom offered by
-Typescript, I believe we still can do a little better, either way.
-
-##Design Goals
-
-`eitherway` is trying to close the gap between typesafety, idiom and
+`eitherway` is trying to close the gap between type-safety, idiom and
 productivity by focusing on the following goals:
 
-- Pragmatism: There is no need to strictly port something from another language
+- *Pragmatism*: There is no need to strictly port something from another language
   with very different semantics. Typescript employs structural typing and
-  therefore also subtyping, whereas Rust largely employs nominal typing and
+  therefore also sub-typing, whereas Rust largely employs nominal typing and
   variance only exists in the context of lifetimes. When decisions arrive, which
   call for a trade-off, `eitherway` will always try to offer an solution geared
   towards the constraints and idiom of Typescript.
-- Compatibility: Interacting with one of the structures defined by `eitherway`
+- *Compatibility*: Interacting with one of the structures defined by `eitherway`
   should be painless in the sense that things do what you would expect them to
   do in Typescript.
-- Documentation: All structures come with full, inline documentation. Making it
+- *Documentation*: All structures come with full, inline documentation. Making it
   easy to understand what is currently happening and if chosen operation is
   suitable for the desired use case.
 
-##NFRs
+## Examples
 
-On the aspect of quality attributes, `eitherway` strives for:
+## API
 
-- Performance: Users should know how much overhead is incurred when using
-  `eitherway` and how it compares to other, available libraries in the
-  **YARIOARI** category.
-- Usability:
-- Safety:
+### Option<T>
 
-##API
+### Result<T, E>
 
-###Option
+### Chance<T>
 
-###Result
+### Task<T, E>
 
-###Task
+## Best Practices
 
-##Examples
+## Prior Art
 
-##Best Practices
+## License & Contributing
 
-##Prior Art
+### Contributing
 
-##License & Contributing
+### License
 
-###Contributing
+<sup>
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+</sup>
 
-###License
+<br>
+
+<sub>
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in `eitherway` by you, as defined in the Apache-2.0 license, shall be
+dual licensed as above, without any additional terms or conditions.
+</sub>
