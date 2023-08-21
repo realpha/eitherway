@@ -313,14 +313,18 @@ Deno.test("eitherway::Option", async (t) => {
       assertStrictEquals(someLifted.unwrap(), 1);
     },
   );
-  await t.step("Option.lift() -> allows for composition of custom Option constructors", () => {
+  await t.step(
+    "Option.lift() -> allows for composition of custom Option constructors",
+    () => {
       type Left<L> = { tag: "Left"; value: L };
       type Right<R> = { tag: "Right"; value: R };
       type Either<L, R> = Left<L> | Right<R>;
-      type Numeric<T> =  T extends number | bigint ? T : never;
+      type Numeric<T> = T extends number | bigint ? T : never;
       type NonNumeric<T> = NonNullable<Exclude<T, Numeric<T>>>;
       function isNonNumeric<T>(arg: T): arg is NonNumeric<T> {
-        if (arg == null || typeof arg === "number" || typeof arg === "bigint") return false;
+        if (arg == null || typeof arg === "number" || typeof arg === "bigint") {
+          return false;
+        }
         return true;
       }
 
@@ -331,7 +335,9 @@ Deno.test("eitherway::Option", async (t) => {
         return None;
       }
 
-      function tupleToEither(arg: Readonly<[string, number | boolean]>): Either<typeof arg[0], typeof arg[1]> {
+      function tupleToEither(
+        arg: Readonly<[string, number | boolean]>,
+      ): Either<typeof arg[0], typeof arg[1]> {
         return { tag: "Right", value: arg[1] };
       }
 
@@ -345,7 +351,8 @@ Deno.test("eitherway::Option", async (t) => {
 
       assertStrictEquals(res.isSome(), true);
       assertStrictEquals(res.unwrap(), true);
-  });
+    },
+  );
   await t.step(
     "Option[Symbol.hasInstance]() -> instanceof returns true for instances of Some & None",
     () => {

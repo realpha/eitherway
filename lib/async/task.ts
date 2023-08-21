@@ -68,18 +68,18 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * ======================
    *  TASK ASYNC OPERATORS
    * ======================
-   */ 
+   */
 
   static id<T, E>() {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
       return idTask(res);
-    }
+    };
   }
 
   static clone<T, E>() {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
       return cloneTask(res);
-    }
+    };
   }
 
   static map<T, T2, E>(mapFn: (v: T) => T2 | PromiseLike<T2>) {
@@ -161,27 +161,26 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   static unwrap<T, E>() {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
       return unwrapTask(res);
-    }
+    };
   }
 
   static unwrapOr<T, E, T2>(orValue: T2 | PromiseLike<T2>) {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
       return unwrapTaskOr(res, orValue);
-    }
+    };
   }
 
   static unwrapOrElse<T, E, T2>(elseFn: (e: E) => T2 | PromiseLike<T2>) {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
       return unwrapTaskOrElse(res, elseFn);
-    }
+    };
   }
-
 
   /**
    * ======================
-   * TASK INSTANCE METHODS 
+   * TASK INSTANCE METHODS
    * ======================
-   */ 
+   */
 
   id(): Task<T, E> {
     return this;
@@ -261,11 +260,10 @@ export class Task<T, E> extends Promise<Result<T, E>> {
 }
 
 /**
- * Helper functions to leverage the same functionality in operators 
+ * Helper functions to leverage the same functionality in operators
  * and instance methods
  *
  * @internal
- *
  */
 
 async function idTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {

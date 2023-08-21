@@ -84,7 +84,7 @@ export interface IOption<T> {
    * Canonical identity function
    *
    * Mainly useful for flattening types of `Option<Option<T>>` togehter
-   * with `andThen()`, 
+   * with `andThen()`,
    *
    * @category Option::Basic
    *
@@ -365,7 +365,7 @@ export interface IOption<T> {
    * ```typescript
    * import { assert } from "../deps.ts";
    * import { Option, None, Some } from "./option.ts";
-   * 
+   *
    * type LogArgs = [boolean, string];
    * function produceLogEntry(args: LogArgs): Option<Record<string, string>> {
    *   return Option({
@@ -555,7 +555,7 @@ export interface IOption<T> {
    * the wrapped value `<T>`, but ensures that the `tapFn` can never
    * change or invalidate the state of the `Option<T>` instance
    *
-   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone) 
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone)
    *
    * @category Option::Intermediate
    *
@@ -753,7 +753,7 @@ export interface IOption<T> {
    *
    * This method *ALWAYS* returns a primitive value, as required by the spec
    * In case of keyed/indexed collection types, if no primitive conversion
-   * is defined, their `string` representation will be returned (i.e. 
+   * is defined, their `string` representation will be returned (i.e.
    * `collection.toString()`)
    *
    * In case of `None` the spec required hints produce the following values:
@@ -1181,10 +1181,11 @@ export type InferredOptionTypes<Opts extends ArrayLike<Option<unknown>>> = {
 export type InferredSomeType<O extends Readonly<Option<unknown>>> = O extends
   Readonly<Some<infer T>> ? T : never;
 
-export type InferredOption<O extends Readonly<Option<unknown>>> = O extends Readonly<None> 
-      ? None : O extends Readonly<Some<infer T1>>
-      ? Some<T1> : [O] extends [Readonly<Option<infer T2>>]
-      ? Option<T2> : never;
+export type InferredOption<O extends Readonly<Option<unknown>>> = O extends
+  Readonly<None> ? None
+  : O extends Readonly<Some<infer T1>> ? Some<T1>
+  : [O] extends [Readonly<Option<infer T2>>] ? Option<T2>
+  : never;
 
 export type OptionIdentity<O extends Readonly<Option<unknown>>> = O extends
   Readonly<Option<infer T>> ? Option<T>
@@ -1195,7 +1196,7 @@ export type OptionIdentity<O extends Readonly<Option<unknown>>> = O extends
 export namespace Option {
   /**
    * Alias for Option()
-   * 
+   *
    * @category Option::Basic
    *
    * @example
@@ -1466,7 +1467,7 @@ export namespace Option {
     return opts.every((opt) => opt.isSome());
   }
 
-  /** 
+  /**
    * Type predicate - use this to check if all values in an array are `None`
    *
    * @category Option::Basic
@@ -1479,12 +1480,12 @@ export namespace Option {
 
   /**
    * Use this to return the provided instance of `Option<T>`
-   * Mostly usefull for flattening or en lieu of a no-op 
+   * Mostly usefull for flattening or en lieu of a no-op
    *
    * @category Option::Basic
    */
   export function id<T>(
-    opt: Readonly<Option<T>> | Option<T>
+    opt: Readonly<Option<T>> | Option<T>,
   ): Option<T> {
     return opt.id();
   }
@@ -1492,12 +1493,12 @@ export namespace Option {
   /**
    * Use this to compose functions and `Option` constructors
    *
-   * Allows interleaving a given chain of operations on instances of type 
+   * Allows interleaving a given chain of operations on instances of type
    * `Option<T>` with (sort of) arbirtrary operations by lifting them into
    * an `Option` context
    *
    * This is useful in situations, where it's necessary to perform computations
-   * on the wrapped value of type `<T>`, but the available functions are 
+   * on the wrapped value of type `<T>`, but the available functions are
    * invariant over the provided `map()` or `andThen()` methods' parameters
    *
    * Furthermore, it allows for composing functions with custom `Option`
@@ -1505,7 +1506,7 @@ export namespace Option {
    *
    * @category Option::Advanced
    *
-   * @example 
+   * @example
    * ```typescript
    * import { assert } from "../deps.ts";
    * import { Option, None, Some } from "./option.ts";
@@ -1536,13 +1537,13 @@ export namespace Option {
    * // ...or we could just use the `lift()` function with an appropriate ctor
    * const liftedDiv = Option.lift(chainDivide, Option.fromCoercible);
    *
-   * // If the ctor parameter is omitted, `Option.from()` is used per default 
+   * // If the ctor parameter is omitted, `Option.from()` is used per default
    * const liftedWithDefault = Option.lift(chainDivide);
    *
    * const divident = getDivident();
    * const divisors = getDivisors();
    * const args = divident.zip(divisors);
-   * 
+   *
    * const someWrapped = args.andThen(args => wrappedDiv(args[0], ...args[1]));
    * const someLifted = args.andThen(args => liftedDiv(args[0], ...args[1]));
    *
@@ -1551,7 +1552,11 @@ export namespace Option {
    * assert(someWrapped.unwrap() === someLifted.unwrap());
    * ```
    */
-  export function lift<Args extends Readonly<unknown[]>, R1, R2 = NonNullish<R1>>(
+  export function lift<
+    Args extends Readonly<unknown[]>,
+    R1,
+    R2 = NonNullish<R1>,
+  >(
     fn: (...args: Args) => R1,
     ctor: (arg: R1) => Option<R2> = Option.from as (arg: R1) => Option<R2>,
   ) {
@@ -1560,4 +1565,3 @@ export namespace Option {
     };
   }
 }
-

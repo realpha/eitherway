@@ -72,10 +72,12 @@ Deno.test("eitherway::Task", async (t) => {
           const task = Task.err(
             Error("Received error", { cause: TypeError("Cannot do that") }),
           );
-          const rehydrate = function(err: unknown): Task<number, RangeError> {
-            if (!(err instanceof Error)) return Task.err(RangeError("Cannot rehydrate"));
+          const rehydrate = function (err: unknown): Task<number, RangeError> {
+            if (!(err instanceof Error)) {
+              return Task.err(RangeError("Cannot rehydrate"));
+            }
             return Task.ok(0);
-          }
+          };
 
           const chained = task.orElse(rehydrate);
           const res = await chained;
@@ -147,10 +149,12 @@ Deno.test("eitherway::Task", async (t) => {
           const p: Promise<Result<never, Error>> = Promise.resolve(Err(
             Error("Received error", { cause: TypeError("Cannot do that") }),
           ));
-          const rehydrate = async function(err: unknown) {
-            if (!(err instanceof Error)) return Task.err(RangeError("Cannot rehydrate"));
+          const rehydrate = async function (err: unknown) {
+            if (!(err instanceof Error)) {
+              return Task.err(RangeError("Cannot rehydrate"));
+            }
             return Task.ok(0);
-          }
+          };
 
           const chained = p.then(Task.orElse(rehydrate));
           const res = await chained;

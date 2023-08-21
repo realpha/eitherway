@@ -14,7 +14,9 @@ export interface IResult<T, E> {
   mapOr<T2>(mapFn: (value: T) => T2, orValue: T2): Ok<T2>;
   mapOrElse<T2>(mapFn: (value: T) => T2, elseFn: (err: E) => T2): Ok<T2>;
   mapErr<E2>(mapFn: (err: E) => E2): Result<T, E2>;
-  andThen<T2, E2>(thenFn: (value: T) => Result<T2, E2>): Err<E> | Result<T2, E2>;
+  andThen<T2, E2>(
+    thenFn: (value: T) => Result<T2, E2>,
+  ): Err<E> | Result<T2, E2>;
   orElse<T2, E2>(elseFn: (err: E) => Result<T2, E2>): Ok<T> | Result<T2, E2>;
   and<T2, E2>(rhs: Result<T2, E2>): Err<E> | Result<T2, E2>;
   or<T2, E2>(rhs: Result<T2, E2>): Ok<T> | Result<T2, E2>;
@@ -26,23 +28,23 @@ export interface IResult<T, E> {
   clone(): Result<T, E>;
   zip<T2, E2>(rhs: Result<T2, E2>): Result<[T, T2], E> | Err<E2>;
   tap(tapFn: (value: Result<T, E>) => void): Result<T, E>;
-  trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>
-  rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>
+  trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
+  rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
 }
 
 class _Ok<T> implements IResult<T, never> {
-  #value: T
+  #value: T;
   constructor(value: T) {
     this.#value = value;
   }
-  isOk(): this is Ok<T> { 
+  isOk(): this is Ok<T> {
     return true;
   }
-  isErr(): this is Err<never> { 
+  isErr(): this is Err<never> {
     return false;
   }
-  id(): Ok<T> { 
-    return this; 
+  id(): Ok<T> {
+    return this;
   }
   and<T2, E2>(rhs: Result<T2, E2>): Result<T2, E2> {
     return rhs;
@@ -51,10 +53,10 @@ class _Ok<T> implements IResult<T, never> {
     return this;
   }
   map<T2>(mapFn: (value: T) => T2): Ok<T2> {
-      return Ok(mapFn(this.#value));
+    return Ok(mapFn(this.#value));
   }
   mapOr<T2>(mapFn: (value: T) => T2, orValue: T2): Ok<T2> {
-      return this.map(mapFn);
+    return this.map(mapFn);
   }
   mapOrElse<T2>(mapFn: (value: T) => T2, elseFn: (err: never) => T2): Ok<T2> {
     return this.map(mapFn);
@@ -63,13 +65,15 @@ class _Ok<T> implements IResult<T, never> {
     return this;
   }
   andThen<T2, E2>(thenFn: (value: T) => Result<T2, E2>): Result<T2, E2> {
-      return thenFn(this.#value);
+    return thenFn(this.#value);
   }
-  orElse<T2, E2>(elseFn: (err: never) => Result<T2, E2>): Result<T2, E2> | Ok<T> {
-      return this;
+  orElse<T2, E2>(
+    elseFn: (err: never) => Result<T2, E2>,
+  ): Result<T2, E2> | Ok<T> {
+    return this;
   }
-  unwrap(): T { 
-    return this.#value; 
+  unwrap(): T {
+    return this.#value;
   }
   unwrapOr<T2>(orValue: T2): T {
     return this.#value;
@@ -107,24 +111,24 @@ class _Ok<T> implements IResult<T, never> {
 }
 
 class _Err<E> implements IResult<never, E> {
-  #err: E
+  #err: E;
   constructor(err: E) {
     this.#err = err;
   }
-  isOk(): this is Ok<never> { 
+  isOk(): this is Ok<never> {
     return false;
   }
-  isErr(): this is Err<E> { 
+  isErr(): this is Err<E> {
     return true;
   }
-  id(): Err<E> { 
-    return this; 
+  id(): Err<E> {
+    return this;
   }
   and<T2, E2>(rhs: Result<T2, E2>): Err<E> {
-      return this;
+    return this;
   }
   or<T2, E2>(rhs: Result<T2, E2>): Result<T2, E2> {
-     return rhs; 
+    return rhs;
   }
   map<T2>(mapFn: (value: never) => T2): Err<E> {
     return this;
@@ -133,7 +137,7 @@ class _Err<E> implements IResult<never, E> {
     return Ok(orValue);
   }
   mapOrElse<T2>(mapFn: (value: never) => T2, elseFn: (err: E) => T2): Ok<T2> {
-    return Ok(elseFn(this.#err)); 
+    return Ok(elseFn(this.#err));
   }
   mapErr<E2>(mapFn: (err: E) => E2): Err<E2> {
     return Err(mapFn(this.#err));
@@ -142,13 +146,13 @@ class _Err<E> implements IResult<never, E> {
     return this;
   }
   orElse<T2, E2>(elseFn: (err: E) => Result<T2, E2>): Result<T2, E2> {
-    return elseFn(this.#err);  
+    return elseFn(this.#err);
   }
   tap(tapFn: (value: Result<never, E>) => void): Err<E> {
     tapFn(this.clone());
     return this;
   }
-  unwrap(): E { 
+  unwrap(): E {
     return this.#err;
   }
   unwrapOr<T2>(orValue: T2): T2 {
@@ -181,22 +185,26 @@ class _Err<E> implements IResult<never, E> {
 }
 
 export type Ok<T> = _Ok<T>;
-export function Ok<T>(value: T) { return new _Ok(value) }
+export function Ok<T>(value: T) {
+  return new _Ok(value);
+}
 Object.defineProperty(Ok, Symbol.hasInstance, {
-  value: function(lhs: unknown): lhs is Ok<unknown> {
+  value: function (lhs: unknown): lhs is Ok<unknown> {
     return lhs instanceof _Ok;
-  }
+  },
 });
 Object.defineProperty(Ok, Symbol.toStringTag, {
   value: "eitherway::Result::Ok",
 });
 
 export type Err<E> = _Err<E>;
-export function Err<T, E>(err: E) { return new _Err(err) }
+export function Err<T, E>(err: E) {
+  return new _Err(err);
+}
 Object.defineProperty(Err, Symbol.hasInstance, {
-  value: function(lhs: unknown): lhs is Err<unknown> {
+  value: function (lhs: unknown): lhs is Err<unknown> {
     return lhs instanceof _Err;
-  }
+  },
 });
 Object.defineProperty(Err, Symbol.toStringTag, {
   value: "eitherway::Result::Err",
@@ -208,11 +216,10 @@ export function Result<T, E extends Error>(value: T | E) {
   return Ok(value);
 }
 Object.defineProperty(Result, Symbol.hasInstance, {
-  value: function(lhs: unknown): lhs is Result<unknown, unknown> {
+  value: function (lhs: unknown): lhs is Result<unknown, unknown> {
     return lhs instanceof _Ok || lhs instanceof _Err;
-  }
+  },
 });
 Object.defineProperty(Result, Symbol.toStringTag, {
   value: "eitherway::Result",
 });
-

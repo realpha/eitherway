@@ -43,12 +43,14 @@ export type Fallible<E> = E extends Error ? E : never;
 
 export type Truthy<T> = Exclude<T, Falsy>;
 export type NonNullish<T> = Exclude<T, Nullish>;
-export type Infallible<T> = Exclude<T, Nullish | Fallible<T>>
+export type Infallible<T> = Exclude<T, Nullish | Fallible<T>>;
 export type HasToJSON<T> = T extends { toJSON(): JsonRepr<T> } ? T : never;
 
 export type IsOption<O> = O extends Option<unknown> ? true : false;
 export type OptionType<O> = O extends Option<infer Inner> ? Inner : never;
-export type SomeType<S extends Option<unknown>> = S extends Some<infer Inner> ? Inner : never;
+export type SomeType<S extends Option<unknown>> = S extends Some<infer Inner>
+  ? Inner
+  : never;
 export type NonReadonly<T> = T extends Readonly<infer U> ? U : T;
 
 /**
@@ -83,16 +85,20 @@ export function isPrimitive(arg: unknown): arg is string | number | boolean {
 
 /**
  * ===============
- *   DECORATORS 
+ *   DECORATORS
  * ===============
  */
 
-export function callable<T extends new(...args: any[]) => any, Ctx extends ClassDecoratorContext<T>, R>(
+export function callable<
+  T extends new (...args: any[]) => any,
+  Ctx extends ClassDecoratorContext<T>,
+  R,
+>(
   ctor: T,
-  ctx: Ctx
+  ctx: Ctx,
 ) {
   if (ctx.kind !== "class") return;
-  return function(...args: ConstructorParameters<T>): InstanceType<T> {
+  return function (...args: ConstructorParameters<T>): InstanceType<T> {
     return new ctor(...args);
   };
 }
