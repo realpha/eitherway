@@ -3,13 +3,15 @@
  * NOTE: the "no-unused-vars" lint rule is ignored in order to ensure
  * method parameter names are symetrical
  */
-import type { NonNullish } from "./type_utils.ts";
+import type { Empty, NonNullish } from "./type_utils.ts";
+import { EMPTY } from "./type_utils.ts";
 import { None, Option } from "./option.ts";
 
 export interface IResult<T, E> {
   isOk(): this is Ok<T>;
   isErr(): this is Err<E>;
   id(): Result<T, E>;
+  clone(): Result<T, E>;
   map<T2>(mapFn: (value: T) => T2): Result<T2, E>;
   mapOr<T2>(mapFn: (value: T) => T2, orValue: T2): Ok<T2>;
   mapOrElse<T2>(mapFn: (value: T) => T2, elseFn: (err: E) => T2): Ok<T2>;
@@ -20,14 +22,15 @@ export interface IResult<T, E> {
   orElse<T2, E2>(elseFn: (err: E) => Result<T2, E2>): Ok<T> | Result<T2, E2>;
   and<T2, E2>(rhs: Result<T2, E2>): Err<E> | Result<T2, E2>;
   or<T2, E2>(rhs: Result<T2, E2>): Ok<T> | Result<T2, E2>;
+  zip<T2, E2>(rhs: Result<T2, E2>): Ok<[T, T2]> | Err<E> | Err<E2>;
   unwrap(): T | E;
   unwrapOr<T2>(orValue: T2): T | T2;
   unwrapOrElse<T2>(elseFn: (err: E) => T2): T | T2;
   toTuple(): [T, never] | [never, E] | [never, never];
-  toOption(): Option<T>;
-  clone(): Result<T, E>;
-  zip<T2, E2>(rhs: Result<T2, E2>): Result<[T, T2], E> | Err<E2>;
-  tap(tapFn: (value: Result<T, E>) => void): Result<T, E>;
+  ok(): Option<T>;
+  err(): Option<E>;
+  into<T2>(intoFn: (res: Result<T, E>) => T2): T2;
+  tap(tapFn: (res: Result<T, E>) => void): Result<T, E>;
   trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
 }
@@ -45,6 +48,9 @@ class _Ok<T> implements IResult<T, never> {
   }
   id(): Ok<T> {
     return this;
+  }
+  clone(): Ok<T> {
+    return Ok(structuredClone(this.#value));
   }
   and<T2, E2>(rhs: Result<T2, E2>): Result<T2, E2> {
     return rhs;
@@ -69,7 +75,7 @@ class _Ok<T> implements IResult<T, never> {
   }
   orElse<T2, E2>(
     elseFn: (err: never) => Result<T2, E2>,
-  ): Result<T2, E2> | Ok<T> {
+  ): Ok<T> {
     return this;
   }
   unwrap(): T {
@@ -84,11 +90,14 @@ class _Ok<T> implements IResult<T, never> {
   toTuple(): [T, never] {
     return [this.#value, undefined as never];
   }
-  toOption(): Option<NonNullish<T>> {
-    return Option.from(this.#value);
+  ok(): Option<NonNullish<T>> {
+    return Option(this.#value);
   }
-  clone(): Ok<T> {
-    return Ok(structuredClone(this.#value));
+  err(): Option<never> {
+    return None;
+  }
+  into<T2>(intoFn: (res: Ok<T>) => T2): T2 {
+    return intoFn(this);
   }
   zip<T2, E2>(rhs: Result<T2, E2>): Result<[T, T2], E2> {
     if (rhs.isErr()) return rhs;
@@ -97,9 +106,9 @@ class _Ok<T> implements IResult<T, never> {
   }
   trip<T2, E2>(thenFn: (value: T) => Result<T2, E2>): Ok<T> | Err<E2> {
     const clone = this.clone().unwrap();
-    const rhs = thenFn(clone);
+    const lhs = thenFn(clone);
 
-    return rhs.and(this);
+    return lhs.and(this);
   }
   rise<T2, E2>(riseFn: (err: never) => Result<T2, E2>): Ok<T> {
     return this;
@@ -123,6 +132,9 @@ class _Err<E> implements IResult<never, E> {
   }
   id(): Err<E> {
     return this;
+  }
+  clone(): Err<E> {
+    return Err(structuredClone(this.#err));
   }
   and<T2, E2>(rhs: Result<T2, E2>): Err<E> {
     return this;
@@ -164,11 +176,14 @@ class _Err<E> implements IResult<never, E> {
   toTuple(): [never, E] {
     return [undefined as never, this.#err];
   }
-  toOption(): None {
+  into<T2>(intoFn: (res: Err<E>) => T2): T2 {
+    return intoFn(this);
+  }
+  ok(): None {
     return None;
   }
-  clone(): Err<E> {
-    return Err(structuredClone(this.#err));
+  err(): Option<NonNullish<E>> {
+    return Option(this.#err);
   }
   zip<T2, E2>(rhs: Result<T2, E2>): Err<E> {
     return this;
@@ -178,9 +193,9 @@ class _Err<E> implements IResult<never, E> {
   }
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Ok<T2> | Err<E> {
     const clone = this.clone().unwrap();
-    const rhs = riseFn(clone);
+    const lhs = riseFn(clone);
 
-    return rhs.or(this);
+    return lhs.or(this);
   }
 }
 
@@ -196,9 +211,15 @@ Object.defineProperty(Ok, Symbol.hasInstance, {
 Object.defineProperty(Ok, Symbol.toStringTag, {
   value: "eitherway::Result::Ok",
 });
+//deno-lint-ignore no-namespace
+export namespace Ok {
+  export function empty(): Ok<Empty> {
+    return Ok(EMPTY);
+  }
+}
 
 export type Err<E> = _Err<E>;
-export function Err<T, E>(err: E) {
+export function Err<E>(err: E): Err<E> {
   return new _Err(err);
 }
 Object.defineProperty(Err, Symbol.hasInstance, {
@@ -209,7 +230,12 @@ Object.defineProperty(Err, Symbol.hasInstance, {
 Object.defineProperty(Err, Symbol.toStringTag, {
   value: "eitherway::Result::Err",
 });
-
+//deno-lint-ignore no-namespace
+export namespace Err {
+  export function empty(): Err<Empty> {
+    return Err(EMPTY);
+  }
+}
 export type Result<T, E> = Ok<T> | Err<E>;
 export function Result<T, E extends Error>(value: T | E) {
   if (value instanceof Error) return Err(value);
@@ -223,3 +249,52 @@ Object.defineProperty(Result, Symbol.hasInstance, {
 Object.defineProperty(Result, Symbol.toStringTag, {
   value: "eitherway::Result",
 });
+
+//deno-lint-ignore no-namespace
+export namespace Result {
+  export function from<T>(fn: () => T): Result<T, never> {
+    return Result.fromFallible(fn, isInfallible);
+  }
+  export function fromFallible<T, E>(
+    fn: () => T,
+    errMapFn: (e: unknown) => E,
+  ): Result<T, E> {
+    try {
+      return Ok(fn());
+    } catch (e) {
+      return Err(errMapFn(e));
+    }
+  }
+  export function lift<Args extends unknown[], R, T = R, E = never>(
+    fn: (...args: Args) => R,
+    ctor: (arg: R) => Result<T, E> = Ok as (arg: R) => Result<T, E>,
+  ) {
+    return function (...args: Args): Result<T, E> {
+      try {
+        return ctor(fn(...args));
+      } catch (e) {
+        throw isInfallible(e);
+      }
+    };
+  }
+  export function liftFallible<Args extends unknown[], R, E, T = R>(
+    fn: (...args: Args) => R,
+    errMapFn: (e: unknown) => E,
+    ctor: (arg: R) => Result<T, E> = Ok as (arg: R) => Result<T, E>,
+  ) {
+    return function (...args: Args): Result<T, E> {
+      try {
+        return ctor(fn(...args));
+      } catch (e) {
+        return Err(errMapFn(e));
+      }
+    };
+  }
+}
+
+export function isInfallible(e: unknown): never {
+  throw new Error(
+    `eitherway::core -> A function you've passed as infallible threw an exception: ${e}`,
+    { cause: e },
+  );
+}

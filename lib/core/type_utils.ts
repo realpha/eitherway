@@ -53,6 +53,9 @@ export type SomeType<S extends Option<unknown>> = S extends Some<infer Inner>
   : never;
 export type NonReadonly<T> = T extends Readonly<infer U> ? U : T;
 
+export type Empty = Readonly<Record<"never", never>>;
+export const EMPTY: Empty = Object.freeze(Object.create(null));
+
 /**
  * ===============
  * TYPE PREDICATES
@@ -89,16 +92,21 @@ export function isPrimitive(arg: unknown): arg is string | number | boolean {
  * ===============
  */
 
+/**
+ * Waiting for this to simplify module structure
+ * https://github.com/denoland/deno/issues/19160
+ */
 export function callable<
+  //deno-lint-ignore no-explicit-any
   T extends new (...args: any[]) => any,
   Ctx extends ClassDecoratorContext<T>,
-  R,
+  R = InstanceType<T>,
 >(
   ctor: T,
   ctx: Ctx,
 ) {
   if (ctx.kind !== "class") return;
-  return function (...args: ConstructorParameters<T>): InstanceType<T> {
+  return function (...args: ConstructorParameters<T>): R {
     return new ctor(...args);
   };
 }

@@ -1,13 +1,4 @@
-import { Err, Ok, Result } from "../core/result.ts";
-
-/**
- * These type aliases are only used internally to ease save some chars
- */
-type Future<T, E> = PromiseLike<Result<T, E>>;
-type Either<T, E> = Result<T, E> | Future<T, E>;
-type ExecutorFn<T, E> = ConstructorParameters<typeof Promise<Result<T, E>>>[0];
-
-function noop(arg: unknown) {}
+import { Err, isInfallible, Ok, Result } from "../core/result.ts";
 
 export class Task<T, E> extends Promise<Result<T, E>> {
   private constructor(executor: ExecutorFn<T, E>) {
@@ -23,45 +14,53 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   static of<T, E>(
     value: Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
-    if (value instanceof Task) return value;
-    return new Task<T, E>((resolve) => resolve(value));
+    return Task.from(() => value);
   }
 
-  static ok<T>(value: T): Task<T, never> {
+  static succeed<T>(value: T): Task<T, never> {
     return Task.of(Ok(value));
   }
 
-  static err<E>(error: E): Task<never, E> {
+  static fail<E>(error: E): Task<never, E> {
     return Task.of(Err(error));
   }
 
   static from<T, E>(
     fn: () => Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
-    return new Task<T, E>((resolve) => resolve(fn()));
+    const p = new Promise<Result<T, E>>((resolve) => resolve(fn())).then(
+      (res) => res,
+    ).catch(isInfallible);
+    return new Task<T, E>((resolve) => resolve(p));
   }
 
-  static fromPromise<T, E = never>(
-    promise: Promise<T> | (() => Promise<T>),
-    errorMapFn: (reason: unknown) => E = noop as (reason: unknown) => never,
+  static fromPromise<T, E>(
+    promise: Promise<T>,
+    errorMapFn: (reason: unknown) => E,
   ): Task<T, E> {
-    const p = typeof promise === "function" ? promise() : promise;
-    const toResolve = p.then((value: T) => Ok(value)).catch((reason: unknown) =>
-      Err(errorMapFn(reason))
-    );
-    return new Task((resolve) => resolve(toResolve));
+    return Task.fromFallible(() => promise, errorMapFn);
   }
 
   static fromFallible<T, E>(
-    fn: () => T,
+    fn: () => T | PromiseLike<T>,
     errorMapFn: (reason: unknown) => E,
   ): Task<T, E> {
-    try {
-      const v = fn();
-      return Task.of(Ok(v));
-    } catch (e) {
-      return Task.of(Err(errorMapFn(e)));
-    }
+    const p = new Promise<T>((resolve) => resolve(fn())).then((v) => Ok(v))
+      .catch((e) => Err(errorMapFn(e)));
+    return new Task<T, E>((resolve) => resolve(p));
+  }
+
+  static liftFallible<Args extends unknown[], T, E>(
+    fn: (...args: Args) => T | PromiseLike<T>,
+    errorMapFn: (reason: unknown) => E,
+  ) {
+    return function (...args: Args): Task<T, E> {
+      const p = new Promise<T>((resolve) => resolve(fn(...args))).then((v) =>
+        Ok(v)
+      )
+        .catch((e) => Err(errorMapFn(e)));
+      return new Task<T, E>((resolve) => resolve(p));
+    };
   }
 
   /**
@@ -267,7 +266,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
  */
 
 async function idTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {
-  return task;
+  return await task;
 }
 
 async function cloneTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {
@@ -411,3 +410,12 @@ async function unwrapTaskOrElse<T, E, T2>(
   if (res.isOk()) return res.unwrap();
   return orFn(res.unwrap());
 }
+
+/**
+ * These are only used internally to save some chars
+ * @interal
+ */
+
+type Future<T, E> = PromiseLike<Result<T, E>>;
+type Either<T, E> = Result<T, E> | Future<T, E>;
+type ExecutorFn<T, E> = ConstructorParameters<typeof Promise<Result<T, E>>>[0];

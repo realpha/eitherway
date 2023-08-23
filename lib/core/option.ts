@@ -5,6 +5,7 @@
  */
 import { assert } from "../deps.ts";
 import type {
+  Empty,
   Infallible,
   JsonRepr,
   NonNullish,
@@ -13,12 +14,14 @@ import type {
   ValueRepr,
 } from "./type_utils.ts";
 import {
+  EMPTY,
   hasToJSON,
   isInfallible,
   isNotNullish,
   isPrimitive,
   isTruthy,
 } from "./type_utils.ts";
+import { Err, Ok, Result } from "./result.ts";
 
 /**
  * ==============
@@ -106,6 +109,46 @@ export interface IOption<T> {
    * ```
    */
   id(): Option<T>;
+
+  /**
+   * Use this to obtain a deep clone of `Option<T>`
+   *
+   * This can be handy if user-defined operations on reference types mutate the
+   * passed value and the original value should be retained
+   *
+   * Please keep in mind that this behaviour is strongly discouraged though
+   *
+   * @category Option::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * //This really is an anti-example - don't do that
+   *
+   * const rec = { a: "some", b: "thing" };
+   * const maybeRec = Option.from(rec);
+   * const encode = JSON.stringify;
+   * function mutate(rec: Record<string, string>): Record<string, string> {
+   *   if ("a" in rec) {
+   *     delete rec.a;
+   *   }
+   *
+   *   return rec;
+   * }
+   *
+   * const maybeRecMutated = maybeRec.clone().map(mutate);
+   *
+   * const recUnwrapped = maybeRec.unwrap();
+   * const mutatedUnwrapped = maybeRecMutated.unwrap();
+   *
+   * assert(recUnwrapped === rec); // Same reference
+   * assert(mutatedUnwrapped !== rec);
+   * assert(encode(recUnwrapped) !== encode(mutatedUnwrapped));
+   * ```
+   */
+  clone(): Option<T>;
 
   /**
    * Use this to transform `Some<T>` to `Some<U>` by applying the supplied
@@ -255,6 +298,36 @@ export interface IOption<T> {
   andThen<U>(thenFn: (arg: Readonly<T>) => Option<U>): Option<U>;
 
   /**
+   * Use this if you want to recover from `None` or lazily initialize a
+   * fallback `Option<U>` in case of `None`
+   *
+   * @category Option::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * function fallback() {
+   *   return Some("EXPENSIVE TO PRODUCE");
+   * }
+   * function expensiveGeneration(s: string): Option<string> {
+   *   if (s.length !== 42) return None;
+   *   return Some(s.toUpperCase());
+   * }
+   * const someStr = Some("thing");
+   *
+   * const maybeExpensive = someStr
+   *   .andThen(expensiveGeneration)
+   *   .orElse(fallback);
+   *
+   * assert(maybeExpensive.isSome() === true);
+   * assert(maybeExpensive.unwrap() === "EXPENSIVE TO PRODUCE");
+   * ```
+   */
+  orElse<U>(elseFn: () => Option<U>): Some<T> | Option<U>;
+
+  /**
    * Use this to get the wrapped value out of an `Option` instance
    *
    * Returns the wrapped value of type `<T>` in case of `Some<T>` OR
@@ -348,6 +421,33 @@ export interface IOption<T> {
   unwrapOrElse<U>(elseFn: () => NonNullish<U>): T | NonNullish<U>;
 
   /**
+   * Use this to transform an `Option<T>` into a Result<T, E> by providing
+   * a possible Error value in case of `None`
+   *
+   * @category Option::Basic
+   */
+  okOr<E>(err: E): Result<T, E>;
+
+  /**
+   * Use this to transform an `Option<T>` into a `Result<T, E>` by providing
+   * a function to lazily produce a possible Error value in case of `None`
+   *
+   * This is mostly useful if the Error value is expensive to produce
+   *
+   * @category Option::Intermediate
+   */
+  okOrElse<E>(err: () => E): Result<T, E>;
+
+  /**
+   * Use this to transform an `Option<T>` into a type of your choosing
+   *
+   * This is mostly useful for shoving an `Option<T>` into an async context.
+   *
+   * @category Option::Intermediate
+   */
+  into<U>(intoFn: (arg: Option<T>) => U): U;
+
+  /**
    * Use this to produce a tuple from two wrapped values if both are `Some`,
    * otherwise return `None`
    *
@@ -386,6 +486,67 @@ export interface IOption<T> {
    * ```
    */
   zip<U>(rhs: Option<U>): Option<[T, U]>;
+
+  /**
+   * Use this to perform synchronous side-effects which can derail the
+   * current `Option<T>`
+   *
+   * This is equivalent to chaining:
+   * `original.clone().andThen(tripFn).and(original)`
+   *
+   * CAUTION: Seldom useful in a synchronous context
+   *
+   * |  LHS trip RHS  | RHS: Some<U> |  RHS: None  |
+   * |----------------|--------------|-------------|
+   * |  LHS: Some<T>  |    Some<T>   |     None    |
+   * |  LHS:  None    |      None    |     None    |
+   *
+   * In case of `None` this method short-circuits and returns `None`
+   *
+   * In case of `Some<T>`, the provided `tripFn` gets evaluated with a deep
+   * clone of `<T>` and if the return value is:
+   *  - `Some<U>` - it is discarded and the original `Some<T>` is returned
+   *  - `None`: `None` is returned
+   *
+   * @category Option::Advanced
+   *
+   * @example
+   * ```
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   * import { existsSync } from "https://deno.land/std@0.199.0/fs/mod.ts";
+   *
+   * interface Config {
+   *   rootDir: string;
+   *   cmd: string;
+   * }
+   *
+   * function isReadableDir(path: string): Option<true> {
+   *   return Option.fromCoercible(
+   *     existsSync(path, {
+   *       isReadable: true,
+   *       isDirectory: true,
+   *     });
+   *   );
+   * }
+   *
+   * function finalizeConfig(path: string): Option<Config> {
+   *   return Some({
+   *     rootDir: path,
+   *     cmd: "git add -A"
+   *   });
+   * }
+   *
+   * const path = Some("~/.dotfiles/README.md)
+   *
+   * const maybeConfig = path
+   *   .trip(isReadableDir)
+   *   .andThen(finalizeConfig);
+   *
+   * assert(maybeConfig.isNone() === true);
+   * ```
+   */
+  trip<U>(tripFn: (value: T) => Option<U>): Option<T>;
 
   /**
    * Logical AND ( && )
@@ -578,8 +739,8 @@ export interface IOption<T> {
    * const logMut = function (opt: Option<UserRecord>) {
    *   if (opt.isSome()) {
    *     const rec = opt.unwrap();
-   *     delete rec.name;
-   *     delete rec.email;
+   *     rec.name = "***";
+   *     rec.email = "***";
    *     console.log(JSON.stringify(rec));
    *   }
    *   console.log("No UserRecord found!");
@@ -587,12 +748,13 @@ export interface IOption<T> {
    *
    * const maybeUserRec = Option.from(getUserRecord("1"));
    * const maybeEmail = maybeUserRec
-   *                     .tap(logMut) // stdout: "{"id":"1"}"
+   *                     .tap(logMut)
    *                     .map((rec) => rec.email);
    *
    * assert(maybeEmail.unwrap() === "allen@example.com");
+   * ```
    */
-  tap(tapFn: <T>(arg: Option<T>) => void): Option<T>;
+  tap(tapFn: (arg: Option<T>) => void): Option<T>;
 
   /**
    * Use this to get the full string tag
@@ -818,6 +980,9 @@ class _None<T = never> implements IOption<never> {
   id(): None {
     return this;
   }
+  clone(): None {
+    return this;
+  }
   map<U>(mapFn: (arg: never) => NonNullish<U>): None {
     return this;
   }
@@ -839,6 +1004,9 @@ class _None<T = never> implements IOption<never> {
   andThen<U>(thenFn: (arg: never) => Option<U>): None {
     return this;
   }
+  orElse<U>(elseFn: () => Option<U>): Option<U> {
+    return elseFn();
+  }
   unwrap() {
     return undefined;
   }
@@ -847,6 +1015,15 @@ class _None<T = never> implements IOption<never> {
   }
   unwrapOrElse<U>(elseFn: () => NonNullish<U>) {
     return elseFn();
+  }
+  okOr<E>(err: E): Err<E> {
+    return Err(err);
+  }
+  okOrElse<E>(errFn: () => E): Err<E> {
+    return Err(errFn());
+  }
+  into<U>(intoFn: (arg: Option<never>) => U): U {
+    return intoFn(this);
   }
   and<U>(rhs: Option<U>): None {
     return this;
@@ -860,6 +1037,9 @@ class _None<T = never> implements IOption<never> {
   }
   tap(tapFn: (arg: Option<never>) => void) {
     tapFn(None);
+    return this;
+  }
+  trip<U>(tripFn: (value: never) => Option<U>): None {
     return this;
   }
   toTag(): string {
@@ -907,6 +1087,9 @@ class _Some<T> implements IOption<T> {
   id(): Some<T> {
     return this;
   }
+  clone(): Some<T> {
+    return Some(structuredClone(this.#value));
+  }
   map<U>(mapFn: (arg: T) => NonNullish<U>): Some<NonNullish<U>> {
     return Some(mapFn(this.#value));
   }
@@ -929,6 +1112,9 @@ class _Some<T> implements IOption<T> {
   andThen<U>(thenFn: (arg: T) => Option<U>): Option<U> {
     return thenFn(this.#value);
   }
+  orElse<U>(elseFn: () => Option<U>): Some<T> {
+    return this;
+  }
   unwrap(): T {
     return this.#value;
   }
@@ -937,6 +1123,15 @@ class _Some<T> implements IOption<T> {
   }
   unwrapOrElse<U>(elseFn: () => NonNullish<U>): T {
     return this.#value;
+  }
+  okOr<E>(err: E): Ok<T> {
+    return Ok(this.#value);
+  }
+  okOrElse<E>(errFn: () => E): Ok<T> {
+    return Ok(this.#value);
+  }
+  into<U>(intoFn: (arg: Option<T>) => U): U {
+    return intoFn(this);
   }
   and<U>(rhs: Option<U>): Some<U> | None {
     return rhs;
@@ -951,6 +1146,10 @@ class _Some<T> implements IOption<T> {
   tap(tapFn: (arg: Option<T>) => void): Option<T> {
     tapFn(Some(structuredClone(this.#value)));
     return this;
+  }
+  trip<U>(tripFn: (value: T) => Option<U>): Option<T> {
+    const lhs = tripFn(this.clone().unwrap());
+    return lhs.and(this);
   }
   toTag(): string {
     return Object.prototype.toString.call(this);
@@ -999,7 +1198,7 @@ class _Some<T> implements IOption<T> {
   }
 }
 
-/*
+/**
  * ==============
  *   MODULE API
  * ==============
@@ -1070,13 +1269,18 @@ Object.defineProperty(Some, Symbol.hasInstance, {
 Object.defineProperty(Some, Symbol.toStringTag, {
   value: "eitherway::Option::Some",
 });
+Object.defineProperty(Some, "empty", {
+  value: function (): Some<Empty> {
+    return Some(EMPTY);
+  },
+});
 
 /**
  * # None
  * {@linkcode None} represents the absence of a value and is the opinionated, composable
  * equivalent of `undefined` with "sane" defaults.
  *
- * It can be [coerced to the falsy representation of primitive types]{@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion}
+ * It can be [coerced to the falsy representation of primitive types](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion)
  * Furthermore, it implements the iterator protocol and returns `undefined`
  * when it gets JSON encoded via JSON.stringify()
  *
@@ -1131,14 +1335,14 @@ Object.freeze(None);
  * It's impossible to end up with an instance of `Some<null | undefined>`,
  * as this is enforced by the Option<T> factory function(s)
  *
- * @satisfies {IOption<T>} - {@linkcode IOption} Base interface
- *
  * The namespace provides additional factory functions when it's desired that
  * the return type is invariant over fallible (i.e. Error) or falsy types
  *
  * @property {<T>(value: T) => Option<NonNullish<T>>} from - alias for Option()
  * @property {<T>(value: T | Error) => Option<NonNullish<T>>} fromFallible - returns None for instances of Error
  * @property {<T>(value: T) => Option<Truthy<T>>} fromCoercible - returns None for all falsy values
+ * @property {<T>(opts: Option<T>[]) => Option<T[]>} all - returns Some<T[]> if all elements are Some
+ * @property {<T>(opts: Option<T>[]) => Some<T>} any - returns the first encountered Some
  *
  * @example
  * ```typescript
@@ -1149,7 +1353,7 @@ Object.freeze(None);
  * const undef: string | undefined = undefined;
  *
  * const some: Option<string> = Option(str);
- * const none: Option<string> = Option.from(undef); //same a above
+ * const none: Option<string> = Option(undef);
  *
  * assert(some instanceof Option === true);
  * assert(none instanceof Option === true);
@@ -1173,24 +1377,6 @@ Object.defineProperty(Option, Symbol.hasInstance, {
 Object.defineProperty(Option, Symbol.toStringTag, {
   value: "eitherway::Option",
 });
-
-export type InferredOptionTypes<Opts extends ArrayLike<Option<unknown>>> = {
-  [i in keyof Opts]: Opts[i] extends Option<infer T> ? T : never;
-};
-
-export type InferredSomeType<O extends Readonly<Option<unknown>>> = O extends
-  Readonly<Some<infer T>> ? T : never;
-
-export type InferredOption<O extends Readonly<Option<unknown>>> = O extends
-  Readonly<None> ? None
-  : O extends Readonly<Some<infer T1>> ? Some<T1>
-  : [O] extends [Readonly<Option<infer T2>>] ? Option<T2>
-  : never;
-
-export type OptionIdentity<O extends Readonly<Option<unknown>>> = O extends
-  Readonly<Option<infer T>> ? Option<T>
-  : O extends Option<infer T> ? Option<T>
-  : never;
 
 //deno-lint-ignore no-namespace
 export namespace Option {
@@ -1525,6 +1711,7 @@ export namespace Option {
    * }
    *
    * // We now could manually compose a function like this...
+   *
    * function wrappedDiv(n: number, ...divisors: number[]) {
    *   const res = chainDivide(n, ...divisors);
    *
@@ -1534,10 +1721,14 @@ export namespace Option {
    *   return Some(res);
    * }
    *
+   *
    * // ...or we could just use the `lift()` function with an appropriate ctor
+
    * const liftedDiv = Option.lift(chainDivide, Option.fromCoercible);
    *
+   *
    * // If the ctor parameter is omitted, `Option.from()` is used per default
+   *
    * const liftedWithDefault = Option.lift(chainDivide);
    *
    * const divident = getDivident();
@@ -1565,3 +1756,20 @@ export namespace Option {
     };
   }
 }
+
+export type { Infallible, NonNullish, Truthy } from "./type_utils.ts";
+
+export { isInfallible, isNotNullish, isTruthy } from "./type_utils.ts";
+
+export type InferredOptionTypes<Opts extends ArrayLike<Option<unknown>>> = {
+  [i in keyof Opts]: Opts[i] extends Option<infer T> ? T : never;
+};
+
+export type InferredSomeType<O extends Readonly<Option<unknown>>> = O extends
+  Readonly<Some<infer T>> ? T : never;
+
+export type InferredOption<O extends Readonly<Option<unknown>>> = O extends
+  Readonly<None> ? None
+  : O extends Readonly<Some<infer T1>> ? Some<T1>
+  : [O] extends [Readonly<Option<infer T2>>] ? Option<T2>
+  : never;
