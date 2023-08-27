@@ -156,7 +156,28 @@ here is another gem:
   <summary><b>Q: What is the performance impact of using this?</b></summary>
   <b>A: Practically none.</b>
 
-Here the results for synchronous exception propagation vs. result passing:
+You can run the benchmark suite yourself with `$ deno bench`.
+
+The benchmark results suggest, that for nearly all practical considerations 
+there is no or virtually no overhead of using the abstractions provided by 
+`eitherway` vs. a classic exception propagation style.
+
+Although the result and task flows were slightly faster in the runs below, it's
+important not to fall into a micro-optimization trap. The conclusion should not
+necessarily be "use eitherway, it's faster", but rather "use eitherway, it's 
+practically free".
+
+The overall performance thesis is that by returning errors instead of throwing,
+catching and re-throwing exceptions, the instantiation costs of the abstractions
+provided here are amortized over call-stack depth & it's size, as well as the 
+optimizations the linear return path allows, sometimes even leading to small
+performance improvements. 
+This sounds plausible, and the results are not refuting the null hypothesis 
+here, but benchmarking is hard and for most use cases, the difference really 
+won't matter.
+
+<details>
+<summary>Synchronous exception propagation vs. result chaining</summary>
 ```markdown
 cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 runtime: deno 1.33.2 (x86_64-apple-darwin)
@@ -171,8 +192,10 @@ summary
   SyncResultFlow
    1.88x faster than SyncExceptions
 ```
+</details>
 
-In an asynchronous context:
+<details>
+<summary>Asynchronous exception propagation vs. task chaining</summary>
 ```markdown
 cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 runtime: deno 1.33.2 (x86_64-apple-darwin)
@@ -191,22 +214,29 @@ summary
    1.01x faster than TaskOperatorFlow
    1.04x faster than AsyncExceptions
 ```
+</details>
 
-These results suggest, that for nearly all practical considerations there is no
-or virtually no overhead of using the abstractions provided by `eitherway` vs.
-a classic exception propagation style.
-Although the result and task flows were slightly faster in the runs above, it's
-important not to fall into a micro-optimization trap. The conclusion should not
-necessarily be "use eitherway, it's faster", but rather "use eitherway, it's 
-practically free".
+<details>
+<summary>Micro benchmarks</summary>
+If you have a highly performance sensitive use case, ideally you should use 
+a different language.
+On a more serious note, if µs differences really matter to you, or if you are
+genuinely curious, here a few micro benchmarks:
+```markdown
+cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
+runtime: deno 1.33.2 (x86_64-apple-darwin)
 
-You can run these yourself with `$ deno bench`
+file:///projects/eitherway/bench/micro_bench.ts
+benchmark           time (avg)     (min … max)       p75       p99      p995
+--------------------------------------------------------------------------------
+Promise.resolve 47.25 ns/iter  (35.7 ns … 104.8 ns) 49.67 ns 86.17 ns 100.96 ns
+Task.succeed    942.58 ns/iter (192.5 ns … 3.81 µs) 856.11 ns 3.81 µs 3.81 µs
 
-
-
-
-
-
+summary
+  Promise.resolve
+   19.95x faster than Task.succeed
+```
+</details>
 </details>
 
 <details>
