@@ -113,10 +113,19 @@ export interface IOption<T> {
   /**
    * Use this to obtain a deep clone of `Option<T>`
    *
-   * This can be handy if user-defined operations on reference types mutate the
+   * Under the hood, this uses the `structuredClone` algorithm exposed via
+   * the global function of the same name
+   *
+   * May incur performance penalties, depending on the platform, size and type
+   * of the data to be cloned
+   *
+   * Can be handy if user-defined operations on reference types mutate the
    * passed value and the original value should be retained
    *
-   * Please keep in mind that this behaviour is strongly discouraged though
+   * CAUTION: Mutations in a chained series of operations are strongly
+   * discouraged
+   *
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone)
    *
    * @category Option::Basic
    *
@@ -152,7 +161,8 @@ export interface IOption<T> {
 
   /**
    * Use this to transform `Some<T>` to `Some<U>` by applying the supplied
-   * `mapFn` to the immutable, wrapped value of type `<T>`
+   * `mapFn` to the  wrapped value of type `<T>`
+   *
    * Produces a new instance of `Some`
    *
    * In case of `None`, this method short-circuits and returns `None`
@@ -492,7 +502,7 @@ export interface IOption<T> {
    * current `Option<T>`
    *
    * This is equivalent to chaining:
-   * `original.clone().andThen(tripFn).and(original)`
+   * `original.andThen(tripFn).and(original)`
    *
    * CAUTION: Seldom useful in a synchronous context
    *
@@ -503,8 +513,8 @@ export interface IOption<T> {
    *
    * In case of `None` this method short-circuits and returns `None`
    *
-   * In case of `Some<T>`, the provided `tripFn` gets evaluated with a deep
-   * clone of `<T>` and if the return value is:
+   * In case of `Some<T>`, the provided `tripFn` gets called with a value
+   * of type `<T>` and if the return value is:
    *  - `Some<U>` - it is discarded and the original `Some<T>` is returned
    *  - `None`: `None` is returned
    *
@@ -709,8 +719,7 @@ export interface IOption<T> {
   /**
    * Use this to perform side-effects transparently
    *
-   * The `tapFn` receives a deep clone of `Option<T>`, by applying the
-   * `structuredClone()` algorithm on the wrapped value
+   * The `tapFn` receives a deep clone of `Option<T>` {@linkcode IOption#clone}
    *
    * This may have performance implications, dependending on the size of
    * the wrapped value `<T>`, but ensures that the `tapFn` can never
@@ -755,6 +764,34 @@ export interface IOption<T> {
    * ```
    */
   tap(tapFn: (arg: Option<T>) => void): Option<T>;
+
+  /**
+   * Use this to inspect the value inside an instace of `Some<T>`
+   * in a transparent manner
+   *
+   * Short-curcuits in case of `None'
+   *
+   * @category Option::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * function toEven(n: number): Option<number> {
+   *   if (n % 2 === 0) return Some(n);
+   *   return None;
+   * }
+   *
+   * const maybeEven = Option.from("thing")
+   *                    .map(str => str.length)
+   *                    .inspect(console.log)
+   *                    .andThen(toEven);
+   *
+   * assert(maybeEven.isNone() === true);
+   * ```
+   */
+  inspect(inspectFn: (value: T) => void): Option<T>;
 
   /**
    * Use this to get the full string tag
@@ -1035,8 +1072,11 @@ class _None<T = never> implements IOption<never> {
     if (rhs.isSome()) return rhs;
     return this;
   }
-  tap(tapFn: (arg: Option<never>) => void) {
+  tap(tapFn: (arg: None) => void) {
     tapFn(None);
+    return this;
+  }
+  inspect(inspectFn: (value: never) => void): None {
     return this;
   }
   trip<U>(tripFn: (value: never) => Option<U>): None {
@@ -1144,7 +1184,11 @@ class _Some<T> implements IOption<T> {
     return this;
   }
   tap(tapFn: (arg: Option<T>) => void): Option<T> {
-    tapFn(Some(structuredClone(this.#value)));
+    tapFn(this.clone());
+    return this;
+  }
+  inspect(inspectFn: (value: T) => void): Some<T> {
+    inspectFn(this.#value);
     return this;
   }
   trip<U>(tripFn: (value: T) => Option<U>): Option<T> {
@@ -1261,6 +1305,40 @@ export function Some<T>(value: NonNullish<T>): Some<NonNullish<T>> {
   );
   return new _Some(value);
 }
+//deno-lint-ignore no-namespace
+export namespace Some {
+  /**
+   * Use this to signal some kind of success irrespective of
+   * the wrapped type as alternative to `Some<void>`
+   *
+   * Seldom useful in a pure `Option<T>` context, mostly provided
+   * for compatibility with `Result<T, E>`, where using `Ok<void>`
+   * to signal a successful operation would evaluate to `None`, if
+   * converted into an `Option<T>`
+   *
+   * @category Option::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../deps.ts";
+   * import { Option, None, Some } from "./option.ts";
+   * import { Empty } from "./type_utils.ts";
+   *
+   * function doStuff(): Option<Empty> {
+   *   return Some.empty();
+   * }
+   *
+   * const res = doStuff()
+   *   .okOrElse(() => TypeError("Invalid")) // conversion to Result
+   *   .ok(); //convert back to Some<Empty>
+   *
+   * assert(res.isSome() === true);
+   * ```
+   */
+  export function empty(): Some<Empty> {
+    return Some(EMPTY);
+  }
+}
 Object.defineProperty(Some, Symbol.hasInstance, {
   value: <T>(lhs: unknown): lhs is Some<T> => {
     return lhs instanceof _Some;
@@ -1269,18 +1347,13 @@ Object.defineProperty(Some, Symbol.hasInstance, {
 Object.defineProperty(Some, Symbol.toStringTag, {
   value: "eitherway::Option::Some",
 });
-Object.defineProperty(Some, "empty", {
-  value: function (): Some<Empty> {
-    return Some(EMPTY);
-  },
-});
 
 /**
  * # None
- * {@linkcode None} represents the absence of a value and is the opinionated, composable
- * equivalent of `undefined` with "sane" defaults.
+ * `None` represents the absence of a value and is the opinionated, composable
+ * equivalent of `undefined`.
  *
- * It can be [coerced to the falsy representation of primitive types](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion)
+ * It support [coercion to the falsy representation of primitive types](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures#primitive_coercion)
  * Furthermore, it implements the iterator protocol and returns `undefined`
  * when it gets JSON encoded via JSON.stringify()
  *
@@ -1331,18 +1404,31 @@ Object.freeze(None);
  *  - OR the absence of a value via {@linkcode None}
  *
  * It's the composable equivalent of the union `<T | undefined>`
- * Furthermore, it's important to note that T itself must not be nullish
- * It's impossible to end up with an instance of `Some<null | undefined>`,
- * as this is enforced by the Option<T> factory function(s)
  *
- * The namespace provides additional factory functions when it's desired that
- * the return type is invariant over fallible (i.e. Error) or falsy types
+ * Not only is it useful for representing a value OR the absence of it,
+ * but also representing a value and communicating a certain fact
+ * about it. As in the following example:
+ *
+ * ```typescript
+ * import { Option } from "./option.ts";
+ *
+ * type Prime = number;
+ * declare function toPrime(n: number): Option<Prime>;
+ * ```
+ *
+ * Furthermore, it's important to note that the encapsulated vaule must not
+ * be nullish
+ * It's impossible to create an instance of `Some<null | undefined>`
+ *
+ * The namespace provides additional constructors when it's desired that
+ * the return type is invariant over fallible (i.e. Error) or falsy types,
+ * as well as a couple of collection helpers
  *
  * @property {<T>(value: T) => Option<NonNullish<T>>} from - alias for Option()
- * @property {<T>(value: T | Error) => Option<NonNullish<T>>} fromFallible - returns None for instances of Error
+ * @property {<T>(value: T) => Option<Infallible<T>>} fromFallible - also returns None for instances of Error
  * @property {<T>(value: T) => Option<Truthy<T>>} fromCoercible - returns None for all falsy values
  * @property {<T>(opts: Option<T>[]) => Option<T[]>} all - returns Some<T[]> if all elements are Some
- * @property {<T>(opts: Option<T>[]) => Some<T>} any - returns the first encountered Some
+ * @property {<T>(opts: Option<T>[]) => Option<T>} any - returns the first instance of Some, otherwise
  *
  * @example
  * ```typescript
@@ -1637,9 +1723,10 @@ export namespace Option {
     arg: Option<Args>,
   ): Option<NonNullish<R>> {
     const argTuple = Option.all([fn, arg] as const);
+
     if (argTuple.isNone()) return None;
-    const [f, a] = argTuple.unwrap();
-    return Option.from(f(a));
+
+    return argTuple.andThen(([fn, arg]) => Option.from(fn(arg)));
   }
 
   /**
@@ -1756,10 +1843,6 @@ export namespace Option {
     };
   }
 }
-
-export type { Infallible, NonNullish, Truthy } from "./type_utils.ts";
-
-export { isInfallible, isNotNullish, isTruthy } from "./type_utils.ts";
 
 export type InferredOptionTypes<Opts extends ArrayLike<Option<unknown>>> = {
   [i in keyof Opts]: Opts[i] extends Option<infer T> ? T : never;

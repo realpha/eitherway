@@ -31,6 +31,8 @@ export interface IResult<T, E> {
   err(): Option<E>;
   into<T2>(intoFn: (res: Result<T, E>) => T2): T2;
   tap(tapFn: (res: Result<T, E>) => void): Result<T, E>;
+  inspect(inspectFn: (value: T) => void): Result<T, E>;
+  inspectErr(inspectFn: (err: E) => void): Result<T, E>;
   trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
 }
@@ -96,7 +98,7 @@ class _Ok<T> implements IResult<T, never> {
   err(): Option<never> {
     return None;
   }
-  into<T2>(intoFn: (res: Ok<T>) => T2): T2 {
+  into<U>(intoFn: (res: Ok<T>) => U): U {
     return intoFn(this);
   }
   zip<T2, E2>(rhs: Result<T2, E2>): Result<[T, T2], E2> {
@@ -115,6 +117,13 @@ class _Ok<T> implements IResult<T, never> {
   }
   tap(tapFn: (value: Ok<T>) => void): Ok<T> {
     tapFn(this.clone());
+    return this;
+  }
+  inspect(inspectFn: (value: T) => void): Ok<T> {
+    inspectFn(this.#value);
+    return this;
+  }
+  inspectErr(inspectFn: (err: never) => void): Ok<T> {
     return this;
   }
 }
@@ -197,6 +206,13 @@ class _Err<E> implements IResult<never, E> {
 
     return lhs.or(this);
   }
+  inspect(inspectFn: (value: never) => void): Err<E> {
+    return this;
+  }
+  inspectErr(inspectFn: (err: E) => void): Err<E> {
+    inspectFn(this.#err);
+    return this;
+  }
 }
 
 export type Ok<T> = _Ok<T>;
@@ -253,7 +269,7 @@ Object.defineProperty(Result, Symbol.toStringTag, {
 //deno-lint-ignore no-namespace
 export namespace Result {
   export function from<T>(fn: () => T): Result<T, never> {
-    return Result.fromFallible(fn, isInfallible);
+    return Result.fromFallible(fn, asInfallible);
   }
   export function fromFallible<T, E>(
     fn: () => T,
@@ -273,7 +289,7 @@ export namespace Result {
       try {
         return ctor(fn(...args));
       } catch (e) {
-        throw isInfallible(e);
+        throw asInfallible(e);
       }
     };
   }
@@ -292,7 +308,7 @@ export namespace Result {
   }
 }
 
-export function isInfallible(e: unknown): never {
+export function asInfallible(e: unknown): never {
   throw new Error(
     `eitherway::core -> A function you've passed as infallible threw an exception: ${e}`,
     { cause: e },

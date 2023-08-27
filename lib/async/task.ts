@@ -1,4 +1,4 @@
-import { Err, isInfallible, Ok, Result } from "../core/result.ts";
+import { asInfallible, Err, Ok, Result } from "../core/result.ts";
 
 export class Task<T, E> extends Promise<Result<T, E>> {
   private constructor(executor: ExecutorFn<T, E>) {
@@ -30,7 +30,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   ): Task<T, E> {
     const p = new Promise<Result<T, E>>((resolve) => resolve(fn())).then(
       (res) => res,
-    ).catch(isInfallible);
+    ).catch(asInfallible);
     return new Task<T, E>((resolve) => resolve(p));
   }
 

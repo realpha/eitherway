@@ -50,6 +50,52 @@ Deno.test("eitherway::Result", async (t) => {
       assertStrictEquals(res.unwrap(), te);
     },
   );
+
+  await t.step(
+    ".lift() -> composes functions and constructors correctly",
+    () => {
+      const powerOfTwo = (n: number) => Math.pow(n, 2);
+      const toEven = (n: number) => {
+        if (n % 2 === 0) return Ok(n);
+        return Err(TypeError("Not even"));
+      };
+
+      const toEvenPowerOfTwo = Result.lift(powerOfTwo, toEven);
+      const res = Ok(9).andThen(toEvenPowerOfTwo);
+
+      assertStrictEquals(res.isOk(), false);
+      assertStrictEquals(res.unwrap().constructor, TypeError);
+    },
+  );
+
+  await t.step(
+    ".liftFallible() -> composes fallible functions and constructors correctly",
+    () => {
+      const te = TypeError("Cannot do that");
+      const powerOfTwo = (n: number) => {
+        if (n < 10) throw te;
+        return Math.pow(n, 2);
+      };
+      const errMapFn = (e: unknown) => {
+        if (e instanceof TypeError) return e;
+        return new TypeError("Also cannot do that");
+      };
+      const toEven = (n: number) => {
+        if (n % 2 === 0) return Ok(n);
+        return Err(TypeError("Not even"));
+      };
+
+      const toEvenPowerOfTwo = Result.liftFallible(
+        powerOfTwo,
+        errMapFn,
+        toEven,
+      );
+      const res = Ok(9).andThen(toEvenPowerOfTwo);
+
+      assertStrictEquals(res.isErr(), true);
+      assertStrictEquals(res.unwrap().constructor, TypeError);
+    },
+  );
 });
 Deno.test("eitherway::Result::Ok", () => {
 });

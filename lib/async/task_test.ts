@@ -1,7 +1,7 @@
 //deno-lint-ignore-file  no-unused-vars require-await
-import { Err, isInfallible, Ok, Result } from "../core/result.ts";
+import { asInfallible, Err, Ok, Result } from "../core/result.ts";
 import { Task } from "./task.ts";
-import { assertStrictEquals, assertThrows } from "../../dev_deps.ts";
+import { assertStrictEquals } from "../../dev_deps.ts";
 
 Deno.test("eitherway::Task", async (t) => {
   await t.step("Task<T, E> -> Constructors", async (t) => {
@@ -54,7 +54,7 @@ Deno.test("eitherway::Task", async (t) => {
       async () => {
         const futureNumber = Promise.resolve(42);
 
-        const infallible = await Task.fromPromise(futureNumber, isInfallible);
+        const infallible = await Task.fromPromise(futureNumber, asInfallible);
 
         assertStrictEquals(infallible.isErr(), false);
       },
@@ -66,7 +66,7 @@ Deno.test("eitherway::Task", async (t) => {
         const futureTypeError = Promise.reject(te);
 
         const shouldProduceInfallible = () =>
-          Task.fromPromise(futureTypeError, isInfallible);
+          Task.fromPromise(futureTypeError, asInfallible);
 
         shouldProduceInfallible().catch((e) =>
           assertStrictEquals(e?.cause, te)
@@ -121,11 +121,11 @@ Deno.test("eitherway::Task", async (t) => {
         const shouldProduceInfallible = () =>
           Task.fromFallible(() => {
             throw te;
-          }, isInfallible);
+          }, asInfallible);
         const shouldProduceInfallibleAsync = () =>
           Task.fromFallible(async () => {
             throw te;
-          }, isInfallible);
+          }, asInfallible);
 
         shouldProduceInfallible().catch((e) =>
           assertStrictEquals(e?.cause, te)
