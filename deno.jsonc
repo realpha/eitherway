@@ -1,5 +1,6 @@
 {
   "tasks": {
-    "dev": "deno run --watch main.ts"
+    "test::full": "deno test --doc --coverage=./cov",
+    "test::cov": "deno test --coverage=./cov"
   }
 }
