@@ -1,27 +1,12 @@
 # eitherway
 
-| **Y**et **A**nother **O**ption and **R**esult **I**mplementation (**YAORI**)
+> Yet Another Option and Result Implementation (**YAORI**)
 
-Safe abstractions for fallible flows.
+Safe abstractions for fallible flows inspired by F# and Rust.
 
-## Design Goals
+## Disclaimer
 
-`eitherway` is trying to close the gap between type-safety, idiom and
-productivity by focusing on the following goals:
-
-- **Pragmatism**: There is no need to strictly port something from another
-  language with very different semantics. Typescript employs structural typing
-  and therefore also sub-typing, whereas Rust largely employs nominal typing and
-  variance only exists in the context of lifetimes. When decisions arrive, which
-  call for a trade-off, `eitherway` will always try to offer a solution geared
-  towards the constraints and idiom of Typescript.
-- **Compatibility**: Interacting with one of the structures defined by
-  `eitherway` should be painless in the sense that things do what you would
-  expect them to do in Typescript and are compatible with inherent language
-  protocols.
-- **Documentation**: All structures come with full, inline documentation. Making
-  it easy to understand what is currently happening and if the chosen operation
-  is suitable for the desired use case. (Soon(TM))
+This is still experimental software.
 
 ## Motivation
 
@@ -41,11 +26,88 @@ issues arose/persisted:
 - **Lack of async support**: Very few existing projects offer abstractions for
   working in an `async` context, none of them really being first class citizens.
 
-The goal here is really to make the abstractions provided by `eitherway` the
+The goal here really is to make the abstractions provided by `eitherway` the
 most safe, productive and overall enjoyable to work with. Irrespective of
 experience or employed context.
 
+## Design Goals
+
+`eitherway` is trying to close the gap between type-safety, idiom and
+productivity by focusing on the following goals:
+
+- **Pragmatism**: There is no need to strictly port something from another
+  language with very different semantics. When decisions arrive, which
+  call for a trade-off, `eitherway` will always try to offer a solution geared
+  towards the constraints and idiom of Typescript.
+- **Compatibility**: Interacting with one of the structures defined by
+  `eitherway` should be painless in the sense that things do what you would
+  expect them to do in Typescript and are compatible with inherent language
+  protocols (e.g. Iterator protocol).
+- **Safety**: Once an abstraction is instantiated, no inherent operation should ever
+  panic.
+- **Performance**: All abstractions provided here should strive to amortize the cost
+  of usage and be upfront about these costs. 
+- **Documentation**: All structures come with full, inline documentation. Making
+  it easy to understand what is currently happening and if the chosen operation
+  is suitable for the desired use case. (Still very much in progress)
+
+
+
 ## `eitherway` in Action
+
+```typescript
+function toUpperCase(input: string | undefined): Task<string, TypeError> {
+    return Option(input)  // All nullish values are None
+      .okOrElse(() => TypeError("Input is undefined")) // Convert to Result<string, TypeError>
+      .into((res) => Task.of(res))  // Push the result into an async context
+      .map(async (str) => {
+        await sleep(1);
+        return str.toUpperCase();
+      });
+}
+
+function stringToLength(input: string): Task<number, TypeError> {
+    return Option.fromCoercible(input) // All falsy types are None
+      .okOrElse(() => TypeError("Input string is empty"))
+      .into((res) => Task.of(res))
+      .map(async (str) => {
+        await sleep(1);
+        return str.length;
+      });
+}
+
+function powerOfSelf(input: number): Task<number, TypeError> {
+    return Option.fromCoercible(input)
+      .okOrElse(() => TypeError("Cannot perform computation with NaN, Infinity or 0"))
+      .into((res) => Task.of(res))
+      .andThen(async (n) => {  // Promise<Result<T, E>> and Task<T, E> can be used interchangeably for async composition
+        await sleep(1);
+        return Option.fromCoercible(Math.pow(n, n))
+          .okOrElse(() => TypeError("Cannot calculate result"));
+      });
+}
+
+function processString(input: string | undefined): Task<number, TypeError> {
+    return toUpperCase(input)  // Synchronous and asynchronous composition work the same
+      .andThen(stringToLength)  
+      .andThen(powerOfSelf);
+}
+
+async function main(): Promise<Result<T, E>> {
+  const result = await processString("foo"); // Task is of course awaitable
+
+  return Task.of(result) // You can return Task<T, E> as Promise<Result<T, E>>
+}
+
+main()
+.then((result) => {
+  result // Result<number, TypeError>
+    .inspect(console.log)
+    .inspectErr(console.error);
+})
+.catch(e => "Unreachable!")
+.finally(() => console.log("DONE!"));
+```
 
 ### Installation
 
@@ -70,8 +132,9 @@ experience or employed context.
 Explicit error types and built-in happy/error path selectors lead to expressive
 code which is often even more pleasant to read.
 
-<details open>
-<summary>Compare these examples, taken from the benchmark suite:</summary>
+  <details>
+    <summary>Compare these examples, taken from the benchmark suite:</summary>
+
 ```typescript
 /**
  * ==================
@@ -132,7 +195,7 @@ function processString(input: string | undefined): Task<number, TypeError> {
     .inspectErr(e => console.error(e.message));
 }
 ```
-</details>
+  </details>
 
 Apart from making error cases explicit, the abstractions provided here foster 
 a code style, which naturally builds up complex computations via composition of
@@ -178,8 +241,9 @@ This sounds plausible, and the results are not refuting the null hypothesis
 here, but benchmarking is hard and for most use cases, the difference really 
 won't matter.
 
-<details>
-<summary>Synchronous exception propagation vs. result chaining</summary>
+  <details>
+    <summary>Synchronous exception propagation vs. result chaining</summary>
+
 ```markdown
 cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 runtime: deno 1.33.2 (x86_64-apple-darwin)
@@ -194,10 +258,11 @@ summary
   SyncResultFlow
    1.88x faster than SyncExceptions
 ```
-</details>
+  </details>
 
-<details>
-<summary>Asynchronous exception propagation vs. task chaining</summary>
+  <details>
+    <summary>Asynchronous exception propagation vs. task chaining</summary>
+
 ```markdown
 cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 runtime: deno 1.33.2 (x86_64-apple-darwin)
@@ -216,14 +281,15 @@ summary
    1.01x faster than TaskOperatorFlow
    1.04x faster than AsyncExceptions
 ```
-</details>
+  </details>
 
-<details>
-<summary>Micro benchmarks</summary>
+  <details>
+    <summary>Micro benchmarks</summary>
 If you have a highly performance sensitive use case, you should be using
 a different language.
 On a more serious note, also small costs can add up and as a user, you should
 know how high the costs are. So here are a few micro benchmarks:
+    
 ```markdown
 cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 runtime: deno 1.33.2 (x86_64-apple-darwin)
@@ -264,7 +330,7 @@ summary
   Async Error Propagation
    1.44x faster than Async Exception Propagation
 ```
-</details>
+  </details>
 </details>
 
 <details>
@@ -279,7 +345,13 @@ because it's _NOT_ a "system" promise (for lack of a better word).
 Since `Task<T, E>` is a subclass of `Promise<Result<T, E>>`, it's possible to
 return it as such from an async function though or just await it.
 
-Furthermore, `Task<T, E>` is merely composability extensions for `Promise<Result<T, E>>`.
+```typescript
+async function(str: string): Promise<Result<string, never>> {
+  return Task.succeed(str);
+}
+```
+
+Furthermore, `Task<T, E>` is merely a composability extension for `Promise<Result<T, E>>`.
 As such, you can cheaply convert every `Promise<Result<T, E>` via the `Task.of()` constructor, 
 or use the promise operators to compose your pipeline.
 
@@ -289,8 +361,8 @@ or use the promise operators to compose your pipeline.
   <summary><b>Q: Why subclassing Promises instead of just providing a PromiseLike abstraction?</b></summary>
   <b>A: For compatibility reasons.</b>
 
-The drawback of the current implementation is that we cannot make `Task<T, E>`
-or `Chance<T>` lazy.
+The drawback of the current implementation is that we cannot evaluate `Task<T, E>`
+lazily.
 On the other hand, a lot of framework or library code is still (probably 
 needlessly) invariant over `PromiseLike` types. Therefore subclassing the
 native `Promise` and allowing the users to treat `Promise<Result<T, E>>` and
