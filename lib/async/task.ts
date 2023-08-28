@@ -1,4 +1,4 @@
-import { asInfallible, Err, Ok, Result } from "../core/result.ts";
+import { asInfallible, Err, Ok, Result } from "./mod.ts";
 
 export class Task<T, E> extends Promise<Result<T, E>> {
   private constructor(executor: ExecutorFn<T, E>) {
@@ -18,11 +18,11 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   }
 
   static succeed<T>(value: T): Task<T, never> {
-    return new Task(resolve => resolve(Ok(value)));
+    return new Task((resolve) => resolve(Ok(value)));
   }
 
   static fail<E>(error: E): Task<never, E> {
-    return new Task(resolve => resolve(Err(error)));
+    return new Task((resolve) => resolve(Err(error)));
   }
 
   static from<T, E>(
@@ -365,7 +365,7 @@ async function tripTask<T, E, T2, E2>(
   task: Either<T, E>,
   tripFn: (value: T) => Either<T2, E2>,
 ): Promise<Result<T, E | E2>> {
-  const res = (await task).clone();
+  const res = (await task);
 
   if (res.isErr()) return res;
 
@@ -378,7 +378,7 @@ async function riseTask<T, E, T2, E2>(
   task: Either<T, E>,
   riseFn: (value: E) => Either<T2, E2>,
 ): Promise<Result<T | T2, E>> {
-  const res = (await task).clone();
+  const res = (await task);
 
   if (res.isOk()) return res;
 
