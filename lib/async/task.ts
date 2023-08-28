@@ -18,11 +18,11 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   }
 
   static succeed<T>(value: T): Task<T, never> {
-    return Task.of(Ok(value));
+    return new Task(resolve => resolve(Ok(value)));
   }
 
   static fail<E>(error: E): Task<never, E> {
-    return Task.of(Err(error));
+    return new Task(resolve => resolve(Err(error)));
   }
 
   static from<T, E>(

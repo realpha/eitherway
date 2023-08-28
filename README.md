@@ -70,7 +70,8 @@ experience or employed context.
 Explicit error types and built-in happy/error path selectors lead to expressive
 code which is often even more pleasant to read.
 
-Compare these examples, taken from the benchmark suite:
+<details open>
+<summary>Compare these examples, taken from the benchmark suite:</summary>
 ```typescript
 /**
  * ==================
@@ -93,7 +94,7 @@ function processString(input: string | undefined): number {
   }
 }
 
-/* With Result */ 
+/* Equivalent Result flow */ 
 function processString(input: string | undefined): Result<number, TypeError> {
   return toUpperCase(input)
     .andThen(stringToLength)
@@ -131,6 +132,7 @@ function processString(input: string | undefined): Task<number, TypeError> {
     .inspectErr(e => console.error(e.message));
 }
 ```
+</details>
 
 Apart from making error cases explicit, the abstractions provided here foster 
 a code style, which naturally builds up complex computations via composition of
@@ -218,23 +220,49 @@ summary
 
 <details>
 <summary>Micro benchmarks</summary>
-If you have a highly performance sensitive use case, ideally you should use 
+If you have a highly performance sensitive use case, you should be using
 a different language.
-On a more serious note, if µs differences really matter to you, or if you are
-genuinely curious, here a few micro benchmarks:
+On a more serious note, also small costs can add up and as a user, you should
+know how high the costs are. So here are a few micro benchmarks:
 ```markdown
 cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz
 runtime: deno 1.33.2 (x86_64-apple-darwin)
 
 file:///projects/eitherway/bench/micro_bench.ts
-benchmark           time (avg)     (min … max)       p75       p99      p995
---------------------------------------------------------------------------------
-Promise.resolve 47.25 ns/iter  (35.7 ns … 104.8 ns) 49.67 ns 86.17 ns 100.96 ns
-Task.succeed    942.58 ns/iter (192.5 ns … 3.81 µs) 856.11 ns 3.81 µs 3.81 µs
+benchmark                time (avg)      (min … max)       p75       p99        p995
+-----------------------------------------------------------------------------------------
+Promise.resolve(Ok)  44.33 ns/iter  (35.81 ns … 106.41 ns) 44.6 ns   62.58 ns  72.56 ns
+Task.succeed         105.43 ns/iter (88.44 ns … 227.26 ns) 108.97 ns 204.75 ns 212.54 ns
+Promise.resolve(Err) 3.11 µs/iter   (3.06 µs … 3.27 µs)    3.13 µs   3.27 µs   3.27 µs
+Task.fail            2.94 µs/iter   (2.71 µs … 3.35 µs)    3.25 µs   3.35 µs   3.35 µs
 
 summary
-  Promise.resolve
-   19.95x faster than Task.succeed
+  Promise.resolve(Ok)
+   2.38x faster than Task.succeed
+   66.41x faster than Task.fail
+   70.14x faster than Promise.resolve(Err)
+
+file:///projects/eitherway/bench/micro_bench.ts
+benchmark          time (avg)    (min … max)         p75       p99      p995
+---------------------------------------------------------------------------------
+Ok             5.1 ns/iter   (4.91 ns … 22.27 ns)   5.02 ns  8.62 ns   11.67 ns
+Err            4.88 ns/iter  (4.7 ns … 17.93 ns)    4.81 ns  8.18 ns   10.52 ns
+Option         90.39 ns/iter (83.63 ns … 172.61 ns) 93.31 ns 135.19 ns 146.79 ns
+
+summary
+  Err
+   1.05x faster than Ok
+   18.52x faster than Option
+
+file:///projects/eitherway/bench/micro_bench.ts
+benchmark                       time (avg)   (min … max)       p75     p99    p995
+-------------------------------------------------------------------------------------
+Async Exception Propagation 9.08 µs/iter (8.95 µs … 9.26 µs) 9.18 µs 9.26 µs 9.26 µs
+Async Error Propagation     6.32 µs/iter (6.24 µs … 6.52 µs) 6.37 µs 6.52 µs 6.52 µs
+
+summary
+  Async Error Propagation
+   1.44x faster than Async Exception Propagation
 ```
 </details>
 </details>
