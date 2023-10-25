@@ -28,9 +28,9 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   static from<T, E>(
     fn: () => Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
-    const p = new Promise<Result<T, E>>((resolve) => resolve(fn())).then(
-      (res) => res,
-    ).catch(asInfallible);
+    const p = new Promise<Result<T, E>>((resolve) => resolve(fn())).catch(
+      asInfallible,
+    );
     return new Task<T, E>((resolve) => resolve(p));
   }
 
@@ -135,9 +135,21 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     };
   }
 
-  static tap<T, E>(tapFn: (v: Result<T, E>) => PromiseLike<void>) {
+  static tap<T, E>(tapFn: (v: Result<T, E>) => void | PromiseLike<void>) {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
       return tapTask(res, tapFn);
+    };
+  }
+
+  static inspect<T, E>(inspectFn: (v: T) => void | PromiseLike<void>) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return inspectTaskSuccess(res, inspectFn);
+    };
+  }
+
+  static inspectErr<T, E>(inspectFn: (v: E) => void | PromiseLike<void>) {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return inspectTaskFailure(res, inspectFn);
     };
   }
 
@@ -229,8 +241,16 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return Task.of(zipTask(this, rhs));
   }
 
-  tap(tapFn: (v: Result<T, E>) => PromiseLike<void>): Task<T, E> {
+  tap(tapFn: (v: Result<T, E>) => void | PromiseLike<void>): Task<T, E> {
     return Task.of(tapTask(this, tapFn));
+  }
+
+  inspect(inspectFn: (v: T) => void | PromiseLike<void>): Task<T, E> {
+    return Task.of(inspectTaskSuccess(this, inspectFn));
+  }
+
+  inspectErr(inspectFn: (v: E) => void | PromiseLike<void>): Task<T, E> {
+    return Task.of(inspectTaskFailure(this, inspectFn));
   }
 
   trip<T2, E2>(
@@ -345,11 +365,31 @@ async function chainTaskFailure<T, E, T2, E2>(
 
 async function tapTask<T, E>(
   task: Either<T, E>,
-  tapFn: (v: Result<T, E>) => PromiseLike<void>,
+  tapFn: (v: Result<T, E>) => void | PromiseLike<void>,
 ): Promise<Result<T, E>> {
   const res = (await task).clone();
 
   await tapFn(res);
+
+  return task;
+}
+
+async function inspectTaskSuccess<T, E>(task: Either<T, E>, inspectFn: (v: T) => void | PromiseLike<void>): Promise<Result<T, E>> {
+  const res = await task;
+
+  if (res.isOk()) {
+    await inspectFn(res.unwrap());
+  }
+
+  return task;
+}
+
+async function inspectTaskFailure<T, E>(task: Either<T, E>, inspectFn: (v: E) => void | PromiseLike<void>): Promise<Result<T, E>> {
+  const res = await task;
+
+  if (res.isErr()) {
+    await inspectFn(res.unwrap());
+  }
 
   return task;
 }
@@ -365,7 +405,7 @@ async function tripTask<T, E, T2, E2>(
   task: Either<T, E>,
   tripFn: (value: T) => Either<T2, E2>,
 ): Promise<Result<T, E | E2>> {
-  const res = (await task);
+  const res = await task;
 
   if (res.isErr()) return res;
 
@@ -378,7 +418,7 @@ async function riseTask<T, E, T2, E2>(
   task: Either<T, E>,
   riseFn: (value: E) => Either<T2, E2>,
 ): Promise<Result<T | T2, E>> {
-  const res = (await task);
+  const res = await task;
 
   if (res.isOk()) return res;
 
