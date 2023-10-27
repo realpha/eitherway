@@ -7,6 +7,7 @@ import {
   assertStrictEquals,
 } from "../../dev_deps.ts";
 import { None, Option, Some } from "./option.ts";
+import { Result } from "./result.ts";
 
 /**
  * Setup test value collections
@@ -510,7 +511,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
       assertStrictEquals(maybeDoubled.unwrap(), double(toBeWrapped).unwrap());
     });
 
-    await t.step("andThen() -> flattens nested Options", () => {
+    await t.step(".andThen() -> flattens nested Options", () => {
       function greaterThanTen(n: number): Option<number> {
         return n > 10 ? Some(n) : None;
       }
@@ -523,6 +524,15 @@ Deno.test("eitherway::Option::Some", async (t) => {
         .andThen(greaterThanTen);
 
       assertStrictEquals(flattened.isSome(), true);
+    });
+
+    await t.step(".orElse() -> is a noop", () => {
+      const some = Option(1);
+
+      const same = some.orElse(() => Some(2));
+
+      assertStrictEquals(same, some);
+      assertStrictEquals(same.unwrap(), some.unwrap());
     });
   });
 
@@ -579,6 +589,52 @@ Deno.test("eitherway::Option::Some", async (t) => {
     });
   });
 
+  await t.step("Some<T> -> Tranformation Methods", async (t) => {
+    await t.step(
+      ".into() -> provides Some<T> to the supplied intoFn",
+      async () => {
+        const some = Some("thing");
+        const promise = some.into((o) => Promise.resolve(o));
+
+        const same = await promise;
+
+        assertStrictEquals(same, some);
+      },
+    );
+
+    await t.step(
+      ".okOr() -> passes the encapsulated value by reference to the Ok constructor",
+      () => {
+        const rec = { some: "thing" };
+        const some = Some(rec);
+
+        const unreachable = Error("This is unreachable!");
+        const res = some.okOr(unreachable);
+
+        assertStrictEquals(res.isOk(), true);
+        assertStrictEquals(res.unwrap(), rec);
+      },
+    );
+
+    await t.step(
+      ".okOrElse() -> passes the encapsulated value by reference to the Ok constructor",
+      () => {
+        const rec = { some: "thing" };
+        const some = Some(rec);
+
+        function unreachable() {
+          const err = Error("This function call is unreachable!");
+          throw err;
+        }
+
+        const res = some.okOrElse(unreachable);
+
+        assertStrictEquals(res.isOk(), true);
+        assertStrictEquals(res.unwrap(), rec);
+      },
+    );
+  });
+
   await t.step("Some<T> -> Convenience Methods", async (t) => {
     await t.step(
       ".tap() -> tapFn receives cloned value wrapped in new instance of Option",
@@ -608,6 +664,27 @@ Deno.test("eitherway::Option::Some", async (t) => {
         const tapAssertionFn = createTapFn(originalValue, originalOption);
 
         const returnedOption = originalOption.tap(tapAssertionFn);
+
+        assertStrictEquals(returnedOption, originalOption);
+      },
+    );
+
+    await t.step(
+      ".inspect() -> passes the encapsulated value by reference",
+      () => {
+        const createInspectFn = function <T>(
+          originalValue: T,
+        ): (value: T) => void {
+          return (value: T) => {
+            assertStrictEquals(originalValue, value);
+          };
+        };
+
+        const originalValue = { some: "thing" };
+        const originalOption = Some(originalValue);
+        const inspectAssertionFn = createInspectFn(originalValue);
+
+        const returnedOption = originalOption.inspect(inspectAssertionFn);
 
         assertStrictEquals(returnedOption, originalOption);
       },
