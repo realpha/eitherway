@@ -374,7 +374,10 @@ async function tapTask<T, E>(
   return task;
 }
 
-async function inspectTaskSuccess<T, E>(task: Either<T, E>, inspectFn: (v: T) => void | PromiseLike<void>): Promise<Result<T, E>> {
+async function inspectTaskSuccess<T, E>(
+  task: Either<T, E>,
+  inspectFn: (v: T) => void | PromiseLike<void>,
+): Promise<Result<T, E>> {
   const res = await task;
 
   if (res.isOk()) {
@@ -384,7 +387,10 @@ async function inspectTaskSuccess<T, E>(task: Either<T, E>, inspectFn: (v: T) =>
   return task;
 }
 
-async function inspectTaskFailure<T, E>(task: Either<T, E>, inspectFn: (v: E) => void | PromiseLike<void>): Promise<Result<T, E>> {
+async function inspectTaskFailure<T, E>(
+  task: Either<T, E>,
+  inspectFn: (v: E) => void | PromiseLike<void>,
+): Promise<Result<T, E>> {
   const res = await task;
 
   if (res.isErr()) {

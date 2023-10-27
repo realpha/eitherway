@@ -106,7 +106,7 @@ export namespace TaskCallStack {
     return Task.fail(TypeError("Fail!"));
   }
   async function propagate() {
-    return await fail()
+    return await fail();
   }
   export async function linearReturn() {
     return await propagate();

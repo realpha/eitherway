@@ -111,8 +111,6 @@ namespace TaskFlows {
   }
 }
 
-
-
 const INPUTS = [
   undefined,
   "fortytwo",
