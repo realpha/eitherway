@@ -3,7 +3,7 @@
  * NOTE: the "no-unused-vars" lint rule is ignored in order to ensure
  * method parameter names are symetrical
  */
-import { assert } from "../deps.ts";
+import { assert } from "./assert.ts";
 import type {
   Empty,
   Infallible,
@@ -37,7 +37,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const maybeStr = Option.from("something" as string | undefined);
@@ -62,7 +62,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const maybeStr = Option.from("something" as string | undefined);
@@ -93,7 +93,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const nested = Some(Option.from("something"));
@@ -131,7 +131,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * //This really is an anti-example - don't do that
@@ -171,7 +171,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const toUpperCase = String.prototype.toUpperCase.call;
@@ -196,7 +196,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const toUpperCase = String.prototype.toUpperCase.call;
@@ -228,7 +228,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const toUpperCase = String.prototype.toUpperCase.call;
@@ -267,7 +267,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * function randomize(n: number): Option<number> {
@@ -315,7 +315,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * function fallback() {
@@ -353,7 +353,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const maybeStr = Option.from("something" as string | undefined);
@@ -390,7 +390,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const orValue = "some";
@@ -416,7 +416,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const elseFn = () => "some";
@@ -473,7 +473,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * type LogArgs = [boolean, string];
@@ -522,7 +522,7 @@ export interface IOption<T> {
    *
    * @example
    * ```
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    * import { existsSync } from "https://deno.land/std@0.199.0/fs/mod.ts";
    *
@@ -571,7 +571,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * // Given a config interface...
@@ -646,7 +646,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const maybe = Option.from(undefined);
@@ -673,7 +673,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * // A small config utility
@@ -731,7 +731,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * type UserRecord = {
@@ -775,7 +775,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * function toEven(n: number): Option<number> {
@@ -801,7 +801,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const someTag = Some("thing").toTag();
@@ -825,7 +825,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const someNum = Some(1);
@@ -853,7 +853,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const arr = [1];
@@ -884,7 +884,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const num = Some(1);
@@ -916,7 +916,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const arr = [1, 2, 3];
@@ -980,7 +980,7 @@ export interface IOption<T> {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const rec = Some({ a: 1, b: 2 });
@@ -1278,7 +1278,7 @@ class _Some<T> implements IOption<T> {
  *
  * @example
  * ```typescript
- * import { assert } from "../deps.ts";
+ * import { assert } from "./assert.ts";
  * import { Option, None, Some } from "./option.ts";
  *
  * const str = "thing";
@@ -1320,7 +1320,7 @@ export namespace Some {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    * import { Empty } from "./type_utils.ts";
    *
@@ -1363,7 +1363,7 @@ Object.defineProperty(Some, Symbol.toStringTag, {
  *
  * @example
  * ```typescript
- * import { assert } from "../deps.ts";
+ * import { assert } from "./assert.ts";
  * import { Option, None, Some } from "./option.ts";
  *
  * const none = None;
@@ -1432,7 +1432,7 @@ Object.freeze(None);
  *
  * @example
  * ```typescript
- * import { assert } from "../deps.ts";
+ * import { assert } from "./assert.ts";
  * import { Option, None, Some } from "./option.ts";
  *
  * const str: string | undefined = "thing";
@@ -1473,7 +1473,7 @@ export namespace Option {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const str: string | undefined = "thing";
@@ -1501,7 +1501,7 @@ export namespace Option {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * const str = "thing" as string | undefined;
@@ -1535,7 +1535,7 @@ export namespace Option {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * type Bit = 1 | 0;
@@ -1571,7 +1571,7 @@ export namespace Option {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * type StrictTuple = Readonly<[string, number, boolean]>;
@@ -1627,7 +1627,7 @@ export namespace Option {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * type Prime = number;
@@ -1689,7 +1689,7 @@ export namespace Option {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * type UserRecord = {
@@ -1781,7 +1781,7 @@ export namespace Option {
    *
    * @example
    * ```typescript
-   * import { assert } from "../deps.ts";
+   * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
    * // Suppose this function is imported from a fancy library
