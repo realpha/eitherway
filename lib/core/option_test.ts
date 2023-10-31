@@ -431,7 +431,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
     });
 
     await t.step(
-      "and().or().xor() -> chaining returns the equivalent result as logical operations on coercible values",
+      ".and().or().xor() -> chaining returns the equivalent result as logical operations on coercible values",
       () => {
         const lhs = Some("thing");
         const rhs1 = Some("thingelse");
@@ -1036,7 +1036,7 @@ Deno.test("eitherway::Option::None", async (t) => {
     });
 
     await t.step(
-      "and().or().xor() -> chaining returns the equivalent result as logical operations on coercible values",
+      ".and().or().xor() -> chaining returns the equivalent result as logical operations on coercible values",
       () => {
         const lhs = None;
         const rhs1 = None;
@@ -1107,6 +1107,15 @@ Deno.test("eitherway::Option::None", async (t) => {
       assertStrictEquals(maybeDoubled, None);
       assertStrictEquals(maybeDoubled.unwrap(), undefined);
     });
+
+    await t.step(".orElse() -> returns new Option instance", () => {
+      const fallback = () => Option(42);
+      
+      const maybeFallback = None.orElse(fallback);
+
+      assertStrictEquals(maybeFallback.isSome(), true);
+      assertStrictEquals(maybeFallback.unwrap(), 42);
+    });
   });
 
   await t.step("None -> Unwrap Methods", async (t) => {
@@ -1131,6 +1140,42 @@ Deno.test("eitherway::Option::None", async (t) => {
       const unwrapped = None.unwrapOrElse(orFn);
 
       assertStrictEquals(unwrapped, orFn());
+    });
+  });
+
+  await t.step("None -> Transformation Methods", async (t) => {
+    await t.step(".into() -> supplies None to the supplied function", () => {
+      type Either<L, R> = { tag: "Left"; value: L } | { tag: "Right"; value: R };
+      function eitherFromOption(o: Option<number>): Either<number, undefined> {
+        if (o.isNone()) return { tag: "Right", value: undefined };
+        return { tag: "Left", value: o.unwrap() };
+      };
+
+      const maybeNumber = Option.fromCoercible(0);
+      const either = maybeNumber.into(eitherFromOption);
+
+      assertStrictEquals(either.tag, "Right");
+    });
+
+    await t.step(".okOr() -> returns an instance of Err wrapping the provided value", () => {
+      const opt = Option.fromCoercible("");
+      const typeErr = TypeError("Cannot operate on empty string");
+
+      const res = opt.okOr(typeErr);
+
+      assertStrictEquals(res.isErr(), true);
+      assertStrictEquals(res.unwrap(), typeErr);
+    });
+
+    await t.step(".okOrElse() -> returns an instance of Err wrapping the result of the provided fn", () => {
+      const opt = Option.fromCoercible("");
+      const typeErr = TypeError("Cannot operate on empty string");
+      const elseFn = () => typeErr;
+
+      const res = opt.okOrElse(elseFn);
+
+      assertStrictEquals(res.isErr(), true);
+      assertStrictEquals(res.unwrap(), typeErr);
     });
   });
 

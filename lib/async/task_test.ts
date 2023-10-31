@@ -219,7 +219,7 @@ Deno.test("eitherway::Task", async (t) => {
   await t.step("Task<T, E> -> Operators", async (t) => {
     await t.step("Task<T, E> -> Map Operators", async (t) => {
       await t.step(
-        "Task.map() -> returns new Task instance with applied mapFn",
+        "Task.map() -> returns Promise<Result> with applied mapFn",
         async () => {
           const p: Promise<Result<number, TypeError>> = Promise.resolve(Ok(41));
 
@@ -232,7 +232,7 @@ Deno.test("eitherway::Task", async (t) => {
       );
 
       await t.step(
-        "Task.mapErr() -> returns new Task instance with applied mapFn to err",
+        "Task.mapErr() -> returns Promise<Result> with applied mapFn to err",
         async () => {
           const e = TypeError("Cannot do that");
           const p: Promise<Result<number, TypeError>> = Promise.resolve(Err(e));
@@ -249,7 +249,7 @@ Deno.test("eitherway::Task", async (t) => {
       );
 
       await t.step(
-        "Task.andThen() -> returns new Task instance with applied fn to value",
+        "Task.andThen() -> returns Promise<Result> with applied fn to value",
         async () => {
           const p: Promise<Result<string, TypeError>> = Promise.resolve(
             Ok("1"),
@@ -271,7 +271,7 @@ Deno.test("eitherway::Task", async (t) => {
       );
 
       await t.step(
-        ".orElse() -> returns a new Task instance with applied fn to err",
+        "Task.orElse() -> returns a Promise<Result> with applied fn to err",
         async () => {
           const p: Promise<Result<never, Error>> = Promise.resolve(Err(
             Error("Received error", { cause: TypeError("Cannot do that") }),
