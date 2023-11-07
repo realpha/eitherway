@@ -411,26 +411,26 @@ async function tripTask<T, E, T2, E2>(
   task: Either<T, E>,
   tripFn: (value: T) => Either<T2, E2>,
 ): Promise<Result<T, E | E2>> {
-  const res = await task;
+  const original = await task;
 
-  if (res.isErr()) return res;
+  if (original.isErr()) return original;
 
-  const res2 = await tripFn(res.unwrap());
+  const res = await tripFn(original.unwrap());
 
-  return res2.and(res);
+  return res.and(original);
 }
 
 async function riseTask<T, E, T2, E2>(
   task: Either<T, E>,
   riseFn: (value: E) => Either<T2, E2>,
 ): Promise<Result<T | T2, E>> {
-  const res = await task;
+  const original = await task;
 
-  if (res.isOk()) return res;
+  if (original.isOk()) return original;
 
-  const rhs = await riseFn(res.unwrap());
+  const res = await riseFn(original.unwrap());
 
-  return rhs.or(res);
+  return res.or(original);
 }
 
 async function unwrapTask<T, E>(task: Either<T, E>): Promise<T | E> {
