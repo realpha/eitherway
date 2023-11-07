@@ -251,6 +251,32 @@ export interface IOption<T> {
   ): Some<NonNullish<U>>;
 
   /**
+   * Use this to refine a wrapped value `<T>` to `<U>` or cheaply convert
+   * an instance of `Some<T>` to `None` in case the wrapped fails the supplied
+   * predicate function
+   *
+   * In case of `None`, this method short-circuits and returns `None`
+   *
+   * @category Option::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const numOrStr = 0 as string | number;
+   * const isNum = (value: unknown): value is number => typeof value === "number";
+   *
+   * const none = Option.fromCoercible(numOrStr); //Option<number | string>
+   * const same = none.filter(isNum);             //Option<number>
+   *
+   * assert(same === none);
+   * ```
+   */
+  filter<U extends T>(predicate: (arg: Readonly<T>) => arg is U): Option<U>;
+  filter(predicate: (arg: Readonly<T>) => boolean): Option<T>;
+
+  /**
    * Use this to produce a new `Option` instance from the wrapped value or
    * flatten a nested `Option`
    *
@@ -435,6 +461,20 @@ export interface IOption<T> {
    * a possible Error value in case of `None`
    *
    * @category Option::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Option, None, Some } from "./option.ts";
+   * import { Result } from "./result.ts";
+   *
+   * const typeError = new TypeError("Something went wrong!");
+   * const opt = Option.fromCoercible("");
+   *
+   * const res: Result<string, TypeError> = opt.okOr(typeError);
+   *
+   * assert(res.isErr() === true);
+   * ```
    */
   okOr<E>(err: E): Result<T, E>;
 
@@ -445,6 +485,23 @@ export interface IOption<T> {
    * This is mostly useful if the Error value is expensive to produce
    *
    * @category Option::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Option, None, Some } from "./option.ts";
+   * import { Result } from "./result.ts";
+   *
+   * function errFn(): TypeError {
+   *   return new TypeError("Something went wrong!");
+   * }
+   *
+   * const opt = Option.fromCoercible("");
+   *
+   * const res: Result<string, TypeError> = opt.okOrElse(errFn);
+   *
+   * assert(res.isErr() === true);
+   * ```
    */
   okOrElse<E>(err: () => E): Result<T, E>;
 
@@ -454,6 +511,18 @@ export interface IOption<T> {
    * This is mostly useful for shoving an `Option<T>` into an async context.
    *
    * @category Option::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const some = Option(42);
+   *
+   * const maybeInt = some.into(s => Promise.resolve(s.unwrap()));
+   *
+   * maybeInt.then((x) => assert(x === 42));
+   * ```
    */
   into<U>(intoFn: (arg: Option<T>) => U): U;
 
@@ -1035,6 +1104,9 @@ class _None<T = never> implements IOption<never> {
   ): Some<NonNullish<U>> {
     return Some(elseFn());
   }
+  filter(predicate: (arg: never) => boolean): None {
+    return this;
+  }
   zip<U>(rhs: Option<U>): None {
     return this;
   }
@@ -1145,6 +1217,18 @@ class _Some<T> implements IOption<T> {
   ): Some<NonNullish<U>> {
     return this.map(mapFn);
   }
+  filter<U extends T>(predicate: (arg: T) => arg is U): Option<U>;
+  filter<U extends T>(predicate: (arg: T) => boolean): Option<U>;
+  //deno-lint-ignore no-explicit-any 
+  filter<U extends T>(predicate: any) {
+    /**
+     * This is as brittle as it gets...
+     * TODO: clarify if it would be better to have two distinct methods
+     * like `refine` and `filter`
+     */
+    if (predicate(this.#value)) return this as unknown as Some<U>;
+    return None;
+  }
   zip<U>(rhs: Option<U>): Option<[T, U]> {
     if (rhs.isNone()) return None;
     return Some([this.#value, rhs.unwrap()] as [T, U]);
@@ -1192,7 +1276,7 @@ class _Some<T> implements IOption<T> {
     return this;
   }
   trip<U>(tripFn: (value: T) => Option<U>): Option<T> {
-    const lhs = tripFn(this.clone().unwrap());
+    const lhs = tripFn(this.#value);
     return lhs.and(this);
   }
   toTag(): string {

@@ -327,7 +327,7 @@ Since `Task<T, E>` is a subclass of `Promise<Result<T, E>>`, it's possible to
 return it as such from an async function though or just await it.
 
 ```typescript
-async function(str: string): Promise<Result<string, never>> {
+async function toTask(str: string): Promise<Result<string, never>> {
   return Task.succeed(str);
 }
 ```

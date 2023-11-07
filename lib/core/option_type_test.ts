@@ -506,3 +506,39 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
     });
   });
 });
+
+Deno.test("eitherway::Option::None::TypeTests", async (t) => {
+  await t.step("None -> Map Methods", async (t) => {
+    await t.step(".map() -> Return type is None", () => {
+      const none = None.map(() => "never");
+
+      type IsNone = AssertTrue<IsExact<typeof none, None>>;
+
+      assertStrictEquals(none.isNone(), true);
+    });
+
+    await t.step(".filter() -> Narrows type based on supplied typeguard", () => {
+      const numOrStr = 0 as string | number;
+      const isNum = (value: unknown): value is number => typeof value === "number";
+
+      const none = Option.fromCoercible(numOrStr);
+      const same = none.filter(isNum);
+
+      type PriorIsUnion = AssertTrue<IsExact<typeof none, Option<string | number>>>;
+      type ReturnTypeIsNarrowed = AssertTrue<IsExact<typeof same, Option<number>>>;
+
+      assertStrictEquals(same.isNone(), true);
+    });
+
+    await t.step(".filter() -> Return type is None", () => {
+      const isEven = (value: number): boolean => value % 2 === 0;
+
+      const none = None.filter(isEven);
+
+      type IsNone = AssertTrue<IsExact<typeof none, None>>;
+
+      assertStrictEquals(none.isNone(), true);
+    });
+  });
+});
+    

@@ -500,6 +500,28 @@ Deno.test("eitherway::Option::Some", async (t) => {
       },
     );
 
+    await t.step(".filter() -> refines wrapped value", () => {
+      const numOrStr = 5 as string | number;
+      const isNum = (value: unknown): value is number => typeof value === "number";
+
+      const some = Option(numOrStr);
+      const same = some.filter(isNum);
+
+      assertStrictEquals(same, some);
+      assertStrictEquals(same.isSome(), true);
+    });
+
+    await t.step(".filter() -> returns None if predicate fails", () => {
+      const num = 5;
+      const isEven = (value: number): boolean => value % 2 === 0;
+
+      const some = Option(num);
+      const none = some.filter(isEven);
+
+      assertNotStrictEquals(none, some);
+      assertStrictEquals(none.isSome(), false);
+    });
+
     await t.step(".andThen() -> returns new instance of Option", () => {
       const double = (x: number) => Option(x * 2);
       const toBeWrapped = 5;
@@ -589,7 +611,7 @@ Deno.test("eitherway::Option::Some", async (t) => {
     });
   });
 
-  await t.step("Some<T> -> Tranformation Methods", async (t) => {
+  await t.step("Some<T> -> Transformation Methods", async (t) => {
     await t.step(
       ".into() -> provides Some<T> to the supplied intoFn",
       async () => {
@@ -1099,6 +1121,28 @@ Deno.test("eitherway::Option::None", async (t) => {
       },
     );
 
+    await t.step(".filter() -> accepts a type guard", () => {
+      const numOrStr = 0 as string | number;
+      const isNum = (value: unknown): value is number => typeof value === "number";
+
+      const none = Option.fromCoercible(numOrStr);
+      const same = none.filter(isNum);
+
+      assertStrictEquals(same, none);
+      assertStrictEquals(same.isNone(), true);
+    });
+
+    await t.step(".filter() -> returns None", () => {
+      const num = 0;
+      const isEven = (value: number): boolean => value % 2 === 0;
+
+      const none = Option.fromCoercible(num);
+      const same = none.filter(isEven);
+
+      assertStrictEquals(same, none);
+      assertStrictEquals(same.isNone(), true);
+    });
+
     await t.step(".andThen() -> returns None", () => {
       const double = (x: number) => Option(x * 2);
 
@@ -1115,6 +1159,20 @@ Deno.test("eitherway::Option::None", async (t) => {
 
       assertStrictEquals(maybeFallback.isSome(), true);
       assertStrictEquals(maybeFallback.unwrap(), 42);
+    });
+
+    await t.step(".trip() -> is a no-op", () => {
+      let gotCalled = false;
+      const tripFn = () => {
+        gotCalled = true;
+        return Option(42);
+      };
+      const opt = Option.fromCoercible(0);
+      
+      const same = opt.trip(tripFn);
+
+      assertStrictEquals(gotCalled, false);
+      assertStrictEquals(same, opt);
     });
   });
 
@@ -1144,7 +1202,7 @@ Deno.test("eitherway::Option::None", async (t) => {
   });
 
   await t.step("None -> Transformation Methods", async (t) => {
-    await t.step(".into() -> supplies None to the supplied function", () => {
+    await t.step(".into() -> supplies None to the provided function", () => {
       type Either<L, R> = { tag: "Left"; value: L } | { tag: "Right"; value: R };
       function eitherFromOption(o: Option<number>): Either<number, undefined> {
         if (o.isNone()) return { tag: "Right", value: undefined };
@@ -1194,6 +1252,17 @@ Deno.test("eitherway::Option::None", async (t) => {
         assertStrictEquals(returnedOption, originalOption);
       },
     );
+
+    await t.step(".inspect() -> is a no-op", () => {
+      let gotCalled = false;
+      const toggle = () => {
+        gotCalled = true;
+      };
+      
+      None.inspect(toggle);
+
+      assertStrictEquals(gotCalled, false);
+    });
 
     await t.step(
       ".toTag() -> is short-hand for Object.prototype.toString.call(None)",
