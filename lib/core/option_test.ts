@@ -6,8 +6,7 @@ import {
   assertObjectMatch,
   assertStrictEquals,
 } from "../../dev_deps.ts";
-import { None, Option, Some } from "./option.ts";
-import { Result } from "./result.ts";
+import { None, Option, Options, Some } from "./option.ts";
 
 /**
  * Setup test value collections
@@ -153,98 +152,6 @@ Deno.test("eitherway::Option", async (t) => {
       });
     },
   );
-  await t.step("Option.all() -> returns None for empty arrays", () => {
-    const empty: Option<string>[] = [];
-
-    const emptyIsNone: Option<string[]> = Option.all(empty);
-    if (emptyIsNone.isSome()) {
-      throw TypeError("Unreachable in this test");
-    }
-    const undef: undefined = emptyIsNone.unwrap();
-
-    assertStrictEquals(emptyIsNone.isNone(), true);
-    assertStrictEquals(undef, undefined);
-  });
-  await t.step(
-    "Option.all() -> returns Some<T[]> only if all elements are Some",
-    () => {
-      type StrictTuple = Readonly<[string, number, boolean]>;
-      const correctTuple = [
-        Option("some" as string),
-        Option(1 as number),
-        Option(true as boolean),
-      ] as const;
-      const wrongTuple = [
-        Option("some" as string),
-        Option(1 as number),
-        Option.fromCoercible(false as boolean),
-      ] as const;
-      const encode = JSON.stringify;
-
-      const someTuple: Option<StrictTuple> = Option.all(correctTuple);
-      const noneTuple: Option<StrictTuple> = Option.all(wrongTuple);
-      if (someTuple.isNone() || noneTuple.isSome()) {
-        throw TypeError("Unreachable in this test");
-      }
-      const unwrapped: StrictTuple = someTuple.unwrap();
-      const undef: undefined = noneTuple.unwrap();
-
-      assertStrictEquals(someTuple.isSome(), true);
-      assertStrictEquals(noneTuple.isNone(), true);
-      /**
-       * See the `toJSON` tests under the `JS well-known Symbols and Methods`
-       * section to understand why this works
-       * {@linkcode Some#toJSON}
-       */
-      assertStrictEquals(encode(unwrapped), encode(correctTuple));
-      assertStrictEquals(undef, undefined);
-    },
-  );
-  await t.step(
-    "Option.any() -> returns None for empty arrays or if all elements are None",
-    () => {
-      const emptyArr: Option<string>[] = [];
-      const noneArr = [None, None, None];
-
-      const empty = Option.any(emptyArr);
-      const none = Option.any(noneArr);
-
-      assertStrictEquals(empty.isNone(), true);
-      assertStrictEquals(none.isNone(), true);
-    },
-  );
-  await t.step(
-    "Option.any() -> returns the first Some found in Option<T>[]",
-    () => {
-      type Prime = number;
-      const toPrime = function (n: number): Option<Prime> {
-        if (!Number.isSafeInteger(n) || n < 2) return None;
-        if (n % 2 === 0) return (n !== 2) ? None : Some(n);
-        if (n % 3 === 0) return (n !== 3) ? None : Some(n);
-
-        const m = Math.sqrt(n);
-        for (let i = 5; i <= m; i += 6) {
-          if (n % i === 0) return None;
-          if (n % (i + 2) === 0) return None;
-        }
-        return Some(n);
-      };
-      const makeRange = function* (start: number, end: number) {
-        let cursor = start;
-        while (cursor < end) {
-          yield cursor;
-          cursor += 1;
-        }
-        return cursor;
-      };
-
-      const maybePrimes: Option<Prime>[] = [...makeRange(9, 19)].map(toPrime);
-      const firstPrime = Option.any(maybePrimes);
-
-      assertStrictEquals(firstPrime.isSome(), true);
-      assertStrictEquals(firstPrime.unwrap(), 11);
-    },
-  );
   await t.step(
     "Option.apply() -> returns the correct result for variadic functions",
     () => {
@@ -366,6 +273,101 @@ Deno.test("eitherway::Option", async (t) => {
         assertStrictEquals(isInstance, true);
         assertStrictEquals(isNotInstance, true);
       });
+    },
+  );
+});
+
+Deno.test("eitherway::Options", async (t) => {
+  await t.step(".all() -> returns None for empty arrays", () => {
+    const empty: Option<string>[] = [];
+
+    const emptyIsNone: Option<string[]> = Options.all(empty);
+    if (emptyIsNone.isSome()) {
+      throw TypeError("Unreachable in this test");
+    }
+    const undef: undefined = emptyIsNone.unwrap();
+
+    assertStrictEquals(emptyIsNone.isNone(), true);
+    assertStrictEquals(undef, undefined);
+  });
+  await t.step(
+    ".all() -> returns Some<T[]> only if all elements are Some",
+    () => {
+      type StrictTuple = Readonly<[string, number, boolean]>;
+      const correctTuple = [
+        Option("some" as string),
+        Option(1 as number),
+        Option(true as boolean),
+      ] as const;
+      const wrongTuple = [
+        Option("some" as string),
+        Option(1 as number),
+        Option.fromCoercible(false as boolean),
+      ] as const;
+      const encode = JSON.stringify;
+
+      const someTuple: Option<StrictTuple> = Options.all(correctTuple);
+      const noneTuple: Option<StrictTuple> = Options.all(wrongTuple);
+      if (someTuple.isNone() || noneTuple.isSome()) {
+        throw TypeError("Unreachable in this test");
+      }
+      const unwrapped: StrictTuple = someTuple.unwrap();
+      const undef: undefined = noneTuple.unwrap();
+
+      assertStrictEquals(someTuple.isSome(), true);
+      assertStrictEquals(noneTuple.isNone(), true);
+      /**
+       * See the `toJSON` tests under the `JS well-known Symbols and Methods`
+       * section to understand why this works
+       * {@linkcode Some#toJSON}
+       */
+      assertStrictEquals(encode(unwrapped), encode(correctTuple));
+      assertStrictEquals(undef, undefined);
+    },
+  );
+  await t.step(
+    ".any() -> returns None for empty arrays or if all elements are None",
+    () => {
+      const emptyArr: Option<string>[] = [];
+      const noneArr = [None, None, None];
+
+      const empty = Options.any(emptyArr);
+      const none = Options.any(noneArr);
+
+      assertStrictEquals(empty.isNone(), true);
+      assertStrictEquals(none.isNone(), true);
+    },
+  );
+  await t.step(
+    "Option.any() -> returns the first Some found in Option<T>[]",
+    () => {
+      type Prime = number;
+      const toPrime = function (n: number): Option<Prime> {
+        if (!Number.isSafeInteger(n) || n < 2) return None;
+        if (n % 2 === 0) return (n !== 2) ? None : Some(n);
+        if (n % 3 === 0) return (n !== 3) ? None : Some(n);
+
+        const m = Math.sqrt(n);
+        for (let i = 5; i <= m; i += 6) {
+          if (n % i === 0) return None;
+          if (n % (i + 2) === 0) return None;
+        }
+        return Some(n);
+      };
+      const makeRange = function* (start: number, end: number) {
+        let cursor = start;
+        while (cursor < end) {
+          yield cursor;
+          cursor += 1;
+        }
+        return cursor;
+      };
+
+      const maybePrimes: Option<Prime>[] = [...makeRange(9, 19)].map(toPrime);
+      const firstPrime = Options.any(maybePrimes);
+
+      assertStrictEquals(firstPrime.isSome(), true);
+      assertStrictEquals(firstPrime.unwrap(), 11);
     },
   );
 });

@@ -1,5 +1,5 @@
 import type { InferredOptionTypes, InferredSomeType } from "./option.ts";
-import { None, Option, Some } from "./option.ts";
+import { None, Option, Options, Some } from "./option.ts";
 import type { NonNullish } from "./type_utils.ts";
 import {
   AssertFalse,
@@ -100,64 +100,6 @@ Deno.test("eitherway::Option::TypeTests", async (t) => {
     },
   );
 
-  await t.step(
-    "Option.all() -> Heterogenous tuple types are correctly inferred",
-    () => {
-      type TestTuple = Readonly<[string, number, { a: number[] }]>;
-      const optionTuple = [
-        Option("abc" as string),
-        Option(100 as number),
-        Option({ a: [] } as { a: number[] }),
-      ] as const;
-      const someTuple = [
-        Some("abc" as string),
-        Some(100 as number),
-        Some({ a: [] } as { a: number[] }),
-      ] as const;
-
-      const collectedOpts = Option.all(optionTuple);
-      const collectedSomes = Option.all(someTuple);
-
-      if (collectedOpts.isSome() && collectedSomes.isSome()) {
-        const unwrappedOpts = collectedOpts.unwrap();
-        const unwrappedSomes = collectedSomes.unwrap();
-
-        assertType<IsExact<typeof unwrappedOpts, TestTuple>>(true);
-        assertType<IsExact<typeof unwrappedSomes, TestTuple>>(true);
-      } else {
-        throw TypeError("Unreachable");
-      }
-    },
-  );
-
-  await t.step(
-    "Option.all() -> Array types are correctly inferred and retain constraints",
-    () => {
-      type TestArray = ReadonlyArray<string>;
-      type TestArrayMut = Array<string>;
-      const optArray: ReadonlyArray<Option<string>> = Array.of(..."option").map(
-        (
-          char,
-        ) => Option(char),
-      );
-      const optArrayMut: Array<Option<string>> = Array.of(..."option").map((
-        char,
-      ) => Option(char));
-
-      const collected = Option.all(optArray);
-      const collectedMut = Option.all(optArrayMut);
-
-      if (collected.isSome() && collectedMut.isSome()) {
-        const unwrapped = collected.unwrap();
-        const unwrappedMut = collectedMut.unwrap();
-
-        assertType<IsExact<typeof unwrapped, TestArray>>(true);
-        assertType<IsExact<typeof unwrappedMut, TestArrayMut>>(true);
-      } else {
-        throw TypeError("Unreachable");
-      }
-    },
-  );
 
   await t.step(
     "Option.identity() -> identity type is correctly inferred",
@@ -241,6 +183,67 @@ Deno.test("eitherway::Option::TypeTests", async (t) => {
           ReturnType<typeof fromEither<string, number | boolean>>
         >
       >(true);
+    },
+  );
+});
+
+Deno.test("eitherway::Options::TypeTests", async (t) => {
+  await t.step(
+    ".all() -> Heterogenous tuple types are correctly inferred",
+    () => {
+      type TestTuple = Readonly<[string, number, { a: number[] }]>;
+      const optionTuple = [
+        Option("abc" as string),
+        Option(100 as number),
+        Option({ a: [] } as { a: number[] }),
+      ] as const;
+      const someTuple = [
+        Some("abc" as string),
+        Some(100 as number),
+        Some({ a: [] } as { a: number[] }),
+      ] as const;
+
+      const collectedOpts = Options.all(optionTuple);
+      const collectedSomes = Options.all(someTuple);
+
+      if (collectedOpts.isSome() && collectedSomes.isSome()) {
+        const unwrappedOpts = collectedOpts.unwrap();
+        const unwrappedSomes = collectedSomes.unwrap();
+
+        assertType<IsExact<typeof unwrappedOpts, TestTuple>>(true);
+        assertType<IsExact<typeof unwrappedSomes, TestTuple>>(true);
+      } else {
+        throw TypeError("Unreachable");
+      }
+    },
+  );
+
+  await t.step(
+    ".all() -> Array types are correctly inferred and retain constraints",
+    () => {
+      type TestArray = ReadonlyArray<string>;
+      type TestArrayMut = Array<string>;
+      const optArray: ReadonlyArray<Option<string>> = Array.of(..."option").map(
+        (
+          char,
+        ) => Option(char),
+      );
+      const optArrayMut: Array<Option<string>> = Array.of(..."option").map((
+        char,
+      ) => Option(char));
+
+      const collected = Options.all(optArray);
+      const collectedMut = Options.all(optArrayMut);
+
+      if (collected.isSome() && collectedMut.isSome()) {
+        const unwrapped = collected.unwrap();
+        const unwrappedMut = collectedMut.unwrap();
+
+        assertType<IsExact<typeof unwrapped, TestArray>>(true);
+        assertType<IsExact<typeof unwrappedMut, TestArrayMut>>(true);
+      } else {
+        throw TypeError("Unreachable");
+      }
     },
   );
 });
