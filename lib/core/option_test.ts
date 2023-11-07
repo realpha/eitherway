@@ -504,7 +504,8 @@ Deno.test("eitherway::Option::Some", async (t) => {
 
     await t.step(".filter() -> refines wrapped value", () => {
       const numOrStr = 5 as string | number;
-      const isNum = (value: unknown): value is number => typeof value === "number";
+      const isNum = (value: unknown): value is number =>
+        typeof value === "number";
 
       const some = Option(numOrStr);
       const same = some.filter(isNum);
@@ -1125,7 +1126,8 @@ Deno.test("eitherway::Option::None", async (t) => {
 
     await t.step(".filter() -> accepts a type guard", () => {
       const numOrStr = 0 as string | number;
-      const isNum = (value: unknown): value is number => typeof value === "number";
+      const isNum = (value: unknown): value is number =>
+        typeof value === "number";
 
       const none = Option.fromCoercible(numOrStr);
       const same = none.filter(isNum);
@@ -1156,7 +1158,7 @@ Deno.test("eitherway::Option::None", async (t) => {
 
     await t.step(".orElse() -> returns new Option instance", () => {
       const fallback = () => Option(42);
-      
+
       const maybeFallback = None.orElse(fallback);
 
       assertStrictEquals(maybeFallback.isSome(), true);
@@ -1170,7 +1172,7 @@ Deno.test("eitherway::Option::None", async (t) => {
         return Option(42);
       };
       const opt = Option.fromCoercible(0);
-      
+
       const same = opt.trip(tripFn);
 
       assertStrictEquals(gotCalled, false);
@@ -1205,11 +1207,14 @@ Deno.test("eitherway::Option::None", async (t) => {
 
   await t.step("None -> Transformation Methods", async (t) => {
     await t.step(".into() -> supplies None to the provided function", () => {
-      type Either<L, R> = { tag: "Left"; value: L } | { tag: "Right"; value: R };
+      type Either<L, R> = { tag: "Left"; value: L } | {
+        tag: "Right";
+        value: R;
+      };
       function eitherFromOption(o: Option<number>): Either<number, undefined> {
         if (o.isNone()) return { tag: "Right", value: undefined };
         return { tag: "Left", value: o.unwrap() };
-      };
+      }
 
       const maybeNumber = Option.fromCoercible(0);
       const either = maybeNumber.into(eitherFromOption);
@@ -1217,26 +1222,32 @@ Deno.test("eitherway::Option::None", async (t) => {
       assertStrictEquals(either.tag, "Right");
     });
 
-    await t.step(".okOr() -> returns an instance of Err wrapping the provided value", () => {
-      const opt = Option.fromCoercible("");
-      const typeErr = TypeError("Cannot operate on empty string");
+    await t.step(
+      ".okOr() -> returns an instance of Err wrapping the provided value",
+      () => {
+        const opt = Option.fromCoercible("");
+        const typeErr = TypeError("Cannot operate on empty string");
 
-      const res = opt.okOr(typeErr);
+        const res = opt.okOr(typeErr);
 
-      assertStrictEquals(res.isErr(), true);
-      assertStrictEquals(res.unwrap(), typeErr);
-    });
+        assertStrictEquals(res.isErr(), true);
+        assertStrictEquals(res.unwrap(), typeErr);
+      },
+    );
 
-    await t.step(".okOrElse() -> returns an instance of Err wrapping the result of the provided fn", () => {
-      const opt = Option.fromCoercible("");
-      const typeErr = TypeError("Cannot operate on empty string");
-      const elseFn = () => typeErr;
+    await t.step(
+      ".okOrElse() -> returns an instance of Err wrapping the result of the provided fn",
+      () => {
+        const opt = Option.fromCoercible("");
+        const typeErr = TypeError("Cannot operate on empty string");
+        const elseFn = () => typeErr;
 
-      const res = opt.okOrElse(elseFn);
+        const res = opt.okOrElse(elseFn);
 
-      assertStrictEquals(res.isErr(), true);
-      assertStrictEquals(res.unwrap(), typeErr);
-    });
+        assertStrictEquals(res.isErr(), true);
+        assertStrictEquals(res.unwrap(), typeErr);
+      },
+    );
   });
 
   await t.step("None -> Convenience Methods", async (t) => {
@@ -1260,7 +1271,7 @@ Deno.test("eitherway::Option::None", async (t) => {
       const toggle = () => {
         gotCalled = true;
       };
-      
+
       None.inspect(toggle);
 
       assertStrictEquals(gotCalled, false);

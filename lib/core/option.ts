@@ -1219,7 +1219,7 @@ class _Some<T> implements IOption<T> {
   }
   filter<U extends T>(predicate: (arg: T) => arg is U): Option<U>;
   filter<U extends T>(predicate: (arg: T) => boolean): Option<U>;
-  //deno-lint-ignore no-explicit-any 
+  //deno-lint-ignore no-explicit-any
   filter<U extends T>(predicate: any) {
     /**
      * This is as brittle as it gets...
@@ -1934,7 +1934,6 @@ export namespace Options {
     if (found) return found as Some<InferredOptionTypes<O>[number]>;
     return None;
   }
-
 }
 
 export type InferredOptionTypes<Opts extends ArrayLike<Option<unknown>>> = {

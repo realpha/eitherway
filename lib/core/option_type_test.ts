@@ -100,7 +100,6 @@ Deno.test("eitherway::Option::TypeTests", async (t) => {
     },
   );
 
-
   await t.step(
     "Option.identity() -> identity type is correctly inferred",
     () => {
@@ -520,18 +519,26 @@ Deno.test("eitherway::Option::None::TypeTests", async (t) => {
       assertStrictEquals(none.isNone(), true);
     });
 
-    await t.step(".filter() -> Narrows type based on supplied typeguard", () => {
-      const numOrStr = 0 as string | number;
-      const isNum = (value: unknown): value is number => typeof value === "number";
+    await t.step(
+      ".filter() -> Narrows type based on supplied typeguard",
+      () => {
+        const numOrStr = 0 as string | number;
+        const isNum = (value: unknown): value is number =>
+          typeof value === "number";
 
-      const none = Option.fromCoercible(numOrStr);
-      const same = none.filter(isNum);
+        const none = Option.fromCoercible(numOrStr);
+        const same = none.filter(isNum);
 
-      type PriorIsUnion = AssertTrue<IsExact<typeof none, Option<string | number>>>;
-      type ReturnTypeIsNarrowed = AssertTrue<IsExact<typeof same, Option<number>>>;
+        type PriorIsUnion = AssertTrue<
+          IsExact<typeof none, Option<string | number>>
+        >;
+        type ReturnTypeIsNarrowed = AssertTrue<
+          IsExact<typeof same, Option<number>>
+        >;
 
-      assertStrictEquals(same.isNone(), true);
-    });
+        assertStrictEquals(same.isNone(), true);
+      },
+    );
 
     await t.step(".filter() -> Return type is None", () => {
       const isEven = (value: number): boolean => value % 2 === 0;
@@ -544,4 +551,3 @@ Deno.test("eitherway::Option::None::TypeTests", async (t) => {
     });
   });
 });
-    
