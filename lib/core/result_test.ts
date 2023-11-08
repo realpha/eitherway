@@ -1,5 +1,9 @@
 //deno-lint-ignore-file no-unused-vars
-import { assertStrictEquals, assertThrows } from "../../dev_deps.ts";
+import {
+  assertEquals,
+  assertStrictEquals,
+  assertThrows,
+} from "../../dev_deps.ts";
 import { Err, Ok, Result } from "./result.ts";
 
 Deno.test("eitherway::Result", async (t) => {
@@ -97,7 +101,47 @@ Deno.test("eitherway::Result", async (t) => {
     },
   );
 });
-Deno.test("eitherway::Result::Ok", () => {
+Deno.test("eitherway::Result::Ok", async (t) => {
+  await t.step("Ok<T> -> JS well-known Symbols and Methods", async (t) => {
+    await t.step(
+      "[Symbol.iterator]() -> conforms iterator protocol and delegates to underlying implementation",
+      () => {
+        const ok = Ok("123");
+        let count = 0;
+        let lastValue = "";
+
+        for (const value of ok) {
+          count += 1;
+          lastValue = value;
+        }
+
+        const arr = [...ok];
+
+        assertStrictEquals(count, 3);
+        assertStrictEquals(lastValue, "3");
+        assertEquals(arr, ["1", "2", "3"]);
+      },
+    );
+  });
 });
-Deno.test("eitherway::Result::Err", () => {
+
+Deno.test("eitherway::Result::Err", async (t) => {
+  await t.step("Err<E> -> JS well-known Symbols and Methods", async (t) => {
+    await t.step(
+      "[Symbol.iterator]() -> conforms iterator protocol and represents the empty iterator",
+      () => {
+        const err = Err("result");
+        let count = 0;
+        let inner = "";
+
+        for (const value of err) {
+          count += 1;
+          inner = value;
+        }
+
+        assertStrictEquals(count, 0);
+        assertStrictEquals(inner, "");
+      },
+    );
+  });
 });

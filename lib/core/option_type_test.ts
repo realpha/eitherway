@@ -12,9 +12,8 @@ import {
 } from "../../dev_deps.ts";
 
 type IsOption<O> = O extends Option<unknown> ? true : false;
-type OptionType<O> = O extends Option<infer T> ? T : never;
-type SomeType<S extends Readonly<Option<unknown>>> = S extends
-  Readonly<Some<infer T>> ? T : never;
+type OptionType<O> = O extends Readonly<Option<infer T>> ? T : never;
+type SomeType<S> = S extends Readonly<Some<infer T>> ? T : never;
 
 Deno.test("eitherway::Option::TypeHelpers::TypeTests", async (t) => {
   await t.step(
@@ -34,13 +33,16 @@ Deno.test("eitherway::Option::TypeHelpers::TypeTests", async (t) => {
   );
 
   await t.step("InferredSomeType<O> -> Inferres T from Option<T>", () => {
+    const opt = Option(123);
     type StrictOption = Readonly<Option<number[]>>;
     type NormalOption = Option<Record<string, string>>;
+    type InferredOption = typeof opt;
 
     assertType<IsExact<InferredSomeType<StrictOption>, number[]>>(true);
     assertType<IsExact<InferredSomeType<NormalOption>, Record<string, string>>>(
       true,
     );
+    assertType<IsExact<InferredSomeType<InferredOption>, number>>(true);
   });
 });
 
@@ -51,10 +53,7 @@ Deno.test("eitherway::Option::TypeTests", async (t) => {
       const input: string | undefined | null = "abc";
       const option = Option.from(input);
 
-      type returnTypeIsNullable = AssertFalse<
-        IsNullable<OptionType<typeof option>>
-      >;
-
+      assertType<IsNullable<SomeType<typeof option>>>(false);
       assertStrictEquals(option.isSome(), true);
     },
   );
@@ -310,7 +309,7 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
       const res = lhs.or(rhs);
 
       type IsInferredFromLhs = AssertTrue<
-        IsExact<SomeType<typeof lhs>, SomeType<typeof res>>
+        IsExact<SomeType<typeof res>, SomeType<typeof lhs>>
       >;
 
       assertStrictEquals(lhs.unwrap(), res.unwrap());
@@ -443,13 +442,37 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
 
         type ReturnTypeIsOption = AssertTrue<IsOption<AndThenParamReturnType>>;
         type IsInvariantOverNullish = AssertFalse<
-          IsNullable<OptionType<AndThenParamReturnType>>
+          IsNullable<SomeType<AndThenParamReturnType>>
         >;
 
         assertStrictEquals(res.unwrap(), undefined);
         assertStrictEquals(res.isNone(), true);
       },
     );
+
+    await t.step("filter() -> Return type is narrowed by typeguard", () => {
+      const isNum = (value: unknown): value is number =>
+        typeof value === "number";
+      const numOrStr = 123 as number | string;
+      const some = Some(numOrStr);
+
+      const res = some.filter(isNum);
+
+      type IsNarrowed = AssertTrue<IsExact<typeof res, Option<number>>>;
+
+      assertStrictEquals(res.isSome(), true);
+    });
+
+    await t.step("filter() -> Return type is unchanged by predicate", () => {
+      const isEven = (value: number) => value % 2 === 0;
+      const num = 123;
+      const some = Some(num);
+
+      const res = some.filter(isEven);
+
+      assertType<IsExact<SomeType<typeof res>, number>>(true);
+      assertStrictEquals(res.isNone(), true);
+    });
   });
 
   await t.step("Some<T> -> Unwrap Methods", async (t) => {
@@ -506,6 +529,45 @@ Deno.test("eitherway::Option::Some::TypeTests", async (t) => {
 
       assertStrictEquals(someRes, optRes);
     });
+  });
+
+  await t.step("Some<T> - JS well-known Symbols and Methods", async (t) => {
+    await t.step(
+      "[Symbol.iterator]() -> Return type correctly inferes delegation",
+      () => {
+        class MyIterable implements Iterable<number> {
+          #value: number;
+          constructor(value: number) {
+            this.#value = value;
+          }
+          *[Symbol.iterator]() {
+            yield this.#value;
+          }
+        }
+
+        const arr = [1, 2, 3];
+        const str = "thing";
+        const num = 42;
+        const iterable = new MyIterable(123);
+
+        const someArr = Some(arr);
+        const someStr = Some(str);
+        const someNum = Some(num);
+        const someIter = Some(iterable);
+
+        const someArrIter = someArr[Symbol.iterator]();
+        const someStrIter = someStr[Symbol.iterator]();
+        const someNumIter = someNum[Symbol.iterator]();
+        const someIterIter = someIter[Symbol.iterator]();
+
+        assertType<IsExact<typeof someArrIter, IterableIterator<number>>>(true);
+        assertType<IsExact<typeof someStrIter, IterableIterator<string>>>(true);
+        assertType<IsExact<typeof someNumIter, IterableIterator<never>>>(true);
+        assertType<IsExact<typeof someIterIter, IterableIterator<number>>>(
+          true,
+        );
+      },
+    );
   });
 });
 

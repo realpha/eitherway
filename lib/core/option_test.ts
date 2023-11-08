@@ -801,8 +801,8 @@ Deno.test("eitherway::Option::Some", async (t) => {
         assertEquals(copyInner, {});
         assertEquals(copyInnerUnwrapped, { a: 1 });
         assertEquals(arrCopy, [1, 2, 3]);
-        assertEquals(iterResNum, { done: true, value: 2 });
-        assertEquals(iterResRec, { done: true, value: { a: 1 } });
+        assertEquals(iterResNum, { done: true, value: undefined });
+        assertEquals(iterResRec, { done: true, value: undefined });
       },
     );
 

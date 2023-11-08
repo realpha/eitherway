@@ -7,6 +7,12 @@ import type { Empty, NonNullish } from "./type_utils.ts";
 import { EMPTY } from "./type_utils.ts";
 import { None, Option } from "./option.ts";
 
+/**
+ * ==============
+ * BASE INTERFACE
+ * ==============
+ */
+
 export interface IResult<T, E> {
   isOk(): this is Ok<T>;
   isErr(): this is Err<E>;
@@ -30,12 +36,22 @@ export interface IResult<T, E> {
   ok(): Option<T>;
   err(): Option<E>;
   into<T2>(intoFn: (res: Result<T, E>) => T2): T2;
+  iter(): IterableIterator<T>;
   tap(tapFn: (res: Result<T, E>) => void): Result<T, E>;
   inspect(inspectFn: (value: T) => void): Result<T, E>;
   inspectErr(inspectFn: (err: E) => void): Result<T, E>;
   trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
+  [Symbol.iterator](): IterableIterator<
+    T extends Iterable<infer U> ? U : never
+  >;
 }
+
+/**
+ * ==============
+ * IMPLEMENTATION
+ * ==============
+ */
 
 class _Ok<T> implements IResult<T, never> {
   #value: T;
@@ -101,6 +117,9 @@ class _Ok<T> implements IResult<T, never> {
   into<U>(intoFn: (res: Ok<T>) => U): U {
     return intoFn(this);
   }
+  *iter(): IterableIterator<T> {
+    yield this.#value;
+  }
   zip<T2, E2>(rhs: Result<T2, E2>): Result<[T, T2], E2> {
     if (rhs.isErr()) return rhs;
 
@@ -125,6 +144,13 @@ class _Ok<T> implements IResult<T, never> {
   }
   inspectErr(inspectFn: (err: never) => void): Ok<T> {
     return this;
+  }
+  *[Symbol.iterator](): IterableIterator<
+    T extends Iterable<infer U> ? U : never
+  > {
+    const target = Object(this.#value);
+    if (Symbol.iterator in target) yield* target;
+    return;
   }
 }
 
@@ -194,6 +220,10 @@ class _Err<E> implements IResult<never, E> {
   err(): Option<NonNullish<E>> {
     return Option(this.#err);
   }
+  //deno-lint-ignore require-yield
+  *iter(): IterableIterator<never> {
+    return;
+  }
   zip<T2, E2>(rhs: Result<T2, E2>): Err<E> {
     return this;
   }
@@ -213,7 +243,20 @@ class _Err<E> implements IResult<never, E> {
     inspectFn(this.#err);
     return this;
   }
+  //deno-lint-ignore require-yield
+  *[Symbol.iterator](): IterableIterator<never> {
+    return;
+  }
 }
+
+/**
+ * ==============
+ *   MODULE API
+ * ==============
+ *
+ * By leveraging declaration merging and the fact that types and values
+ * live in seperate namespaces, the API feels way more ergonomic
+ */
 
 export type Ok<T> = _Ok<T>;
 export function Ok<T>(value: T) {
@@ -308,6 +351,33 @@ export namespace Result {
   }
 }
 
+/**
+ * Use this as `errMapFn` to indicate that a function or Promise to be lifted
+ * into a Result or Task context is infallible
+ *
+ * If the lifted function or Promise throws an exception, the error will be
+ * propagated
+ *
+ * @throws Error
+ *
+ * @category Result::Intermediate
+ *
+ * @example
+ * ```typescript
+ * import { assert } from "./assert.ts"
+ * import { Err, Ok, Result } from "./result.ts"
+ *
+ * //Let's re-implement `Result.from`
+ *
+ * const customFromImpl = <T>(fn: () => T) => Result.fromFallible(fn, asInfallible);
+ * const getNumber = () => 42;
+ *
+ * const fromOriginal = Result.from(getNumber);
+ * const fromCustom = customFromImpl(getNumber);
+ *
+ * assert(fromOriginal.isOk() === fromCustom.isOk());
+ * ```
+ */
 export function asInfallible(e: unknown): never {
   throw new Error(
     `eitherway::core -> A function you've passed as infallible threw an exception: ${e}`,

@@ -972,11 +972,47 @@ export interface IOption<T> {
   valueOf(): ValueRepr<T>;
 
   /**
+   * Use this to obtain an iterator over the wrapped value `<T>`
+   *
+   * In case of `None`, an empty iterator is returned
+   *
+   * @category Option::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * const opt = Option.from(42);
+   *
+   * let count = 0;
+   * let yieldedValue = undefined;
+   *
+   * for (const value of opt.iter()) {
+   *   count += 1;
+   *   yieldedValue = value;
+   * }
+   *
+   * const fresh = opt.iter();
+   * const first = fresh.next();
+   * const exhausted = fresh.next();
+   *
+   * assert(count === 1);
+   * assert(yieldedValue === 42);
+   * assert(first.done === false);
+   * assert(first.value === 42);
+   * assert(exhausted.done === true);
+   * assert(exhausted.value === undefined);
+   * ```
+   */
+  iter(): IterableIterator<T>;
+
+  /**
    * Delegates to the implementation of the wrapped value `<T>` or exhausts
-   * the iterator by returning `{ done: true, value: T }` if `<T>` doesn't
+   * the iterator by returning `{ done: true, value: undefined }` if `<T>` doesn't
    * implement the iterator protocol
    *
-   * `None` represents the empty iterator and yields the empty iterator result
+   * `None` represents the empty iterator and returns the empty iterator result
    * `{ done: true, value: undefined }`
    *
    * See the [reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator)
@@ -1013,7 +1049,9 @@ export interface IOption<T> {
    * assert(encode(noneArrCopy) === encode([]));
    * ```
    */
-  [Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T>;
+  [Symbol.iterator](): IterableIterator<
+    T extends Iterable<infer U> ? U : never
+  >;
 
   /**
    * Delegates to the implementation of the wrapped value `<T>` or returns
@@ -1167,12 +1205,16 @@ class _None<T = never> implements IOption<never> {
     return 0;
   }
   //deno-lint-ignore require-yield
+  *iter(): IterableIterator<never> {
+    return;
+  }
+  //deno-lint-ignore require-yield
   *[Symbol.iterator](): IterableIterator<never> {
     /**
      * This is actually what we want, since returning from a generator implies
      * that it's exhausted, i.e. { done: true, value: undefined }
      */
-    return undefined;
+    return;
   }
   [Symbol.toPrimitive](hint?: string): "" | 0 | false {
     if (hint === "string") return "";
@@ -1222,7 +1264,9 @@ class _Some<T> implements IOption<T> {
   //deno-lint-ignore no-explicit-any
   filter<U extends T>(predicate: any) {
     /**
-     * This is as brittle as it gets...
+     * This is as brittle as it gets and a terrible hack...
+     * TODO: test if it's possible to violate type constraints by providing a
+     * generic a type argument to a simple predicate, which isn't a type guard
      * TODO: clarify if it would be better to have two distinct methods
      * like `refine` and `filter`
      */
@@ -1303,10 +1347,15 @@ class _Some<T> implements IOption<T> {
      */
     return Object(this.#value).valueOf();
   }
-  *[Symbol.iterator](): IterableIterator<T extends Iterable<infer U> ? U : T> {
+  *iter(): IterableIterator<T> {
+    yield this.#value;
+  }
+  *[Symbol.iterator](): IterableIterator<
+    T extends Iterable<infer U> ? U : never
+  > {
     const target = Object(this.#value);
     if (Symbol.iterator in target) yield* target;
-    return this.#value;
+    return;
   }
   [Symbol.toPrimitive](hint?: string): string | number | boolean | symbol {
     if (isPrimitive(this.#value)) return this.#value;

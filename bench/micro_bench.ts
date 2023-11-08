@@ -77,10 +77,6 @@ Deno.bench({
   },
 });
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 export namespace AsyncExceptionCallStack {
   async function fail() {
     throw TypeError("Fail!");
