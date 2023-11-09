@@ -30,7 +30,9 @@ Deno.test("eitherway::Result", async (t) => {
       };
       const shouldBeInfallible = () => Result.from(throws);
 
-      assertType<IsExact<ReturnType<typeof shouldBeInfallible>, Result<number, never>>>(true);
+      assertType<
+        IsExact<ReturnType<typeof shouldBeInfallible>, Result<number, never>>
+      >(true);
       assertThrows(shouldBeInfallible);
     },
   );
@@ -132,21 +134,24 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       },
     );
 
-    await t.step("[Symbol.iterator]() -> returns an empty IteratableIterator<never> if encapsulated value doesn't implement iterator protocol", () => {
-      const ok = Ok(42);
-      const okIter = ok[Symbol.iterator]();
-      let count = 0;
-      let lastValue = undefined
+    await t.step(
+      "[Symbol.iterator]() -> returns an empty IteratableIterator<never> if encapsulated value doesn't implement iterator protocol",
+      () => {
+        const ok = Ok(42);
+        const okIter = ok[Symbol.iterator]();
+        let count = 0;
+        let lastValue = undefined;
 
-      for (const value of ok) {
+        for (const value of ok) {
           count += 1;
           lastValue = value;
-      }
-      
-      assertType<IsExact<typeof okIter, IterableIterator<never>>>(true);
-      assertStrictEquals(count, 0);
-      assertStrictEquals(lastValue, undefined);
-    });
+        }
+
+        assertType<IsExact<typeof okIter, IterableIterator<never>>>(true);
+        assertStrictEquals(count, 0);
+        assertStrictEquals(lastValue, undefined);
+      },
+    );
   });
 });
 

@@ -203,7 +203,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
 
   /**
    * ============================
-   * WELL-KNOWN SYMBOLS & METHODS 
+   * WELL-KNOWN SYMBOLS & METHODS
    * ============================
    */
 
@@ -214,16 +214,17 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * In all other cases, it yields the empty `AsyncIteratorResult`
    *
    * @category Task::Advanced
-   * 
    */
-  async *[Symbol.asyncIterator](): AsyncIterableIterator<T extends AsyncIterable<infer U> ? U : never> {
+  async *[Symbol.asyncIterator](): AsyncIterableIterator<
+    T extends AsyncIterable<infer U> ? U : never
+  > {
     const res = await this;
 
-    if(res.isErr()) return;
+    if (res.isErr()) return;
 
     const target = Object(res.unwrap());
 
-    if(!target[Symbol.asyncIterator]) return;
+    if (!target[Symbol.asyncIterator]) return;
 
     yield* target;
   }
@@ -355,7 +356,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   static iter<T, E>() {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
       return iterTask(res);
-    }
+    };
   }
 }
 
@@ -539,11 +540,11 @@ async function unwrapTaskOrElse<T, E, T2>(
 }
 
 async function* iterTask<T, E>(task: Either<T, E>): AsyncIterableIterator<T> {
-    const res = await task;
+  const res = await task;
 
-    if(res.isErr()) return;
+  if (res.isErr()) return;
 
-    yield res.unwrap()
+  yield res.unwrap();
 }
 
 /**
