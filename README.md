@@ -358,17 +358,8 @@ the preferred solution.
 
 ### Contributing
 
+<p>Please see <a href="CONTRIBUTING.md">CONTRIBUTING</a> for more information.</p>
+
 ### License
 
-<sup>
-Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
-2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
-</sup>
-
-<br>
-
-<sub>
-Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in `eitherway` by you, as defined in the Apache-2.0 license, shall be
-dual licensed as above, without any additional terms or conditions.
-</sub>
+<p>Licensed under <a href="LICENSE.md">MIT license</a>.</p>
