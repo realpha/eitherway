@@ -3,7 +3,9 @@ import {
   assertEquals,
   assertStrictEquals,
   assertThrows,
+  assertType,
 } from "../../dev_deps.ts";
+import type { IsExact } from "../../dev_deps.ts";
 import { Err, Ok, Result } from "./result.ts";
 
 Deno.test("eitherway::Result", async (t) => {
@@ -122,6 +124,22 @@ Deno.test("eitherway::Result::Ok", async (t) => {
         assertEquals(arr, ["1", "2", "3"]);
       },
     );
+
+    await t.step("[Symbol.iterator]() -> returns an empty IteratableIterator<never> if encapsulated value doesn't implement iterator protocol", () => {
+      const ok = Ok(42);
+      const okIter = ok[Symbol.iterator]();
+      let count = 0;
+      let lastValue = undefined
+
+      for (const value of ok) {
+          count += 1;
+          lastValue = value;
+      }
+      
+      assertType<IsExact<typeof okIter, IterableIterator<never>>>(true);
+      assertStrictEquals(count, 0);
+      assertStrictEquals(lastValue, undefined);
+    });
   });
 });
 
@@ -131,16 +149,18 @@ Deno.test("eitherway::Result::Err", async (t) => {
       "[Symbol.iterator]() -> conforms iterator protocol and represents the empty iterator",
       () => {
         const err = Err("result");
+        const errIter = err[Symbol.iterator]();
         let count = 0;
-        let inner = "";
+        let lastValue = undefined;
 
         for (const value of err) {
           count += 1;
-          inner = value;
+          lastValue = value;
         }
 
+        assertType<IsExact<typeof errIter, IterableIterator<never>>>(true);
         assertStrictEquals(count, 0);
-        assertStrictEquals(inner, "");
+        assertStrictEquals(lastValue, undefined);
       },
     );
   });

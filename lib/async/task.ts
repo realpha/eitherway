@@ -65,6 +65,171 @@ export class Task<T, E> extends Promise<Result<T, E>> {
 
   /**
    * ======================
+   * TASK INSTANCE METHODS
+   * ======================
+   */
+
+  id(): Task<T, E> {
+    return this;
+  }
+
+  clone(): Task<T, E> {
+    return Task.of(cloneTask(this));
+  }
+
+  map<T2>(mapFn: (v: T) => T2 | PromiseLike<T2>): Task<T2, E> {
+    return Task.of(mapTaskSuccess(this, mapFn));
+  }
+
+  mapOr<T2>(
+    mapFn: (v: T) => T2 | PromiseLike<T2>,
+    orValue: T2 | PromiseLike<T2>,
+  ): Task<T2, never> {
+    return Task.of(mapTaskSuccessOr(this, mapFn, orValue));
+  }
+
+  mapOrElse<T2>(
+    mapFn: (v: T) => T2 | PromiseLike<T2>,
+    orFn: (e: E) => T2 | PromiseLike<T2>,
+  ): Task<T2, never> {
+    return Task.of(mapTaskSuccessOrElse(this, mapFn, orFn));
+  }
+
+  mapErr<E2>(mapFn: (v: E) => E2 | PromiseLike<E2>): Task<T, E2> {
+    return Task.of(mapTaskFailure(this, mapFn));
+  }
+
+  andThen<T2, E2>(
+    thenFn: (v: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T2, E | E2> {
+    return Task.of(chainTaskSuccess(this, thenFn));
+  }
+
+  orElse<T2, E2>(
+    elseFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T | T2, E2> {
+    return Task.of(chainTaskFailure(this, elseFn));
+  }
+
+  zip<T2, E2>(
+    rhs: Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<[T, T2], E | E2> {
+    return Task.of(zipTask(this, rhs));
+  }
+
+  tap(tapFn: (v: Result<T, E>) => void | PromiseLike<void>): Task<T, E> {
+    return Task.of(tapTask(this, tapFn));
+  }
+
+  inspect(inspectFn: (v: T) => void | PromiseLike<void>): Task<T, E> {
+    return Task.of(inspectTaskSuccess(this, inspectFn));
+  }
+
+  inspectErr(inspectFn: (v: E) => void | PromiseLike<void>): Task<T, E> {
+    return Task.of(inspectTaskFailure(this, inspectFn));
+  }
+
+  trip<T2, E2>(
+    tripFn: (v: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T, E | E2> {
+    return Task.of(tripTask(this, tripFn));
+  }
+
+  rise<T2, E2>(
+    riseFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T | T2, E> {
+    return Task.of(riseTask(this, riseFn));
+  }
+
+  unwrap(): Promise<T | E> {
+    return unwrapTask(this);
+  }
+
+  unwrapOr<T2>(orValue: T2 | PromiseLike<T2>): Promise<T | T2> {
+    return unwrapTaskOr(this, orValue);
+  }
+
+  unwrapOrElse<T2>(orFn: (e: E) => T2 | PromiseLike<T2>): Promise<T | T2> {
+    return unwrapTaskOrElse(this, orFn);
+  }
+
+  /**
+   * Use this to obtain an async iterator of the encapsulated value `<T>`
+   *
+   * In case of failure, this method returns the empty `AsyncIteratorResult`
+   *
+   * @category Task::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../core/assert.ts"
+   * import { Err, Ok, Result, Task } from "./mod.ts";
+   *
+   * const success = Task.succeed(42);
+   * const failure = Task.fail(Error());
+   *
+   * async function main() {
+   *   const okIter = success.iter();
+   *   const errIter = failure.iter();
+   *
+   *   let okCount = 0;
+   *   let okYieldedValue = undefined;
+   *
+   *   for await (const v of okIter) {
+   *     okCount += 1;
+   *     okYieldedValue = v;
+   *   }
+   *
+   *   let errCount = 0;
+   *   let errYieldedValue = undefined;
+   *
+   *   for await (const v of errIter) {
+   *     errCount += 1;
+   *     errYieldedValue = v;
+   *   }
+   *
+   *   assert(okCount === 1);
+   *   assert(okYieldedValue === 42);
+   *   assert(errCount === 0)
+   *   assert(errYieldedValue === undefined);
+   * }
+   *
+   * main().then(() => console.log("Done"));
+   * ```
+   */
+  iter(): AsyncIterableIterator<T> {
+    return iterTask(this);
+  }
+
+  /**
+   * ============================
+   * WELL-KNOWN SYMBOLS & METHODS 
+   * ============================
+   */
+
+  /**
+   * In case of success AND that the encapsulated value `<T>` implements the
+   * async iterator protocol, this delegates to the underlying implementation
+   *
+   * In all other cases, it yields the empty `AsyncIteratorResult`
+   *
+   * @category Task::Advanced
+   * 
+   */
+  async *[Symbol.asyncIterator](): AsyncIterableIterator<T extends AsyncIterable<infer U> ? U : never> {
+    const res = await this;
+
+    if(res.isErr()) return;
+
+    const target = Object(res.unwrap());
+
+    if(!target[Symbol.asyncIterator]) return;
+
+    yield* target;
+  }
+
+  /**
+   * ======================
    *  TASK ASYNC OPERATORS
    * ======================
    */
@@ -187,94 +352,10 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     };
   }
 
-  /**
-   * ======================
-   * TASK INSTANCE METHODS
-   * ======================
-   */
-
-  id(): Task<T, E> {
-    return this;
-  }
-
-  clone(): Task<T, E> {
-    return Task.of(cloneTask(this));
-  }
-
-  map<T2>(mapFn: (v: T) => T2 | PromiseLike<T2>): Task<T2, E> {
-    return Task.of(mapTaskSuccess(this, mapFn));
-  }
-
-  mapOr<T2>(
-    mapFn: (v: T) => T2 | PromiseLike<T2>,
-    orValue: T2 | PromiseLike<T2>,
-  ): Task<T2, never> {
-    return Task.of(mapTaskSuccessOr(this, mapFn, orValue));
-  }
-
-  mapOrElse<T2>(
-    mapFn: (v: T) => T2 | PromiseLike<T2>,
-    orFn: (e: E) => T2 | PromiseLike<T2>,
-  ): Task<T2, never> {
-    return Task.of(mapTaskSuccessOrElse(this, mapFn, orFn));
-  }
-
-  mapErr<E2>(mapFn: (v: E) => E2 | PromiseLike<E2>): Task<T, E2> {
-    return Task.of(mapTaskFailure(this, mapFn));
-  }
-
-  andThen<T2, E2>(
-    thenFn: (v: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
-  ): Task<T2, E | E2> {
-    return Task.of(chainTaskSuccess(this, thenFn));
-  }
-
-  orElse<T2, E2>(
-    elseFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
-  ): Task<T | T2, E2> {
-    return Task.of(chainTaskFailure(this, elseFn));
-  }
-
-  zip<T2, E2>(
-    rhs: Result<T2, E2> | PromiseLike<Result<T2, E2>>,
-  ): Task<[T, T2], E | E2> {
-    return Task.of(zipTask(this, rhs));
-  }
-
-  tap(tapFn: (v: Result<T, E>) => void | PromiseLike<void>): Task<T, E> {
-    return Task.of(tapTask(this, tapFn));
-  }
-
-  inspect(inspectFn: (v: T) => void | PromiseLike<void>): Task<T, E> {
-    return Task.of(inspectTaskSuccess(this, inspectFn));
-  }
-
-  inspectErr(inspectFn: (v: E) => void | PromiseLike<void>): Task<T, E> {
-    return Task.of(inspectTaskFailure(this, inspectFn));
-  }
-
-  trip<T2, E2>(
-    tripFn: (v: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
-  ): Task<T, E | E2> {
-    return Task.of(tripTask(this, tripFn));
-  }
-
-  rise<T2, E2>(
-    riseFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
-  ): Task<T | T2, E> {
-    return Task.of(riseTask(this, riseFn));
-  }
-
-  unwrap(): Promise<T | E> {
-    return unwrapTask(this);
-  }
-
-  unwrapOr<T2>(orValue: T2 | PromiseLike<T2>): Promise<T | T2> {
-    return unwrapTaskOr(this, orValue);
-  }
-
-  unwrapOrElse<T2>(orFn: (e: E) => T2 | PromiseLike<T2>): Promise<T | T2> {
-    return unwrapTaskOrElse(this, orFn);
+  static iter<T, E>() {
+    return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
+      return iterTask(res);
+    }
   }
 }
 
@@ -455,6 +536,14 @@ async function unwrapTaskOrElse<T, E, T2>(
 
   if (res.isOk()) return res.unwrap();
   return orFn(res.unwrap());
+}
+
+async function* iterTask<T, E>(task: Either<T, E>): AsyncIterableIterator<T> {
+    const res = await task;
+
+    if(res.isErr()) return;
+
+    yield res.unwrap()
 }
 
 /**

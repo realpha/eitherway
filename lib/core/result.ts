@@ -36,12 +36,112 @@ export interface IResult<T, E> {
   ok(): Option<T>;
   err(): Option<E>;
   into<T2>(intoFn: (res: Result<T, E>) => T2): T2;
+
+  /**
+   * Use this to obtain an iterator over the wrapped value `<T>` in case of `Ok`
+   *
+   * In case of `Err`, an empty iterator is returned
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const ok = Ok(42);
+   * const err = Err(Error());
+   *
+   * let count = 0;
+   * let yieldedValue = undefined;
+   *
+   * for (const value of ok.iter()) {
+   *   count += 1;
+   *   yieldedValue = value;
+   * }
+   *
+   * let errCount = 0;
+   * let errYieldedValue = undefined;
+   *
+   * for (const value of err.iter()) {
+   *   count += 1;
+   *   errYieldedValue = value;
+   * }
+   *
+   * const fresh = ok.iter();
+   * const first = fresh.next();
+   * const exhausted = fresh.next();
+   *
+   * assert(count === 1);
+   * assert(yieldedValue === 42);
+   * assert(errCount === 0);
+   * assert(errYieldedValue === undefined);
+   * assert(first.done === false);
+   * assert(first.value === 42);
+   * assert(exhausted.done === true);
+   * assert(exhausted.value === undefined);
+   * ```
+   */
   iter(): IterableIterator<T>;
   tap(tapFn: (res: Result<T, E>) => void): Result<T, E>;
   inspect(inspectFn: (value: T) => void): Result<T, E>;
   inspectErr(inspectFn: (err: E) => void): Result<T, E>;
   trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
+
+  /**
+   * Delegates to the implementation of the wrapped value `<T>` or exhausts
+   * the iterator by returning `{ done: true, value: undefined }` if `<T>` doesn't
+   * implement the iterator protocol
+   *
+   * `Err` represents the empty iterator and returns the empty iterator result
+   * `{ done: true, value: undefined }`
+   *
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/iterator)
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const simpleOk = Ok(42);            //`number` is not iterable
+   * const delegatingOk = Ok([1, 2, 3]); //`number[]` is iterable
+   * const err = Err(Error());
+   *
+   * let simpleCount = 0;
+   * let simpleYieldedValue = undefined;
+   *
+   * for (const value of simpleOk) {
+   *   simpleCount += 1;
+   *   simpleYieldedValue = value;
+   * }
+   *
+   * let delegatingCount = 0;
+   * let delegatingYieldedValue = undefined;
+   *
+   * for (const value of delegatingOk) {
+   *   delegatingCount += 1;
+   *   delegatingYieldedValue = value;
+   * }
+   *
+   * let errCount = 0;
+   * let errYieldedValue = undefined;
+   *
+   * for (const value of err) {
+   *   errCount += 1;
+   *   errYieldedValue = value;
+   * }
+   *
+   * assert(simpleCount === 0);
+   * assert(simpleYieldedValue === undefined);
+   * assert(delegatingCount === 3);
+   * assert(delegatingYieldedValue === 3);
+   * assert(errCount === 0);
+   * assert(errYieldedValue === undefined);
+   * ```
+   */
   [Symbol.iterator](): IterableIterator<
     T extends Iterable<infer U> ? U : never
   >;
@@ -365,7 +465,7 @@ export namespace Result {
  * @example
  * ```typescript
  * import { assert } from "./assert.ts"
- * import { Err, Ok, Result } from "./result.ts"
+ * import { Err, Ok, Result, asInfallible } from "./result.ts"
  *
  * //Let's re-implement `Result.from`
  *
