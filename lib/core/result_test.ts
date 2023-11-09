@@ -14,6 +14,7 @@ Deno.test("eitherway::Result", async (t) => {
 
     const res = Result.from(produceNum);
 
+    assertType<IsExact<typeof res, Result<number, never>>>(true);
     assertStrictEquals(res.isOk(), true);
     assertStrictEquals(res.unwrap(), 42);
   });
@@ -29,6 +30,7 @@ Deno.test("eitherway::Result", async (t) => {
       };
       const shouldBeInfallible = () => Result.from(throws);
 
+      assertType<IsExact<ReturnType<typeof shouldBeInfallible>, Result<number, never>>>(true);
       assertThrows(shouldBeInfallible);
     },
   );
@@ -47,11 +49,12 @@ Deno.test("eitherway::Result", async (t) => {
         return new TypeError("Also cannot do that");
       };
 
-      const res: Result<number, TypeError> = Result.fromFallible(
+      const res = Result.fromFallible(
         throws,
         errMapFn,
       );
 
+      assertType<IsExact<typeof res, Result<number, TypeError>>>(true);
       assertStrictEquals(res.isErr(), true);
       assertStrictEquals(res.unwrap(), te);
     },
@@ -69,6 +72,7 @@ Deno.test("eitherway::Result", async (t) => {
       const toEvenPowerOfTwo = Result.lift(powerOfTwo, toEven);
       const res = Ok(9).andThen(toEvenPowerOfTwo);
 
+      assertType<IsExact<typeof res, Result<number, TypeError>>>(true);
       assertStrictEquals(res.isOk(), false);
       assertStrictEquals(res.unwrap().constructor, TypeError);
     },
@@ -98,6 +102,7 @@ Deno.test("eitherway::Result", async (t) => {
       );
       const res = Ok(9).andThen(toEvenPowerOfTwo);
 
+      assertType<IsExact<typeof res, Result<number, TypeError>>>(true);
       assertStrictEquals(res.isErr(), true);
       assertStrictEquals(res.unwrap().constructor, TypeError);
     },
@@ -109,6 +114,7 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       "[Symbol.iterator]() -> conforms iterator protocol and delegates to underlying implementation",
       () => {
         const ok = Ok("123");
+        const okIter = ok[Symbol.iterator]();
         let count = 0;
         let lastValue = "";
 
@@ -119,6 +125,7 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 
         const arr = [...ok];
 
+        assertType<IsExact<typeof okIter, IterableIterator<string>>>(true);
         assertStrictEquals(count, 3);
         assertStrictEquals(lastValue, "3");
         assertEquals(arr, ["1", "2", "3"]);
