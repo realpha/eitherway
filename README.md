@@ -93,7 +93,7 @@ function processString(input: string | undefined): Task<number, TypeError> {
     .andThen(powerOfSelf);
 }
 
-async function main(): Promise<Result<T, E>> {
+async function main(): Promise<Result<number, TypeError>> {
   const result = await processString("foo"); // Task is of course awaitable
 
   return Task.of(result); // You can return Task<T, E> as Promise<Result<T, E>>

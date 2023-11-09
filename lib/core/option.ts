@@ -174,7 +174,7 @@ export interface IOption<T> {
    * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
-   * const toUpperCase = String.prototype.toUpperCase.call;
+   * const toUpperCase = (s: string) => s.toUpperCase();
    * const some = Some("something");
    * const none = None;
    *
@@ -199,7 +199,7 @@ export interface IOption<T> {
    * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
-   * const toUpperCase = String.prototype.toUpperCase.call;
+   * const toUpperCase = (s: string) => s.toUpperCase();
    * const orValue = "SOMETHING";
    * const some = Some("something");
    * const none = None;
@@ -231,13 +231,13 @@ export interface IOption<T> {
    * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
-   * const toUpperCase = String.prototype.toUpperCase.call;
+   * const toUpperCase = (s: string) => s.toUpperCase();
    * const elseFn = () => "SOMETHING";
    * const some = Some("something");
    * const none = None;
    *
-   * const someUppercased = some.mapOr(toUpperCase, elseFn);
-   * const someDefault = none.mapOr(toUpperCase, elseFn);
+   * const someUppercased = some.mapOrElse(toUpperCase, elseFn);
+   * const someDefault = none.mapOrElse(toUpperCase, elseFn);
    *
    * assert(someUppercased.isSome() === true);
    * assert(someDefault.isSome() === true);
