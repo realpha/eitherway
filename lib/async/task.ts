@@ -208,6 +208,60 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    */
 
   /**
+   * Use this to get the full string tag
+   * Short-hand for `Object.prototype.toString.call(task)`
+   *
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString)
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../core/assert.ts";
+   * import { Task } from "./task.ts"
+   *
+   * const tag = Task.succeed(42).toString();
+   *
+   * assert(tag === "[object eitherway::Task]");
+   * ```
+   */
+  toString(): string {
+    return Object.prototype.toString.call(this);
+  }
+
+  /**
+   * This well-known symbol is called by `Object.prototype.toString` to
+   * obtain a string representation of a value's type
+   *
+   * This maybe useful for debugging or certain logs
+   *
+   * The [`.toString()`]{@link this#toString} method is a useful short-hand in these scenarios
+   *
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag)
+   *
+   * @category Task::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../core/assert.ts";
+   * import { Task } from "./task.ts"
+   *
+   * const task = Task.succeed({ a: 1, b: 2 });
+   *
+   * const toString = Object.prototype.toString;
+   *
+   * assert(toString.call(task) === "[object eitherway::Task]");
+   * assert(toString.call(Task) === "[object eitherway::Task]");
+   * ```
+   */
+  get [Symbol.toStringTag](): string {
+    return "eitherway::Task";
+  }
+  static get [Symbol.toStringTag](): string {
+    return "eitherway::Task";
+  }
+
+  /**
    * In case of success AND that the encapsulated value `<T>` implements the
    * async iterator protocol, this delegates to the underlying implementation
    *

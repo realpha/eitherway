@@ -112,6 +112,17 @@ Deno.test("eitherway::Result", async (t) => {
 });
 Deno.test("eitherway::Result::Ok", async (t) => {
   await t.step("Ok<T> -> JS well-known Symbols and Methods", async (t) => {
+    await t.step(".toString() -> returns the string tag", () => {
+      const okTag = Ok("thing").toString();
+
+      assertStrictEquals(okTag, "[object eitherway::Result::Ok<thing>]");
+    });
+
+    await t.step("[Symbol.toStringTag] -> returns the FQN", () => {
+      const fqn = Ok("thing")[Symbol.toStringTag];
+
+      assertStrictEquals(fqn, "eitherway::Result::Ok<thing>");
+    });
     await t.step(
       "[Symbol.iterator]() -> conforms iterator protocol and delegates to underlying implementation",
       () => {
@@ -157,6 +168,17 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 
 Deno.test("eitherway::Result::Err", async (t) => {
   await t.step("Err<E> -> JS well-known Symbols and Methods", async (t) => {
+    await t.step(".toString() -> returns the string tag", () => {
+      const errTag = Err(Error()).toString();
+
+      assertStrictEquals(errTag, "[object eitherway::Result::Err<[object Error]>]");
+    });
+
+    await t.step("[Symbol.toStringTag] -> returns the FQN", () => {
+      const fqn = Err(Error())[Symbol.toStringTag];
+
+      assertStrictEquals(fqn, "eitherway::Result::Err<[object Error]>");
+    });
     await t.step(
       "[Symbol.iterator]() -> conforms iterator protocol and represents the empty iterator",
       () => {

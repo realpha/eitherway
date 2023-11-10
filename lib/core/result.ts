@@ -26,6 +26,8 @@ export interface IResult<T, E> {
     thenFn: (value: T) => Result<T2, E2>,
   ): Err<E> | Result<T2, E2>;
   orElse<T2, E2>(elseFn: (err: E) => Result<T2, E2>): Ok<T> | Result<T2, E2>;
+  trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
+  rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
   and<T2, E2>(rhs: Result<T2, E2>): Err<E> | Result<T2, E2>;
   or<T2, E2>(rhs: Result<T2, E2>): Ok<T> | Result<T2, E2>;
   zip<T2, E2>(rhs: Result<T2, E2>): Ok<[T, T2]> | Err<E> | Err<E2>;
@@ -86,8 +88,28 @@ export interface IResult<T, E> {
   tap(tapFn: (res: Result<T, E>) => void): Result<T, E>;
   inspect(inspectFn: (value: T) => void): Result<T, E>;
   inspectErr(inspectFn: (err: E) => void): Result<T, E>;
-  trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
-  rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
+
+  /**
+   * Use this to get the full string tag
+   * Short-hand for `Object.prototype.toString.call(result)`
+   *
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/toString)
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const okTag = Ok("thing").toString();
+   * const errTag = Err(Error()).toString();
+   *
+   * assert(okTag === "[object eitherway::Result::Ok<thing>]");
+   * assert(errTag === "[object eitherway::Result::Err<[object Error]>");
+   * ```
+   */
+  toString(): string;
 
   /**
    * Delegates to the implementation of the wrapped value `<T>` or exhausts
@@ -145,6 +167,39 @@ export interface IResult<T, E> {
   [Symbol.iterator](): IterableIterator<
     T extends Iterable<infer U> ? U : never
   >;
+
+  /**
+   * This well-known symbol is called by `Object.prototype.toString` to
+   * obtain a string representation of a value's type
+   *
+   * This maybe useful for debugging or certain logs
+   *
+   * The [`.toString()`]{@link this#toString} method is a useful short-hand in these scenarios
+   *
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol/toStringTag)
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const rec = Ok({ a: 1, b: 2 });
+   * const str = Ok("abc");
+   * const err = Err(TypeError());
+   *
+   * const toString = Object.prototype.toString;
+   *
+   * assert(toString.call(rec) === "[object eitherway::Result::Ok<[object Object]>]");
+   * assert(toString.call(str) === "[object eitherway::Result::Ok<abc>]");
+   * assert(toString.call(err) === "[object eitherway::Result::Err<[object Error]>]");
+   * assert(toString.call(Result) === "[object eitherway::Result]");
+   * assert(toString.call(Ok) === "[object eitherway::Result::Ok]");
+   * assert(toString.call(Err) === "[object eitherway::Result::Err]");
+   * ```
+   */
+  [Symbol.toStringTag]: string;
 }
 
 /**
@@ -245,12 +300,21 @@ class _Ok<T> implements IResult<T, never> {
   inspectErr(inspectFn: (err: never) => void): Ok<T> {
     return this;
   }
+  toString(): string {
+    return Object.prototype.toString.call(this);
+  }
   *[Symbol.iterator](): IterableIterator<
     T extends Iterable<infer U> ? U : never
   > {
     const target = Object(this.#value);
     if (Symbol.iterator in target) yield* target;
     return;
+  }
+  get [Symbol.toStringTag](): string {
+    const innerTag = typeof this.#value === "object"
+      ? Object.prototype.toString.call(this.#value)
+      : String(this.#value);
+    return `eitherway::Result::Ok<${innerTag}>`;
   }
 }
 
@@ -346,6 +410,15 @@ class _Err<E> implements IResult<never, E> {
   //deno-lint-ignore require-yield
   *[Symbol.iterator](): IterableIterator<never> {
     return;
+  }
+  get [Symbol.toStringTag](): string {
+    const innerTag = typeof this.#err === "object"
+      ? Object.prototype.toString.call(this.#err)
+      : String(this.#err);
+    return `eitherway::Result::Err<${innerTag}>`;
+  }
+  toString(): string {
+    return Object.prototype.toString.call(this);
   }
 }
 

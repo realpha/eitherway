@@ -1096,12 +1096,12 @@ export interface IOption<T> {
    *
    * const toString = Object.prototype.toString;
    *
-   * assert(toString.call(rec) === "eitherway::Option::Some<[object Object]>");
-   * assert(toString.call(str) === "eitherway::Option::Some<abc>");
-   * assert(toString.call(none) === "eitherway::Option::None");
-   * assert(toString.call(Option) === "eitherway::Option");
-   * assert(toString.call(Some) === "eitherway::Option::Some");
-   * assert(toString.call(None) === "eitherway::Option::None");
+   * assert(toString.call(rec) === "[object eitherway::Option::Some<[object Object]>]");
+   * assert(toString.call(str) === "[object eitherway::Option::Some<abc>]");
+   * assert(toString.call(none) === "[object eitherway::Option::None]");
+   * assert(toString.call(Option) === "[object eitherway::Option]");
+   * assert(toString.call(Some) === "[object eitherway::Option::Some]");
+   * assert(toString.call(None) === "[object eitherway::Option::None]");
    * ```
    */
   [Symbol.toStringTag]: string;

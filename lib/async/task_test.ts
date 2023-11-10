@@ -155,6 +155,7 @@ Deno.test("eitherway::Task", async (t) => {
           const mapped = task.map(async (x) => x + 1);
           const res = await mapped;
 
+          assertType<IsExact<typeof mapped, Task<number, never>>>(true);
           assertStrictEquals(mapped instanceof Task, true);
           assertStrictEquals(mapped === task, false);
           assertStrictEquals(res.isOk(), true);
@@ -173,6 +174,7 @@ Deno.test("eitherway::Task", async (t) => {
           );
           const res = await mapped;
 
+          assertType<IsExact<typeof mapped, Task<never, TypeError>>>(true);
           assertStrictEquals(mapped instanceof Task, true);
           assertStrictEquals(mapped === task, false);
           assertStrictEquals(res.isErr(), true);
@@ -195,6 +197,7 @@ Deno.test("eitherway::Task", async (t) => {
           const chained = task.andThen(safeParse);
           const res = await chained;
 
+          assertType<IsExact<typeof chained, Task<number, TypeError>>>(true);
           //@ts-expect-error Incompatible types but ref COULD be equal
           assertStrictEquals(task === chained, false);
           assertStrictEquals(res.isOk(), true);
@@ -218,6 +221,7 @@ Deno.test("eitherway::Task", async (t) => {
           const chained = task.orElse(rehydrate);
           const res = await chained;
 
+          assertType<IsExact<typeof chained, Task<number, RangeError>>>(true);
           assertStrictEquals(task === chained, false);
           assertStrictEquals(res.isOk(), true);
           assertStrictEquals(res.unwrap(), 0);
@@ -333,6 +337,18 @@ Deno.test("eitherway::Task", async (t) => {
     });
 
     await t.step("Task<T, E> -> JS well-known Symbols & Methods", async (t) => {
+      await t.step(".toString() -> returns the full string tag", () => {
+        const tag = Task.succeed(42).toString();
+       
+        assertStrictEquals(tag, "[object eitherway::Task]");
+      });
+
+      await t.step("[Symbol.toStringTag] -> returns the FQN", () => {
+        const fqn = Task.succeed(42)[Symbol.toStringTag];
+
+        assertStrictEquals(fqn, "eitherway::Task");
+      });
+
       await t.step(
         "[Symbol.asyncIterator]() -> delegates to the underlying implementation in case of success",
         async () => {
