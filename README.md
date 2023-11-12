@@ -117,9 +117,18 @@ main()
 
 ### Option<T>
 
+Here the [link](https://deno.land/x/eitherway/lib/mod.ts?s=IOption) to the base
+interface, implemented by `Some<T>` and `None`.
+
 ### Result<T, E>
 
+Here the [link](https://deno.land/x/eitherway/lib/mod.ts?s=IResult) to the base
+interface, implemented by `Ok<T>` and `Err<E>`.
+
 ### Task<T, E>
+
+Here the [link](https://deno.land/x/eitherway/lib/mod.ts?s=Task) to the class
+implementing `Task<T, E>`.
 
 ## Best Practices
 
