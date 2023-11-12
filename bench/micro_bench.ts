@@ -1,3 +1,4 @@
+//deno-lint-ignore-file
 import { Task } from "../lib/async/task.ts";
 import { Err, Ok } from "../lib/core/result.ts";
 import { Option } from "../lib/core/option.ts";

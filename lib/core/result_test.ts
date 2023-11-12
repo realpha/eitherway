@@ -1,4 +1,3 @@
-//deno-lint-ignore-file no-unused-vars
 import {
   assertEquals,
   assertStrictEquals,

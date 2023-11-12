@@ -1,4 +1,4 @@
-//deno-lint-ignore-file no-namespace
+//deno-lint-ignore-file
 import { Err, None, Ok, Option, Result, Some } from "../lib/core/mod.ts";
 
 namespace SyncExceptions {

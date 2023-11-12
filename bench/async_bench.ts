@@ -1,4 +1,4 @@
-//deno-lint-ignore-file no-namespace require-await
+//deno-lint-ignore-file
 import { Option, Result } from "../lib/core/mod.ts";
 import { Task } from "../lib/async/task.ts";
 
