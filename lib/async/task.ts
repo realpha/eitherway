@@ -1,5 +1,18 @@
-import { asInfallible, Err, Ok, Result } from "./mod.ts";
+import { asInfallible, Err, Ok, Result, Results } from "./mod.ts";
 
+/**
+ * #Task<T, E>
+ *
+ * `Task<T, E>` is a composeable extension of `Promise<Result<T, E>>`
+ *
+ * It supports almost the same API as {@linkcode Result} and allows for
+ * the same composition patterns as {@linkcode Result}
+ *
+ * Furthermore, {@linkcode Tasks} exposes a few functions to ease working
+ * with collections (indexed and plain `Iterable`s)
+ *
+ * @category Task::Basic
+ */
 export class Task<T, E> extends Promise<Result<T, E>> {
   private constructor(executor: ExecutorFn<T, E>) {
     super(executor);
@@ -413,6 +426,100 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     };
   }
 }
+
+/**
+ * Utilities to work with collections of Task<T, E>
+ *
+ * @category Task::Intermediate
+ */
+//deno-lint-ignore no-namespace
+export namespace Tasks {
+  export function all<
+    P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
+  >(
+    tasks: P,
+  ): Task<InferredSuccessTuple<P>, InferredFailureUnion<P>>;
+  export function all<T, E>(
+    tasks: Readonly<Iterable<PromiseLike<Result<T, E>>>>,
+  ): Task<T[], E>;
+  //deno-lint-ignore no-explicit-any
+  export function all(tasks: any): any {
+    return Task.of(Promise.all(tasks).then((res) => Results.all(res)));
+  }
+
+  export function any<
+    P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
+  >(
+    tasks: P,
+  ): Task<InferredSuccessUnion<P>, InferredFailureTuple<P>>;
+  export function any<T, E>(
+    tasks: Readonly<Iterable<PromiseLike<Result<T, E>>>>,
+  ): Task<T, E[]>;
+  //deno-lint-ignore no-explicit-any
+  export function any(tasks: any): any {
+    return Task.of(Promise.all(tasks).then((res) => Results.any(res)));
+  }
+}
+
+/**
+ * Use this to infer the encapsulated `<T>` type from a `Task<T,E>`
+ *
+ * @category Task::Basic
+ */
+export type InferredSuccessType<P> = P extends
+  PromiseLike<Result<infer T, unknown>> ? T
+  : never;
+
+/**
+ * Use this to infer the encapsulated `<E>` type from a `Task<T,E>`
+ *
+ * @category Task::Basic
+ */
+export type InferredFailureType<P> = P extends
+  PromiseLike<Result<unknown, infer E>> ? E
+  : never;
+
+/**
+ * Use this to infer the encapsulated `<T>` types from a tuple of `Task<T,E>`
+ *
+ * @category Task::Intermediate
+ */
+export type InferredSuccessTuple<
+  P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
+> = {
+  [i in keyof P]: P[i] extends PromiseLike<Result<infer T, unknown>> ? T
+    : never;
+};
+
+/**
+ * Use this to infer the encapsulated `<E>` types from a tuple of `Task<T,E>`
+ *
+ * @category Task::Intermediate
+ */
+export type InferredFailureTuple<
+  P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
+> = {
+  [i in keyof P]: P[i] extends PromiseLike<Result<unknown, infer E>> ? E
+    : never;
+};
+
+/**
+ * Use this to infer a union of all encapsulated `<T>` types from a tuple of `Task<T,E>`
+ *
+ * @category Task::Intermediate
+ */
+export type InferredSuccessUnion<
+  P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
+> = InferredSuccessTuple<P>[number];
+
+/**
+ * Use this to infer a union of all encapsulated `<E>` types from a tuple of `Task<T,E>`
+ *
+ * @category Task::Intermediate
+ */
+export type InferredFailureUnion<
+  P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
+> = InferredFailureTuple<P>[number];
 
 /**
  * Helper functions to leverage the same functionality in operators
