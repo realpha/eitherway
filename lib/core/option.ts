@@ -1917,9 +1917,12 @@ export namespace Options {
    */
   export function all<O extends ReadonlyArray<Option<unknown>>>(
     opts: O,
-  ): Option<InferredOptionTypes<O>> {
-    if (opts.length === 0) return None;
-
+  ): Option<InferredOptionTypes<O>>;
+  export function all<T>(
+    opts: Iterable<Option<T>>,
+  ): Option<T[]>;
+  //deno-lint-ignore no-explicit-any
+  export function all(opts: any): any {
     const areSome = [];
 
     for (const opt of opts) {
@@ -1930,7 +1933,7 @@ export namespace Options {
       }
     }
 
-    return Some(areSome as InferredOptionTypes<O>);
+    return areSome.length !== 0 ? Some(areSome) : None;
   }
 
   /**
@@ -1977,10 +1980,15 @@ export namespace Options {
    */
   export function any<O extends ReadonlyArray<Option<unknown>>>(
     opts: O,
-  ): Option<InferredOptionTypes<O>[number]> {
-    const found = opts.find((opt) => opt.isSome());
-
-    if (found) return found as Some<InferredOptionTypes<O>[number]>;
+  ): Option<InferredOptionTypes<O>[number]>;
+  export function any<T>(
+    opts: Iterable<Option<T>>,
+  ): Option<T>;
+  //deno-lint-ignore no-explicit-any
+  export function any(opts: any): any {
+    for (const opt of opts) {
+      if (opt.isSome()) return opt;
+    }
     return None;
   }
 }
@@ -1992,8 +2000,9 @@ export type InferredOptionTypes<Opts extends ArrayLike<Option<unknown>>> = {
 export type InferredSomeType<O extends Readonly<Option<unknown>>> = O extends
   Readonly<Some<infer T>> ? T : never;
 
-export type InferredOption<O extends Readonly<Option<unknown>>> = O extends
+//deno-lint-ignore no-explicit-any
+export type InferredOptionType<O extends Readonly<Option<any>>> = O extends
   Readonly<None> ? None
   : O extends Readonly<Some<infer T1>> ? Some<T1>
-  : [O] extends [Readonly<Option<infer T2>>] ? Option<T2>
+  : [O] extends [Readonly<Option<infer T2>>] ? [Option<T2>]
   : never;

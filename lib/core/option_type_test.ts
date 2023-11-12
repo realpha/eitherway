@@ -1,4 +1,8 @@
-import type { InferredOptionTypes, InferredSomeType } from "./option.ts";
+import type {
+  InferredOptionType,
+  InferredOptionTypes,
+  InferredSomeType,
+} from "./option.ts";
 import { None, Option, Options, Some } from "./option.ts";
 import type { NonNullish } from "./type_utils.ts";
 import {
@@ -36,13 +40,28 @@ Deno.test("eitherway::Option::TypeHelpers::TypeTests", async (t) => {
     const opt = Option(123);
     type StrictOption = Readonly<Option<number[]>>;
     type NormalOption = Option<Record<string, string>>;
-    type InferredOption = typeof opt;
 
     assertType<IsExact<InferredSomeType<StrictOption>, number[]>>(true);
     assertType<IsExact<InferredSomeType<NormalOption>, Record<string, string>>>(
       true,
     );
-    assertType<IsExact<InferredSomeType<InferredOption>, number>>(true);
+    assertType<IsExact<InferredSomeType<typeof opt>, number>>(true);
+  });
+
+  await t.step("InferredOptionType<O> -> Inferres Option<T> from union", () => {
+    const thenFn = (b: boolean) => {
+      if (b) return Option("abc");
+      return Option(["a", "b", "c"]);
+    };
+
+    type t = InferredOptionType<ReturnType<typeof thenFn>>;
+
+    assertType<
+      Has<
+        InferredOptionType<ReturnType<typeof thenFn>>,
+        Option<string | string[]>
+      >
+    >(true);
   });
 });
 

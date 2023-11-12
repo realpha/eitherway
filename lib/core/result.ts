@@ -525,6 +525,107 @@ export namespace Result {
 }
 
 /**
+ * Utilities to work with collections of Result<T, E>
+ *
+ * @category Result::Intermediate
+ */
+//deno-lint-ignore no-namespace
+export namespace Results {
+  export function all<R extends Readonly<ArrayLike<Result<unknown, unknown>>>>(
+    results: R,
+  ): Result<InferredOkTuple<R>, InferredErrUnion<R>>;
+  export function all<T, E>(
+    results: Readonly<Iterable<Result<T, E>>>,
+  ): Result<T[], E>;
+  //deno-lint-ignore no-explicit-any
+  export function all(results: any): any {
+    const areOk = [];
+
+    for (const res of results) {
+      if (res.isErr()) return res;
+      areOk.push(res.unwrap());
+    }
+
+    return Ok(areOk);
+  }
+
+  export function any<R extends Readonly<ArrayLike<Result<unknown, unknown>>>>(
+    results: R,
+  ): Result<InferredOkUnion<R>, InferredErrTuple<R>>;
+  export function any<T, E>(
+    results: Readonly<Iterable<Result<T, E>>>,
+  ): Result<T, E[]>;
+  //deno-lint-ignore no-explicit-any
+  export function any(results: any): any {
+    const areErr = [];
+
+    for (const res of results) {
+      if (res.isOk()) return res;
+      areErr.push(res.unwrap());
+    }
+
+    return Err(areErr);
+  }
+}
+
+/**
+ * Use this to infer the encapsulated `Ok<T>` types from a `Result<T,E>`
+ *
+ * @category Result::Basic
+ */
+export type InferredOkType<R> = R extends Readonly<Result<infer T, unknown>> ? T
+  : never;
+
+/**
+ * Use this to infer the encapsulated `Err<E>` types from a `Result<T,E>`
+ *
+ * @category Result::Basic
+ */
+export type InferredErrType<R> = R extends Readonly<Result<unknown, infer E>>
+  ? E
+  : never;
+
+/**
+ * Use this to infer the encapsulated `Ok<T>` types from a tuple of `Result<T,E>`
+ *
+ * @category Result::Intermediate
+ */
+export type InferredOkTuple<
+  R extends Readonly<ArrayLike<Result<unknown, unknown>>>,
+> = {
+  [i in keyof R]: R[i] extends Result<infer T, unknown> ? T : never;
+};
+
+/**
+ * Use this to infer the encapsulated `Err<E>` types from a tuple of `Result<T,E>`
+ *
+ * @category Result::Intermediate
+ */
+export type InferredErrTuple<
+  R extends Readonly<ArrayLike<Result<unknown, unknown>>>,
+> = {
+  [i in keyof R]: R[i] extends Result<unknown, infer E> ? E : never;
+};
+
+/**
+ * Use this to infer a union of all encapsulated `Ok<T>` types from a tuple of `Result<T,E>`
+ *
+ * @category Result::Intermediate
+ */
+export type InferredOkUnion<
+  R extends Readonly<ArrayLike<Result<unknown, unknown>>>,
+> = InferredOkTuple<R>[number];
+
+/**
+ * Use this to infer a union of all encapsulated `Err<E>` types from a tuple of `Result<T,E>`
+ *
+ * @category Result::Intermediate
+ */
+export type InferredErrUnion<
+  R extends Readonly<ArrayLike<Result<unknown, unknown>>>,
+> = InferredErrTuple<R>[number];
+
+/**
  * Use this as `errMapFn` to indicate that a function or Promise to be lifted
  * into a Result or Task context is infallible
  *

@@ -339,7 +339,7 @@ Deno.test("eitherway::Task", async (t) => {
     await t.step("Task<T, E> -> JS well-known Symbols & Methods", async (t) => {
       await t.step(".toString() -> returns the full string tag", () => {
         const tag = Task.succeed(42).toString();
-       
+
         assertStrictEquals(tag, "[object eitherway::Task]");
       });
 
