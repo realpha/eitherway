@@ -1560,8 +1560,6 @@ Object.freeze(None);
  * @property {<T>(value: T) => Option<NonNullish<T>>} from - alias for Option()
  * @property {<T>(value: T) => Option<Infallible<T>>} fromFallible - also returns None for instances of Error
  * @property {<T>(value: T) => Option<Truthy<T>>} fromCoercible - returns None for all falsy values
- * @property {<T>(opts: Option<T>[]) => Option<T[]>} all - returns Some<T[]> if all elements are Some
- * @property {<T>(opts: Option<T>[]) => Option<T>} any - returns the first instance of Some, otherwise
  *
  * @example
  * ```typescript
@@ -1848,6 +1846,8 @@ export namespace Option {
  * Utility functions to work with `Option<T>[]`
  *
  * @namespace
+ * @property {<T>(opts: Option<T>[]) => Option<T[]>} all - returns Some<T[]> if all elements are Some
+ * @property {<T>(opts: Option<T>[]) => Option<T>} any - returns the first instance of Some or None
  */
 //deno-lint-ignore no-namespace
 export namespace Options {

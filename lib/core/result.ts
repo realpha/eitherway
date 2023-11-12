@@ -468,6 +468,23 @@ export namespace Err {
     return Err(EMPTY);
   }
 }
+
+/**
+ * #Result<T, E>
+ *
+ * `Result<T, E>` is the composeable equivalent to the union `<T | E>`, where
+ * `<T>` represents the success and `<E>` the failure case
+ *
+ * It's the type level represenation of the union `Ok<T> | Err<E>`
+ *
+ * Furthermore the namespace {@linkcode Results} exposes a few functions
+ * to ease working with collections of `Result<T, E>` (indexed and plain
+ * Iterables)
+ *
+ * @implements {@lincode IResult}
+ * @category Result::Basic
+ * @namespace
+ */
 export type Result<T, E> = Ok<T> | Err<E>;
 export function Result<T, E extends Error>(value: T | E) {
   if (value instanceof Error) return Err(value);
