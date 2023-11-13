@@ -1,13 +1,13 @@
 import { Err, Ok, Option, Result, Task } from "../mod.ts";
-import { dnt, semver } from "../dev_deps.ts";
+import { build, emptyDir, semver } from "../dev_deps.ts";
 
 type SemVer = semver.SemVer;
 
 const PKG_NAME = "eitherway";
-const ENTRY_POINT = "../mod.ts";
-const OUT_DIR = "../npm";
-const LICENSE = "../LICENSE.md";
-const README = "../README.md";
+const ENTRY_POINT = "./mod.ts";
+const OUT_DIR = "./npm";
+const LICENSE = "./LICENSE.md";
+const README = "./README.md";
 const GIT_URL = "git+https://github.com/realpha/eitherway.git";
 const ISSUE_URL = "https://github.com/realpha/eitherway/issues";
 
@@ -23,27 +23,30 @@ const tryParse = Result.liftFallible(
   (e: unknown) => e as TypeError,
 );
 const createOutputDir = Task.liftFallible(
-  dnt.emptyDir,
+  emptyDir,
   ScriptErrors.CouldNotCreateOutputDir,
 );
 
 function parseVersion(): Result<SemVer, TypeError> {
-  return Option.from(Deno.args[0]).okOr(ScriptErrors.NoVersionProvided).andThen(
-    tryParse,
-  );
+  return Option.fromCoercible(Deno.args[0])
+    .okOr(ScriptErrors.NoVersionProvided)
+    .inspect((v) => console.log(`Using version specifier: ${v}`))
+    .andThen(tryParse);
 }
 
 async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
   try {
-    await dnt.build({
+    await build({
       entryPoints: [ENTRY_POINT],
       outDir: OUT_DIR,
+      typeCheck: "both",
+      test: false,
       shims: {
-        deno: true,
+        deno: false,
       },
       package: {
         name: PKG_NAME,
-        version: v.build.join("."),
+        version: semver.format(v),
         description: "Yet another Result and Option implementation",
         license: "MIT",
         repository: {
@@ -53,6 +56,10 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
         bugs: {
           url: ISSUE_URL,
         },
+      },
+      compilerOptions: {
+        lib: ["DOM", "ES2022"], //needed for structuredClone
+        target: "ES2022",
       },
       postBuild() {
         Deno.copyFileSync(LICENSE, `${OUT_DIR}/LICENSE.md`);
@@ -72,4 +79,11 @@ function main(): Task<void, Error> {
     .andThen(buildPackage);
 }
 
-await main().inspectErr(console.error);
+main().then((res) => {
+  if(res.isOk()) {
+    console.log("Build succeeded");
+    Deno.exit(0);
+  }
+  console.error(res.unwrap());
+  Deno.exit(1);
+});
