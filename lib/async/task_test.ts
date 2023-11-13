@@ -1,4 +1,4 @@
-//deno-lint-ignore-file  no-unused-vars require-await
+//deno-lint-ignore-file require-await
 import { asInfallible, Err, Ok, Result } from "../core/mod.ts";
 import { Task, Tasks } from "./task.ts";
 import {
@@ -7,7 +7,7 @@ import {
   assertType,
 } from "../../dev_deps.ts";
 import type { Empty } from "../core/mod.ts";
-import type { Has, IsExact } from "../../dev_deps.ts";
+import type { IsExact } from "../../dev_deps.ts";
 import type {
   InferredFailureTuple,
   InferredFailureType,
@@ -514,7 +514,7 @@ Deno.test("eitherway::Task", async (t) => {
           const p: Promise<Result<never, Error>> = Promise.resolve(Err(
             Error("Received error", { cause: TypeError("Cannot do that") }),
           ));
-          const rehydrate = async function (err: unknown) {
+          const rehydrate = function (err: unknown) {
             if (!(err instanceof Error)) {
               return Task.fail(RangeError("Cannot rehydrate"));
             }
