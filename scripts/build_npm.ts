@@ -13,9 +13,9 @@ const ISSUE_URL = "https://github.com/realpha/eitherway/issues";
 
 const ScriptErrors = {
   NoVersionProvided: TypeError("Expected version specifier, received none"),
-  CouldNotCreateOutputDir: (e: any) =>
+  CouldNotCreateOutputDir: (e: unknown) =>
     Error(`Could not create output directory`, { cause: e }),
-  BuildFailed: (e: any) => Error(`Build failed`, { cause: e }),
+  BuildFailed: (e: unknown) => Error(`Build failed`, { cause: e }),
 } as const;
 
 const tryParse = Result.liftFallible(
