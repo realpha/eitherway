@@ -47,8 +47,12 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
       package: {
         name: PKG_NAME,
         version: semver.format(v),
-        description: "Yet another Result and Option implementation",
+        description: "Safe abstractions for fallible flows inspired by F# and Rust",
         license: "MIT",
+        author: "realpha <0xrealpha@proton.me>",
+        engines: {
+          "node": ">=17.0.0", //needed for structuredClone
+        },
         repository: {
           type: "git",
           url: GIT_URL,
@@ -72,7 +76,7 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
   }
 }
 
-function main(): Task<void, Error> {
+function main() {
   return parseVersion()
     .into((res) => Task.of(res))
     .trip((_v) => createOutputDir(OUT_DIR))
@@ -80,10 +84,10 @@ function main(): Task<void, Error> {
 }
 
 main().then((res) => {
-  if(res.isOk()) {
-    console.log("Build succeeded");
-    Deno.exit(0);
+  if(res.isErr()) {
+    console.error(res.unwrap());
+    Deno.exit(1);
   }
-  console.error(res.unwrap());
-  Deno.exit(1);
+  console.log("Build succeeded");
+  Deno.exit(0);
 });
