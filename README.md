@@ -54,6 +54,14 @@ productivity by focusing on the following goals:
 ## `eitherway` in Action
 
 ```typescript
+import { Option, Result, Task } from "https://deno.land/x/eitherway@0.2.0/mod.ts";
+
+/**
+ * A little API over-use to show what's possible.
+ * This is not the most efficient way to write code, but still performs well
+ * enough in benchmarks.
+ */
+
 function toUpperCase(input: string | undefined): Task<string, TypeError> {
   return Option(input) // All nullish values are None
     .okOrElse(() => TypeError("Input is undefined")) // Convert to Result<string, TypeError>
@@ -110,6 +118,36 @@ main()
 ```
 
 ### Installation
+
+#### Minimum Required Runtime Versions
+
+`eitherway` internally uses the [`Error.cause`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/cause#browser_compatibility) configuration option and [`structuredClone`](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone), therefore please make sure these versions are met:
+ - `Deno`: 1.14
+ - `Node`: 17.0.0
+ - `Browser`: [`Error.cause`](https://caniuse.com/?search=Error.cause) & [`structuredClone`](https://caniuse.com/?search=structuredClone)
+
+#### `deno`
+
+```typescript
+import { Err, Ok, Option, None, Result, Some, Task } from "https://deno.land/x/eitherway@0.2.0/mod.ts";
+```
+
+#### `node`
+
+```shell
+(npm | pnpm | yarn) add eitherway@latest
+```
+
+ESM:
+```
+import { Err, Ok, Option, None, Result, Some, Task } from "eitherway";
+```
+
+CJS:
+```
+const { Err, Ok, Option, None, Result, Some, Task } = require("eitherway");
+```
+
 
 ### Getting started
 
