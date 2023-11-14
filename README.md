@@ -6,7 +6,9 @@ Safe abstractions for fallible flows inspired by F# and Rust.
 
 ## Disclaimer
 
-This is still experimental software.
+🚧 This project is still under development, expect breaking changes 🚧
+
+Please see this [tracking issue](https://github.com/realpha/eitherway/issues/9) for more information regarding when to expect a stable release.
 
 ## Motivation
 
