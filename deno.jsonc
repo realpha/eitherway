@@ -1,6 +1,7 @@
 {
   "tasks": {
     "build:npm": "deno run -A ./scripts/build_npm.ts",
+    "build:cov": "deno coverage --lcov --output=./cov.lcov ./cov/",
     "test:full": "deno test -A --doc --coverage=./cov",
     "test:cov": "deno test -A --coverage=./cov",
     "test:ci": "deno test -A --doc --coverage=./cov ./lib"

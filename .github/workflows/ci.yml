@@ -10,20 +10,32 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
-
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
 
-      - name: Setup Deno
+      - name: Setup deno
         uses: denoland/setup-deno@61fe2df320078202e33d7d5ad347e7dcfa0e8f31  # v1.1.2
         with:
           deno-version: v1.x
 
+      - name: Check fmt
+        run: deno fmt --check
+
       - name: Run linter
         run: deno lint
 
-      - name: Run tests
-        run: deno test -A
+      - name: Run tests & generate coverage
+        run: deno task test:cov
+
+      - name: Generate coverage report
+        run: deno task build:cov
+
+      - name: Upload coverage report
+        uses: paambaati/codeclimate-action@v5.0.0
+        env:
+          CC_TEST_REPORTER_ID: ${{ secret.CODECLIMATE_REPORTER_ID }} 
+        with: 
+          coverageLocations: ${{github.workspace}}/*.lcov:lcov
