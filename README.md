@@ -8,7 +8,8 @@ Safe abstractions for fallible flows inspired by F# and Rust.
 
 🚧 This project is still under development, expect breaking changes 🚧
 
-Please see this [tracking issue](https://github.com/realpha/eitherway/issues/9) for more information regarding when to expect a stable release.
+Please see this [tracking issue](https://github.com/realpha/eitherway/issues/9)
+for more information regarding when to expect a stable release.
 
 ## Motivation
 
@@ -56,7 +57,11 @@ productivity by focusing on the following goals:
 ## `eitherway` in Action
 
 ```typescript
-import { Option, Result, Task } from "https://deno.land/x/eitherway@0.2.0/mod.ts";
+import {
+  Option,
+  Result,
+  Task,
+} from "https://deno.land/x/eitherway@0.2.0/mod.ts";
 
 /**
  * A little API over-use to show what's possible.
@@ -123,15 +128,29 @@ main()
 
 #### Minimum Required Runtime Versions
 
-`eitherway` internally uses the [`Error.cause`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/cause#browser_compatibility) configuration option and [`structuredClone`](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone), therefore please make sure these versions are met:
- - `Deno`: 1.14
- - `Node`: 17.0.0
- - `Browser`: [`Error.cause`](https://caniuse.com/?search=Error.cause) & [`structuredClone`](https://caniuse.com/?search=structuredClone)
+`eitherway` internally uses the
+[`Error.cause`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error/cause#browser_compatibility)
+configuration option and
+[`structuredClone`](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone),
+therefore please make sure these versions are met:
+
+- `Deno`: 1.14
+- `Node`: 17.0.0
+- `Browser`: [`Error.cause`](https://caniuse.com/?search=Error.cause) &
+  [`structuredClone`](https://caniuse.com/?search=structuredClone)
 
 #### `deno`
 
 ```typescript
-import { Err, Ok, Option, None, Result, Some, Task } from "https://deno.land/x/eitherway@0.2.0/mod.ts";
+import {
+  Err,
+  None,
+  Ok,
+  Option,
+  Result,
+  Some,
+  Task,
+} from "https://deno.land/x/eitherway@0.2.0/mod.ts";
 ```
 
 #### `node`
@@ -141,15 +160,16 @@ import { Err, Ok, Option, None, Result, Some, Task } from "https://deno.land/x/e
 ```
 
 ESM:
+
 ```
 import { Err, Ok, Option, None, Result, Some, Task } from "eitherway";
 ```
 
 CJS:
+
 ```
 const { Err, Ok, Option, None, Result, Some, Task } = require("eitherway");
 ```
-
 
 ### Getting started
 
