@@ -47,7 +47,8 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
       package: {
         name: PKG_NAME,
         version: semver.format(v),
-        description: "Safe abstractions for fallible flows inspired by F# and Rust",
+        description:
+          "Safe abstractions for fallible flows inspired by F# and Rust",
         license: "MIT",
         author: "realpha <0xrealpha@proton.me>",
         engines: {
@@ -84,7 +85,7 @@ function main() {
 }
 
 main().then((res) => {
-  if(res.isErr()) {
+  if (res.isErr()) {
     console.error(res.unwrap());
     Deno.exit(1);
   }
