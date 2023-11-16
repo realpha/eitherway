@@ -1,6 +1,6 @@
 import type {
   InferredOptionType,
-  InferredOptionTypes,
+  InferredSomeTuple,
   InferredSomeType,
 } from "./option.ts";
 import { None, Option, Options, Some } from "./option.ts";
@@ -31,7 +31,7 @@ Deno.test("eitherway::Option::TypeHelpers::TypeTests", async (t) => {
       ] as const;
 
       assertType<
-        IsExact<InferredOptionTypes<typeof correctTuple>, StrictTuple>
+        IsExact<InferredSomeTuple<typeof correctTuple>, StrictTuple>
       >(true);
     },
   );
