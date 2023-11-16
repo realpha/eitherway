@@ -27,9 +27,9 @@ for more information regarding when to expect a stable release.
   - [Overview](#overview)
     - [Design Decisions](#design-decisions)
     - [Additions](#additions)
-  - [Option<T>](#option<T>)
-  - [Result<T, E>](#result<T,E>)
-  - [Task<T, E>](#task<T,E>)
+  - [Option](#option)
+  - [Result](#result)
+  - [Task](#task)
 - [Best Practices](#best-practices)
 - [FAQ](#faq)
 - [Prior Art](#prior-art)
@@ -308,17 +308,17 @@ Some notable additions, which you may have been missing in other libraries:
   `Tasks`, every abstraction provides functions to collect tuples, arrays and
   iterables into the base abstraction.
 
-### Option<T>
+### Option
 
 Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=IOption) to the
 base interface, implemented by `Some<T>` and `None`.
 
-### Result<T, E>
+### Result
 
 Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=IResult) to the
 base interface, implemented by `Ok<T>` and `Err<E>`.
 
-### Task<T, E>
+### Task
 
 Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=Task) to the
 class implementing `Task<T, E>`.
