@@ -1,4 +1,3 @@
-import type { Option, Some } from "./option.ts";
 /**
  * ===============
  *      TYPES
@@ -46,14 +45,29 @@ export type NonNullish<T> = Exclude<T, Nullish>;
 export type Infallible<T> = Exclude<T, Nullish | Fallible<T>>;
 export type HasToJSON<T> = T extends { toJSON(): JsonRepr<T> } ? T : never;
 
-export type IsOption<O> = O extends Option<unknown> ? true : false;
-export type OptionType<O> = O extends Option<infer Inner> ? Inner : never;
-export type SomeType<S extends Option<unknown>> = S extends Some<infer Inner>
-  ? Inner
-  : never;
 export type NonReadonly<T> = T extends Readonly<infer U> ? U : T;
 
-export type Empty = Readonly<Record<"never", never>>;
+/**
+ * An artificial bottom type en lieu of unknown and nullish types
+ *
+ * This is used as a combatibility safe-guard for conversions between
+ * `Result<T, E>` and `Option<T>`, where a value of type `Ok<void>`
+ * would evaluate to `None` when converted with `.ok()`.
+ *
+ * @example
+ * ```typescript
+ * import { assert } from "./assert.ts";
+ * import { Empty, Ok, Option, Result, Some } from "./mod.ts";
+ *
+ * const voidResult: Result<void, never> = Ok(undefined);
+ * const emptyResult: Result<Empty, never> = Ok.empty();
+ *
+ * assert(voidResult.ok().isNone() === true);
+ * assert(emptyResult.ok().isNone() === false);
+ * ```
+ */
+//deno-lint-ignore ban-types
+export type Empty = Readonly<{}>;
 export const EMPTY: Empty = Object.freeze(Object.create(null));
 
 /**

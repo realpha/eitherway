@@ -533,7 +533,7 @@ export interface IOption<T> {
    * Apart from creating tuples, this is mostly useful for composing arguments,
    * which should be applied to a function down the line
    *
-   * |  LHS  x  RHS  | RHS: Some<U> |  RHS: None  |
+   * |  LHS `x` RHS  | RHS: Some<U> |  RHS: None  |
    * |---------------|--------------|-------------|
    * |  LHS: Some<T> | Some<[T, U]> |     None    |
    * |  LHS:  None   |     None     |     None    |
@@ -573,9 +573,7 @@ export interface IOption<T> {
    * This is equivalent to chaining:
    * `original.andThen(tripFn).and(original)`
    *
-   * CAUTION: Seldom useful in a synchronous context
-   *
-   * |  LHS trip RHS  | RHS: Some<U> |  RHS: None  |
+   * | LHS `trip` RHS | RHS: Some<U> |  RHS: None  |
    * |----------------|--------------|-------------|
    * |  LHS: Some<T>  |    Some<T>   |     None    |
    * |  LHS:  None    |      None    |     None    |
@@ -631,7 +629,7 @@ export interface IOption<T> {
    * Logical AND ( && )
    * Returns RHS if LHS is `Some<T>`
    *
-   * |  LHS  &&  RHS  | RHS: Some<U> |  RHS: None  |
+   * |  LHS `&&` RHS  | RHS: Some<U> |  RHS: None  |
    * |----------------|--------------|-------------|
    * |  LHS: Some<T>  |    Some<U>   |     None    |
    * |  LHS:  None    |      None    |     None    |
@@ -706,7 +704,7 @@ export interface IOption<T> {
    * Logical OR ( || )
    * Returns LHS if LHS is `Some<T>`, otherwise returns RHS
    *
-   * |  LHS  ||  RHS  | RHS: Some<U> |  RHS: None  |
+   * |  LHS `||` RHS  | RHS: Some<U> |  RHS: None  |
    * |----------------|--------------|-------------|
    * |  LHS: Some<T>  |    Some<T>   |   Some<T>   |
    * |  LHS:  None    |    Some<U>   |    None     |
@@ -733,7 +731,7 @@ export interface IOption<T> {
    * Useful when only one of two values should be `Some`, but not both
    * Returns `Some`, if only LHS or RHS is `Some`
    *
-   * |  LHS  ^  RHS   | RHS: Some<U> |  RHS: None  |
+   * |  LHS `^` RHS   | RHS: Some<U> |  RHS: None  |
    * |----------------|--------------|-------------|
    * |  LHS: Some<T>  |     None     |    Some<T>  |
    * |  LHS:  None    |    Some<U>   |     None    |
@@ -1917,7 +1915,7 @@ export namespace Options {
    */
   export function all<O extends ReadonlyArray<Option<unknown>>>(
     opts: O,
-  ): Option<InferredOptionTypes<O>>;
+  ): Option<InferredSomeTuple<O>>;
   export function all<T>(
     opts: Iterable<Option<T>>,
   ): Option<T[]>;
@@ -1980,7 +1978,7 @@ export namespace Options {
    */
   export function any<O extends ReadonlyArray<Option<unknown>>>(
     opts: O,
-  ): Option<InferredOptionTypes<O>[number]>;
+  ): Option<InferredSomeUnion<O>>;
   export function any<T>(
     opts: Iterable<Option<T>>,
   ): Option<T>;
@@ -1993,16 +1991,42 @@ export namespace Options {
   }
 }
 
-export type InferredOptionTypes<Opts extends ArrayLike<Option<unknown>>> = {
-  [i in keyof Opts]: Opts[i] extends Option<infer T> ? T : never;
-};
-
+/**
+ * Use this to infer the encapsulated `<T>` type from a `Some<T>`
+ *
+ * @category Option::Basic
+ */
 export type InferredSomeType<O extends Readonly<Option<unknown>>> = O extends
   Readonly<Some<infer T>> ? T : never;
 
+/**
+ * Use this to infer an `Option<T>` type
+ *
+ * @categroy OPtion::Basic
+ */
 //deno-lint-ignore no-explicit-any
 export type InferredOptionType<O extends Readonly<Option<any>>> = O extends
   Readonly<None> ? None
   : O extends Readonly<Some<infer T1>> ? Some<T1>
   : [O] extends [Readonly<Option<infer T2>>] ? [Option<T2>]
   : never;
+
+/**
+ * Use this to infer the encapsulated `Some<T>` types from a tuple of `Option<T>`
+ *
+ * @category Option::Intermediate
+ */
+export type InferredSomeTuple<
+  Opts extends Readonly<ArrayLike<Option<unknown>>>,
+> = {
+  [i in keyof Opts]: Opts[i] extends Option<infer T> ? T : never;
+};
+
+/**
+ * Use this to infer a union of all `Some<T>` types from a tuple of `Option<T>`
+ *
+ * @category Option::Intermediate
+ */
+export type InferredSomeUnion<
+  Opts extends Readonly<ArrayLike<Option<unknown>>>,
+> = InferredSomeTuple<Opts>[number];
