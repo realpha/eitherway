@@ -61,6 +61,18 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
         bugs: {
           url: ISSUE_URL,
         },
+        keywords: [
+          "async",
+          "either",
+          "fsharp",
+          "fallible",
+          "maybe",
+          "option",
+          "result",
+          "rust",
+          "task",
+          "typescript",
+        ],
       },
       compilerOptions: {
         lib: ["DOM", "ES2022"], //needed for structuredClone
@@ -89,6 +101,6 @@ main().then((res) => {
     console.error(res.unwrap());
     Deno.exit(1);
   }
-  console.log("Build succeeded");
+  console.log("Build succeeded!");
   Deno.exit(0);
 });

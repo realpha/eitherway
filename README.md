@@ -1,12 +1,18 @@
 # eitherway
 
+[![maintainability](https://api.codeclimate.com/v1/badges/dc2d6e0d46d4b6b304f6/maintainability)](https://codeclimate.com/github/realpha/eitherway/maintainability)
+![ci](https://github.com/realpha/eitherway/actions/workflows/ci.yml/badge.svg)
+[![coverage](https://api.codeclimate.com/v1/badges/dc2d6e0d46d4b6b304f6/test_coverage)](https://codeclimate.com/github/realpha/eitherway/test_coverage)
+[![deno](https://shield.deno.dev/x/eitherway)](https://deno.land/x/eitherway)
+![npm](https://img.shields.io/npm/v/eitherway)
+
 > Yet Another Option and Result Implementation (**YAORI**)
 
 Safe abstractions for fallible flows inspired by F# and Rust.
 
 ## Disclaimer
 
-🚧 This project is still under development, expect breaking changes 🚧
+🚧 This project is still under development, expect some breaking changes 🚧
 
 Please see this [tracking issue](https://github.com/realpha/eitherway/issues/9)
 for more information regarding when to expect a stable release.
@@ -61,7 +67,9 @@ import {
   Option,
   Result,
   Task,
-} from "https://deno.land/x/eitherway@0.2.0/mod.ts";
+} from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * A little API over-use to show what's possible.
@@ -134,8 +142,8 @@ configuration option and
 [`structuredClone`](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone),
 therefore please make sure these versions are met:
 
-- `Deno`: 1.14
-- `Node`: 17.0.0
+- `deno`: >=1.14
+- `node`: >=17.0.0
 - `Browser`: [`Error.cause`](https://caniuse.com/?search=Error.cause) &
   [`structuredClone`](https://caniuse.com/?search=structuredClone)
 
@@ -150,45 +158,151 @@ import {
   Result,
   Some,
   Task,
-} from "https://deno.land/x/eitherway@0.2.0/mod.ts";
+} from "https://deno.land/x/eitherway@0.2.1/mod.ts";
 ```
 
 #### `node`
 
-```shell
-(npm | pnpm | yarn) add eitherway@latest
+```bash
+(npm | pnpm | yarn) add eitherway
 ```
 
 ESM:
 
-```
-import { Err, Ok, Option, None, Result, Some, Task } from "eitherway";
+```typescript
+import { Err, None, Ok, Option, Result, Some, Task } from "npm:eitherway";
 ```
 
 CJS:
 
-```
+```javascript
 const { Err, Ok, Option, None, Result, Some, Task } = require("eitherway");
 ```
 
-### Getting started
-
 ## API
+
+### Overview
+
+In general, this kind of API is not something you'd typically want to write or
+maintain. It's thin AND broad. At the same time the simplicity and specificity
+of each and every method/function allows for highly ergonomic composition
+without the need for cumbersome boilerplate, while retaining full type-safety. A
+fluid API for control structures.
+
+On a high level, `eitherway` provides 3 basic abstractions, which have different
+use cases:
+
+- `Option<T>`: Composable equivalent of the union `T | undefined`. Use this to
+  handle the case of non-existence gracefully or assert a certain fact about a
+  value.
+- `Result<T, E>`: Composable equivalent of the union `T | E`. Use this to
+  gracefully handle an happy-path and error-path without the need to throw
+  exceptions.
+- `Task<T, E>`: Composable equivalent of `Promise<T | E>`. Same as `Result` but
+  for asynchronous operations.
+
+#### Design decisions
+
+If you are coming from other languages, or other libraries, you will be familiar
+with most parts already. A couple of things are handled differently though:
+
+- **Thinking in unions**: Union types are ubiquitous and work a little bit
+  differently in Typescript than other languages. The abstractions provided by
+  `eitherway` were modeled to provide a tag to members of unions commonly used.
+  As a consequence, there are no `safe` or `unchecked` variants for methods like
+  `.unwrap()`. Unless properly narrowed, which you probably want to do anyway,
+  they return just the union the abstraction was modeled after with the types
+  provided by the user or inferred.
+
+```typescript
+import { Ok, Option, Result } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+
+const opt: Option<string> = Option("foo" as string | undefined);
+const res: Result<number, TypeError> = Ok(1);
+
+/* Without narrowing, the union type is returned */
+const maybeString: string | undefined = opt.unwrap();
+const numOrError: number | TypeError = res.unwrap();
+
+/* The type can easily be narrowed though */
+if (res.isErr()) {
+  console.error(res.unwrap());
+}
+
+const num: number = res.unwrap();
+```
+
+- **Upholding basic invariants**: You CANNOT construct an instance of
+  `Option<undefined | nullish>` and you MUST NOT throw exceptions when returning
+  `Result<T, E>` or `Task<T, E>` from a function.
+- **Don't panic**: Following the previous statements, `eitherway` does not throw
+  or re-throw exceptions under normal operations. In fact, there are only 3
+  scenarios, which lead to a panic at runtime:
+  - Trying to shove a nullish value into `Some`. The compiler will not allow
+    this, but if you perform a couple of type casts, or a library you depend on
+    provides wrong type declarations, the `Some` constructor will throw an
+    exception, when you end up trying to instantiate it with a nullish value.
+  - Trying to lift a `Promise` or a function, which you've explicitly provided
+    as infallible, into a `Result` or `Task` context and it ends up panicking.
+
+  ```typescript
+  import {
+    asInfallible,
+    Task,
+  } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+
+  async function getNumber(): Promise<number> {
+    throw new Error("Something went wrong");
+  }
+
+  const p = getNumber();
+
+  /**
+   * `Task.fromPromise` expects an error mapping function as second argument.
+   * `asInfallible` is an error mapping function, which returns `never`.
+   * When we await the task, it will reject, because the invariant was violated.
+   */
+  const task: Task<number, never> = Task.fromPromise(p, asInfallible);
+  ```
+
+  - You, despite being told multiple times not to do so, chose to panic in a
+    function you've implicitly marked as infallible by returning a
+    `Result<T, E>`, a `Promise<Result<T, E>>` or a `Task<T, E>`.
+
+- **Closure of operations**: All mapping and chaining operations are closed,
+  meaning that they return an instance of the same abstraction as the one they
+  were called on.
+
+#### Additions
+
+Some notable additions, which you may have been missing in other libraries:
+
+- **Composable side-effects**: `.tap()`, `.inspect()` and `.inspectErr()`
+  methods.
+- **Sync & Async feature parity**: `Result<T, E>` and `Task<T, E>` provide the
+  same API for composing operations. Only the predicates `.isOk()` and
+  `.isErr()` are not implemented on `Task<T, E>` (for obvious reasons).
+- **Composability helpers**: Higher order `.lift()` and `.liftFallible()`.
+  Eliminating the need to manually wrap library or existing code in many
+  situations.
+- **Collection helpers**: Exposed via the namespaces `Options`, `Results` and
+  `Tasks`, every abstraction provides functions to collect tuples, arrays and
+  iterables into the base abstraction.
 
 ### Option<T>
 
-Here the [link](https://deno.land/x/eitherway/lib/mod.ts?s=IOption) to the base
-interface, implemented by `Some<T>` and `None`.
+Here the [link](https://deno.land/x/eitherway@latest/lib/mod.ts?s=IOption) to
+the base interface, implemented by `Some<T>` and `None`.
 
 ### Result<T, E>
 
-Here the [link](https://deno.land/x/eitherway/lib/mod.ts?s=IResult) to the base
-interface, implemented by `Ok<T>` and `Err<E>`.
+Here the [link](https://deno.land/x/eitherway@latest/lib/mod.ts?s=IResult) to
+the base interface, implemented by `Ok<T>` and `Err<E>`.
 
 ### Task<T, E>
 
-Here the [link](https://deno.land/x/eitherway/lib/mod.ts?s=Task) to the class
-implementing `Task<T, E>`.
+Here the [link](https://deno.land/x/eitherway@latest/lib/mod.ts?s=Task) to the
+class implementing `Task<T, E>`.
 
 ## Best Practices
 
@@ -204,14 +318,15 @@ code which is often even more pleasant to read.
 <details>
     <summary>Compare these examples, taken from the benchmark suite:</summary>
 
-```typescript
-/**
- * ==================
- *    SYNCHRONOUS
- * ==================
- */
+Synchronous:
 
+```typescript
 /* Classic exception style */
+
+declare function toUpperCase(input: string | undefined): string;
+declare function stringToLength(input: string): number;
+declare function powerOfSelf(input: number): number;
+
 function processString(input: string | undefined): number {
   try {
     const upperCased = toUpperCase(input);
@@ -225,22 +340,36 @@ function processString(input: string | undefined): number {
     throw new TypeError("Unknown error", { cause: error });
   }
 }
+```
 
+```typescript
 /* Equivalent Result flow */
+
+import { Result } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+
+declare function toUpperCase(
+  input: string | undefined,
+): Result<string, TypeError>;
+declare function stringToLength(input: string): Result<number, TypeError>;
+declare function powerOfSelf(input: number): Result<number, TypeError>;
+
 function processString(input: string | undefined): Result<number, TypeError> {
   return toUpperCase(input)
     .andThen(stringToLength)
     .andThen(powerOfSelf)
     .inspectErr((e) => console.error(e.message));
 }
+```
 
-/**
- * ==================
- *    ASYNCHRONOUS
- * ==================
- */
+Asynchronous:
 
+```typescript
 /* Classic exception style */
+
+declare function toUpperCase(input: string | undefined): Promise<string>;
+declare function stringToLength(input: string): Promise<number>;
+declare function powerOfSelf(input: number): Promise<number>;
+
 async function processString(input: string | undefined): Promise<number> {
   try {
     const upperCased = await toUpperCase(input);
@@ -254,8 +383,21 @@ async function processString(input: string | undefined): Promise<number> {
     throw new TypeError("Unknown error", { cause: error });
   }
 }
+```
 
+```typescript
 /* Equivalent Task flow */
+
+import { Result, Task } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+
+declare function toUpperCase(
+  input: string | undefined,
+): Task<string, TypeError>;
+declare function stringToLength(
+  input: string,
+): Promise<Result<number, TypeError>>;
+declare function powerOfSelf(input: number): Task<number, TypeError>;
+
 function processString(input: string | undefined): Task<number, TypeError> {
   return toUpperCase(input)
     .andThen(stringToLength)
@@ -330,11 +472,10 @@ cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz runtime: deno 1.33.2
 
 ## file:///projects/eitherway/bench/async_bench.ts benchmark time (avg) (min … max) p75 p99 p995
 
-AsyncExceptions 24.78 ms/iter (22.08 ms … 25.55 ms) 25.46 ms 25.55 ms 25.55 ms
-TaskInstanceFlow 23.88 ms/iter (21.28 ms … 25.8 ms) 24.57 ms 25.8 ms 25.8 ms
-TaskOperatorFlow 24.21 ms/iter (21.33 ms … 25.73 ms) 25.36 ms 25.73 ms 25.73 ms
-TaskEarlyReturnFlow 24.04 ms/iter (20.36 ms … 25.47 ms) 25.42 ms 25.47 ms 25.47
-ms
+AsyncExceptions 24.78 ms/iter (22.08 ms … 25.55 ms) 25.46 ms 25.55ms 25.55ms
+TaskInstanceFlow 23.88 ms/iter (21.28 ms … 25.8 ms) 24.57 ms 25.8ms 25.8ms
+TaskOperatorFlow 24.21 ms/iter (21.33 ms … 25.73 ms) 25.36 ms 25.73ms 25.73ms
+TaskEarlyReturnFlow 24.04 ms/iter (20.36 ms … 25.47 ms) 25.42 ms 25.47ms 25.47ms
 
 summary TaskInstanceFlow 1.01x faster than TaskEarlyReturnFlow 1.01x faster than
 TaskOperatorFlow 1.04x faster than AsyncExceptions
@@ -355,10 +496,10 @@ cpu: Intel(R) Core(TM) i9-9880H CPU @ 2.30GHz runtime: deno 1.33.2
 
 ## file:///projects/eitherway/bench/micro_bench.ts benchmark time (avg) (min … max) p75 p99 p995
 
-Promise.resolve(Ok) 44.33 ns/iter (35.81 ns … 106.41 ns) 44.6 ns 62.58 ns 72.56
-ns Task.succeed 105.43 ns/iter (88.44 ns … 227.26 ns) 108.97 ns 204.75 ns 212.54
-ns Promise.resolve(Err) 3.11 µs/iter (3.06 µs … 3.27 µs) 3.13 µs 3.27 µs 3.27 µs
-Task.fail 2.94 µs/iter (2.71 µs … 3.35 µs) 3.25 µs 3.35 µs 3.35 µs
+Promise.resolve(Ok) 44.33 ns/iter (35.81 ns … 106.41 ns) 44.6 ns 62.58 ns
+72.56ns Task.succeed 105.43 ns/iter (88.44 ns … 227.26 ns) 108.97 ns 204.75 ns
+212.54ns Promise.resolve(Err) 3.11 µs/iter (3.06 µs … 3.27 µs) 3.13 µs 3.27 µs
+3.27 µs Task.fail 2.94 µs/iter (2.71 µs … 3.35 µs) 3.25 µs 3.35 µs 3.35 µs
 
 summary Promise.resolve(Ok) 2.38x faster than Task.succeed 66.41x faster than
 Task.fail 70.14x faster than Promise.resolve(Err)
@@ -396,6 +537,8 @@ Since `Task<T, E>` is a subclass of `Promise<Result<T, E>>`, it's possible to
 return it as such from an async function though or just await it.
 
 ```typescript
+import { Result, Task } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+
 async function toTask(str: string): Promise<Result<string, never>> {
   return Task.succeed(str);
 }
@@ -422,6 +565,11 @@ the preferred solution.
 </details>
 
 ## Prior Art
+
+- [neverthrow](https://github.com/supermacro/neverthrow)
+- [ts-result](https://github.com/vultix/ts-results)
+- [oxide.ts](https://github.com/traverse1984/oxide.ts)
+- [eventual-result](https://github.com/alexlafroscia/eventual-result)
 
 ## License & Contributing
 

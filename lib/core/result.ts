@@ -13,6 +13,9 @@ import { None, Option } from "./option.ts";
  * ==============
  */
 
+/**
+ * Base interface implemented by `Ok<T>` and `Err<E>`
+ */
 export interface IResult<T, E> {
   isOk(): this is Ok<T>;
   isErr(): this is Err<E>;
@@ -431,6 +434,14 @@ class _Err<E> implements IResult<never, E> {
  * live in seperate namespaces, the API feels way more ergonomic
  */
 
+/**
+ * # Ok<T>
+ *
+ * The success variant of a `Result<T, E>`
+ *
+ * @category Result:Basic
+ * @implements {@linkcode IResult}
+ */
 export type Ok<T> = _Ok<T>;
 export function Ok<T>(value: T) {
   return new _Ok(value);
@@ -450,6 +461,14 @@ export namespace Ok {
   }
 }
 
+/**
+ * # Err<E>
+ *
+ * The failure variant of a `Result<T, E>`
+ *
+ * @category Result:Basic
+ * @implements {@linkcode IResult}
+ */
 export type Err<E> = _Err<E>;
 export function Err<E>(err: E): Err<E> {
   return new _Err(err);
@@ -470,7 +489,7 @@ export namespace Err {
 }
 
 /**
- * #Result<T, E>
+ * # Result<T, E>
  *
  * `Result<T, E>` is the composeable equivalent to the union `<T | E>`, where
  * `<T>` represents the success and `<E>` the failure case
@@ -481,7 +500,7 @@ export namespace Err {
  * to ease working with collections of `Result<T, E>` (indexed and plain
  * Iterables)
  *
- * @implements {@lincode IResult}
+ * @implements {@linkcode IResult}
  * @category Result::Basic
  * @namespace
  */
