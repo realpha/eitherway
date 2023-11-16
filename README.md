@@ -17,6 +17,24 @@ Safe abstractions for fallible flows inspired by F# and Rust.
 Please see this [tracking issue](https://github.com/realpha/eitherway/issues/9)
 for more information regarding when to expect a stable release.
 
+## Contents
+
+- [Motivation](#motivation)
+- [Design Goals](#design-goals)
+- [`eitherway` in Action](#eitherway-in-action)
+  - [Installation](#installation)
+- [API](#api)
+  - [Overview](#overview)
+    - [Design Decisions](#design-decisions)
+    - [Additions](#additions)
+  - [Option<T>](#option<T>)
+  - [Result<T, E>](#result<T,E>)
+  - [Task<T, E>](#task<T,E>)
+- [Best Practices](#best-practices)
+- [FAQ](#faq)
+- [Prior Art](#prior-art)
+- [License and Contributing](#license-and-contributing)
+
 ## Motivation
 
 Let's be honest: The community already nurtured a bunch of great projects,
@@ -201,7 +219,7 @@ use cases:
 - `Task<T, E>`: Composable equivalent of `Promise<T | E>`. Same as `Result` but
   for asynchronous operations.
 
-#### Design decisions
+#### Design Decisions
 
 If you are coming from other languages, or other libraries, you will be familiar
 with most parts already. A couple of things are handled differently though:
@@ -279,29 +297,30 @@ Some notable additions, which you may have been missing in other libraries:
 
 - **Composable side-effects**: `.tap()`, `.inspect()` and `.inspectErr()`
   methods.
+- **Pass-through chaining**: `.trip()` and `.rise()` methods.
 - **Sync & Async feature parity**: `Result<T, E>` and `Task<T, E>` provide the
   same API for composing operations. Only the predicates `.isOk()` and
   `.isErr()` are not implemented on `Task<T, E>` (for obvious reasons).
-- **Composability helpers**: Higher order `.lift()` and `.liftFallible()`.
-  Eliminating the need to manually wrap library or existing code in many
-  situations.
+- **Composability helpers**: Higher order `.lift()` and `.liftFallible()`
+  functions. Eliminating the need to manually wrap library or existing code in
+  many situations.
 - **Collection helpers**: Exposed via the namespaces `Options`, `Results` and
   `Tasks`, every abstraction provides functions to collect tuples, arrays and
   iterables into the base abstraction.
 
 ### Option<T>
 
-Here the [link](https://deno.land/x/eitherway@latest/lib/mod.ts?s=IOption) to
-the base interface, implemented by `Some<T>` and `None`.
+Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=IOption) to the
+base interface, implemented by `Some<T>` and `None`.
 
 ### Result<T, E>
 
-Here the [link](https://deno.land/x/eitherway@latest/lib/mod.ts?s=IResult) to
-the base interface, implemented by `Ok<T>` and `Err<E>`.
+Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=IResult) to the
+base interface, implemented by `Ok<T>` and `Err<E>`.
 
 ### Task<T, E>
 
-Here the [link](https://deno.land/x/eitherway@latest/lib/mod.ts?s=Task) to the
+Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=Task) to the
 class implementing `Task<T, E>`.
 
 ## Best Practices
@@ -571,7 +590,7 @@ the preferred solution.
 - [oxide.ts](https://github.com/traverse1984/oxide.ts)
 - [eventual-result](https://github.com/alexlafroscia/eventual-result)
 
-## License & Contributing
+## License and Contributing
 
 ### Contributing
 
