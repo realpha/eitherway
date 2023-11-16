@@ -276,13 +276,18 @@ const num: number = res.unwrap();
 #### Additions
 
 Some notable additions, which you may have been missing in other libraries:
-- **Composable side-effects**: `.tap()`, `.inspect()` and `.inspectErr()` methods.
-- **Sync & Async feature parity**: `Result<T, E>` and `Task<T, E>` provide the same 
-API for composing operations. Only the predicates `.isOk()` and `.isErr()` are not implemented
-on `Task<T, E>` (for obvious reasons).
-- **Composability helpers**: Higher order `.lift()` and `.liftFallible()`. Eliminating the need to manually wrap library or existing code in many situations.
-- **Collection helpers**: Exposed via the namespaces `Options`, `Results` and `Tasks`, every abstraction
-provides functions to collect tuples, arrays and iterables into the base abstraction.
+
+- **Composable side-effects**: `.tap()`, `.inspect()` and `.inspectErr()`
+  methods.
+- **Sync & Async feature parity**: `Result<T, E>` and `Task<T, E>` provide the
+  same API for composing operations. Only the predicates `.isOk()` and
+  `.isErr()` are not implemented on `Task<T, E>` (for obvious reasons).
+- **Composability helpers**: Higher order `.lift()` and `.liftFallible()`.
+  Eliminating the need to manually wrap library or existing code in many
+  situations.
+- **Collection helpers**: Exposed via the namespaces `Options`, `Results` and
+  `Tasks`, every abstraction provides functions to collect tuples, arrays and
+  iterables into the base abstraction.
 
 ### Option<T>
 

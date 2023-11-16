@@ -441,7 +441,6 @@ class _Err<E> implements IResult<never, E> {
  *
  * @category Result:Basic
  * @implements {@linkcode IResult}
- *
  */
 export type Ok<T> = _Ok<T>;
 export function Ok<T>(value: T) {
@@ -469,7 +468,6 @@ export namespace Ok {
  *
  * @category Result:Basic
  * @implements {@linkcode IResult}
- *
  */
 export type Err<E> = _Err<E>;
 export function Err<E>(err: E): Err<E> {
