@@ -4,7 +4,8 @@
 ![ci](https://github.com/realpha/eitherway/actions/workflows/ci.yml/badge.svg)
 [![coverage](https://api.codeclimate.com/v1/badges/dc2d6e0d46d4b6b304f6/test_coverage)](https://codeclimate.com/github/realpha/eitherway/test_coverage)
 [![deno](https://shield.deno.dev/x/eitherway)](https://deno.land/x/eitherway)
-![npm](https://img.shields.io/npm/v/eitherway)
+[![npm](https://img.shields.io/npm/v/eitherway)](https://www.npmjs.com/package/eitherway)
+![release](https://github.com/realpha/eitherway/actions/workflows/release.yml/badge.svg)
 
 > Yet Another Option and Result Implementation (**YAORI**)
 
@@ -85,7 +86,7 @@ import {
   Option,
   Result,
   Task,
-} from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+} from "https://deno.land/x/eitherway@0.3.0/mod.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -160,10 +161,14 @@ configuration option and
 [`structuredClone`](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone),
 therefore please make sure these versions are met:
 
-- `deno`: >=1.14
+- `deno`: >=1.14.
 - `node`: >=17.0.0
 - `Browser`: [`Error.cause`](https://caniuse.com/?search=Error.cause) &
   [`structuredClone`](https://caniuse.com/?search=structuredClone)
+
+| <img width="30px" height="30px" alt="Deno" src="https://res.cloudinary.com/dz3vsv9pg/image/upload/v1620998361/logos/deno.svg"></br>deno | <img width="24px" height="24px" alt="Node.js" src="https://res.cloudinary.com/dz3vsv9pg/image/upload/v1620998361/logos/nodejs.svg"></br>node | <img width="24px" height="24px" alt="IE / Edge" src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/edge/edge_48x48.png"></br>Edge | <img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/chrome/chrome_48x48.png" alt="Chrome" width="24px" height="24px" /></br>Chrome | <img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/firefox/firefox_48x48.png" alt="Firefox" width="24px" height="24px" /></br>Firefox | <img src="https://raw.githubusercontent.com/alrra/browser-logos/master/src/safari/safari_48x48.png" alt="Safari" width="24px" height="24px" /></br>Safari |
+| --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `>=1.14.0`                                                                                                                              | `>=17.0.0`                                                                                                                                   | `>=119`                                                                                                                                              | `>=119`                                                                                                                                                   | `>=119`                                                                                                                                                       | `>=17.1`                                                                                                                                                  |
 
 #### `deno`
 
@@ -176,7 +181,7 @@ import {
   Result,
   Some,
   Task,
-} from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+} from "https://deno.land/x/eitherway@0.3.0/mod.ts";
 ```
 
 #### `node`
@@ -201,55 +206,46 @@ const { Err, Ok, Option, None, Result, Some, Task } = require("eitherway");
 
 ### Overview
 
-In general, this kind of API is not something you'd typically want to write or
-maintain. It's thin AND broad. At the same time the simplicity and specificity
-of each and every method/function allows for highly ergonomic composition
-without the need for cumbersome boilerplate, while retaining full type-safety. A
-fluid API for control structures.
-
 On a high level, `eitherway` provides 3 basic abstractions, which have different
 use cases:
 
-- `Option<T>`: Composable equivalent of the union `T | undefined`. Use this to
-  handle the case of non-existence gracefully or assert a certain fact about a
-  value.
-- `Result<T, E>`: Composable equivalent of the union `T | E`. Use this to
-  gracefully handle an happy-path and error-path without the need to throw
-  exceptions.
-- `Task<T, E>`: Composable equivalent of `Promise<T | E>`. Same as `Result` but
-  for asynchronous operations.
+- [`Option<T>`](#option): Composable equivalent of the union `T | undefined`.
+  Use this to handle the case of non-existence gracefully or assert a certain
+  fact about a value.
+- [`Result<T, E>`](#result): Composable equivalent of the union `T | E`. Use
+  this to gracefully handle an happy-path and error-path without the need to
+  throw exceptions.
+- [`Task<T, E>`](#task): Composable equivalent of `Promise<T | E>`. Same as
+  `Result` but for asynchronous operations.
 
 #### Design Decisions
 
 If you are coming from other languages, or other libraries, you will be familiar
 with most parts already. A couple of things are handled differently though:
 
-- **Thinking in unions**: Union types are ubiquitous and work a little bit
-  differently in Typescript than other languages. The abstractions provided by
-  `eitherway` were modeled to provide a tag to members of unions commonly used.
-  As a consequence, there are no `safe` or `unchecked` variants for methods like
-  `.unwrap()`. Unless properly narrowed, which you probably want to do anyway,
-  they return just the union the abstraction was modeled after with the types
-  provided by the user or inferred.
+- **Thinking in unions**: Union types are ubiquitous and a powerful feature of
+  Typescript. The abstractions provided by `eitherway` were modeled to provide a
+  tag to members of unions commonly used. As a consequence, there are no `safe`
+  or `unchecked` variants for methods like `.unwrap()`.
+  <details>
+    <summary>Example:</summary>
+    ```typescript
+    import { Ok, Option, Result } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
 
-```typescript
-import { Ok, Option, Result } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+  const opt: Option<string> = Option("foo"); const res: Result<number,
+  TypeError> = Ok(1);
 
-const opt: Option<string> = Option("foo" as string | undefined);
-const res: Result<number, TypeError> = Ok(1);
+  /* Without narrowing, the union type is returned */ const maybeString: string
+  | undefined = opt.unwrap(); const numOrError: number | TypeError =
+  res.unwrap();
 
-/* Without narrowing, the union type is returned */
-const maybeString: string | undefined = opt.unwrap();
-const numOrError: number | TypeError = res.unwrap();
+  /* The type can easily be narrowed though */ if (res.isErr()) {
+  console.error(res.unwrap()); }
 
-/* The type can easily be narrowed though */
-if (res.isErr()) {
-  console.error(res.unwrap());
-}
-
-const num: number = res.unwrap();
-```
-
+  const num: number = res.unwrap();
+  ```
+  </details>
+  ```
 - **Upholding basic invariants**: You CANNOT construct an instance of
   `Option<undefined | nullish>` and you MUST NOT throw exceptions when returning
   `Result<T, E>` or `Task<T, E>` from a function.
@@ -262,27 +258,28 @@ const num: number = res.unwrap();
     exception, when you end up trying to instantiate it with a nullish value.
   - Trying to lift a `Promise` or a function, which you've explicitly provided
     as infallible, into a `Result` or `Task` context and it ends up panicking.
+    <details>
+      <summary>Example:</summary>
+      ```typescript
+      import {
+        asInfallible,
+        Task,
+      } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
 
-  ```typescript
-  import {
-    asInfallible,
-    Task,
-  } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+    async function getNumber(): Promise<number> { throw new Error("Something
+    went wrong"); }
 
-  async function getNumber(): Promise<number> {
-    throw new Error("Something went wrong");
-  }
+    const p = getNumber();
 
-  const p = getNumber();
-
-  /**
-   * `Task.fromPromise` expects an error mapping function as second argument.
-   * `asInfallible` is an error mapping function, which returns `never`.
-   * When we await the task, it will reject, because the invariant was violated.
-   */
-  const task: Task<number, never> = Task.fromPromise(p, asInfallible);
-  ```
-
+    /**
+    - `Task.fromPromise` expects an error mapping function as second argument.
+    - `asInfallible` is an error mapping function, which returns `never`.
+    - When we await the task, it will reject, because the invariant was
+      violated. */ const task: Task<number, never> = Task.fromPromise(p,
+      asInfallible);
+    ```
+    </details>
+    ```
   - You, despite being told multiple times not to do so, chose to panic in a
     function you've implicitly marked as infallible by returning a
     `Result<T, E>`, a `Promise<Result<T, E>>` or a `Task<T, E>`.
@@ -297,7 +294,7 @@ Some notable additions, which you may have been missing in other libraries:
 
 - **Composable side-effects**: `.tap()`, `.inspect()` and `.inspectErr()`
   methods.
-- **Pass-through chaining**: `.trip()` and `.rise()` methods.
+- **Pass-through conditionals**: `.trip()` and `.rise()` methods.
 - **Sync & Async feature parity**: `Result<T, E>` and `Task<T, E>` provide the
   same API for composing operations. Only the predicates `.isOk()` and
   `.isErr()` are not implemented on `Task<T, E>` (for obvious reasons).
@@ -310,20 +307,69 @@ Some notable additions, which you may have been missing in other libraries:
 
 ### Option
 
-Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=IOption) to the
-base interface, implemented by `Some<T>` and `None`.
+1. [Overview and factories](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Option)
+2. [Base interface](https://deno.land/x/eitherway@0.3.0/mod.ts?s=IOption)
+   implemented by `Some<T>` and `None`
+3. [Collection helpers](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Options)
 
 ### Result
 
-Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=IResult) to the
-base interface, implemented by `Ok<T>` and `Err<E>`.
+1. [Overview and factories](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Result)
+2. [Base interface](https://deno.land/x/eitherway@0.3.0/mod.ts?s=IResult)
+   implemented by `Ok<T>` and `Err<E>`
+3. [Collection helpers](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Results)
 
 ### Task
 
-Here the [link](https://deno.land/x/eitherway@0.2.1/lib/mod.ts?s=Task) to the
-class implementing `Task<T, E>`.
+1. [Overview and factories](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Task)
+2. [Collection helpers](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Tasks)
 
 ## Best Practices
+
+1. **Computations - not data**: The abstractions provided by `eitherway` are
+   meant to represent the results of computations, not data.
+2. **Return early occasionally**: When building up longer pipelines of
+   operations, especially if they involve synchronous and asynchronous
+   operations, you may want to break out of a pipeline to not enqueue
+   micro-tasks needlessly.
+   <details>
+     <summary>Example:</summary>
+     ```typescript
+     import { Result, Task } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+
+   type User = { id: string; email: string; }; interface ValidationError extends
+   TypeError {}; interface AlreadyExists extends Error {}; interface DbError
+   extends Error {}; interface PublishError extends Error {}; type
+   CreateUserError = ValidationError | AlreadyExists | DbError | PublishError;
+
+   declare function validateUser(dto: Record<string, ParseError>): Result<User,
+   ValidationError>; declare function saveUser(user: User): Task<void,
+   AlreadyExists | DbError>; decalre function publishCreatedEvent(user: User):
+   Task<void, PublishError>;
+
+   function createUser(dto: Record<string, ParseError>): Task<User,
+   CreateUserError> { const user = validateUser(dto);
+
+       if (user.isErr()) return user;
+
+       return Task.of(user)
+         .trip(saveUser)
+         .trip(publishCreatedEvent);
+   }
+   ```
+   </details>
+   ```
+3. **Unwrap at the edges**: Most application frameworks and library consumers
+   expect that any errors are propagated through exceptions (and hopefully
+   documented). Therefore, it's advised to unwrap `Option`s, `Result`s and
+   `Task`s at the out most layer of your code. In a simple CRUD application,
+   this might be an error handling interceptor, a controller, or the
+   implementation of your public API in case of a library.
+4. **Discriminate but don't over-accumulate**: It's often very tempting, to just
+   accumulate possible errors as a discriminated union when building out flows
+   via composition of `Result` and `Task` pipelines and let the user or the next
+   component in line figure out what to do next. This only works up to a certain
+   point.
 
 ## FAQ
 
