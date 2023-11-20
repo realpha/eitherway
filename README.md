@@ -190,13 +190,13 @@ import {
 (npm | pnpm | yarn) add eitherway
 ```
 
-ESM:
+`esm`:
 
 ```typescript
 import { Err, None, Ok, Option, Result, Some, Task } from "npm:eitherway";
 ```
 
-CJS:
+`cjs`:
 
 ```javascript
 const { Err, Ok, Option, None, Result, Some, Task } = require("eitherway");
@@ -227,63 +227,40 @@ with most parts already. A couple of things are handled differently though:
   Typescript. The abstractions provided by `eitherway` were modeled to provide a
   tag to members of unions commonly used. As a consequence, there are no `safe`
   or `unchecked` variants for methods like `.unwrap()`.
-  <details>
-    <summary>Example:</summary>
-    ```typescript
-    import { Ok, Option, Result } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
 
-  const opt: Option<string> = Option("foo"); const res: Result<number,
-  TypeError> = Ok(1);
+```typescript
+import { Ok, Option, Result } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
 
-  /* Without narrowing, the union type is returned */ const maybeString: string
-  | undefined = opt.unwrap(); const numOrError: number | TypeError =
-  res.unwrap();
+const opt: Option<string> = Option("foo");
+const res: Result<number, TypeError> = Ok(1);
 
-  /* The type can easily be narrowed though */ if (res.isErr()) {
-  console.error(res.unwrap()); }
+// Without narrowing, the union type is returned
+const maybeString: string | undefined = opt.unwrap();
+const numOrError: number | TypeError = res.unwrap();
 
-  const num: number = res.unwrap();
-  ```
-  </details>
-  ```
+// The type can easily be narrowed though
+if (res.isErr()) {
+  console.error(res.unwrap());
+}
+
+const num: number = res.unwrap();
+```
+
 - **Upholding basic invariants**: You CANNOT construct an instance of
-  `Option<undefined | nullish>` and you MUST NOT throw exceptions when returning
+  `Option<undefined | null>` and you MUST NOT throw exceptions when returning
   `Result<T, E>` or `Task<T, E>` from a function.
 - **Don't panic**: Following the previous statements, `eitherway` does not throw
   or re-throw exceptions under normal operations. In fact, there are only 3
   scenarios, which lead to a panic at runtime:
-  - Trying to shove a nullish value into `Some`. The compiler will not allow
-    this, but if you perform a couple of type casts, or a library you depend on
-    provides wrong type declarations, the `Some` constructor will throw an
-    exception, when you end up trying to instantiate it with a nullish value.
-  - Trying to lift a `Promise` or a function, which you've explicitly provided
-    as infallible, into a `Result` or `Task` context and it ends up panicking.
-    <details>
-      <summary>Example:</summary>
-      ```typescript
-      import {
-        asInfallible,
-        Task,
-      } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
-
-    async function getNumber(): Promise<number> { throw new Error("Something
-    went wrong"); }
-
-    const p = getNumber();
-
-    /**
-    - `Task.fromPromise` expects an error mapping function as second argument.
-    - `asInfallible` is an error mapping function, which returns `never`.
-    - When we await the task, it will reject, because the invariant was
-      violated. */ const task: Task<number, never> = Task.fromPromise(p,
-      asInfallible);
-    ```
-    </details>
-    ```
-  - You, despite being told multiple times not to do so, chose to panic in a
-    function you've implicitly marked as infallible by returning a
-    `Result<T, E>`, a `Promise<Result<T, E>>` or a `Task<T, E>`.
-
+  1. Trying to shove a nullish value into `Some`. The compiler will not allow
+     this, but if you perform a couple of type casts, or a library you depend on
+     provides wrong type declarations, the `Some` constructor will throw an
+     exception, when you end up trying to instantiate it with a nullish value.
+  2. Trying to lift a `Promise` or a function, which you've explicitly provided
+     as infallible, into a `Result` or `Task` context and it ends up panicking.
+  3. You, despite being told multiple times not to do so, chose to panic in a
+     function you've implicitly marked as infallible by returning a
+     `Result<T, E>`, a `Promise<Result<T, E>>` or a `Task<T, E>`.
 - **Closure of operations**: All mapping and chaining operations are closed,
   meaning that they return an instance of the same abstraction as the one they
   were called on.
@@ -328,48 +305,46 @@ Some notable additions, which you may have been missing in other libraries:
 
 1. **Computations - not data**: The abstractions provided by `eitherway` are
    meant to represent the results of computations, not data.
-2. **Return early occasionally**: When building up longer pipelines of
+2. **Embrace immutability**: Just don't mutate your state. It's not worth it
+   down the line.
+3. **Return early occasionally**: When building up longer pipelines of
    operations, especially if they involve synchronous and asynchronous
    operations, you may want to break out of a pipeline to not enqueue
-   micro-tasks needlessly.
-   <details>
-     <summary>Example:</summary>
-     ```typescript
-     import { Result, Task } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
-
-   type User = { id: string; email: string; }; interface ValidationError extends
-   TypeError {}; interface AlreadyExists extends Error {}; interface DbError
-   extends Error {}; interface PublishError extends Error {}; type
-   CreateUserError = ValidationError | AlreadyExists | DbError | PublishError;
-
-   declare function validateUser(dto: Record<string, ParseError>): Result<User,
-   ValidationError>; declare function saveUser(user: User): Task<void,
-   AlreadyExists | DbError>; decalre function publishCreatedEvent(user: User):
-   Task<void, PublishError>;
-
-   function createUser(dto: Record<string, ParseError>): Task<User,
-   CreateUserError> { const user = validateUser(dto);
-
-       if (user.isErr()) return user;
-
-       return Task.of(user)
-         .trip(saveUser)
-         .trip(publishCreatedEvent);
-   }
-   ```
-   </details>
-   ```
-3. **Unwrap at the edges**: Most application frameworks and library consumers
+   micro-tasks needlessly. The need to do this, does arise less frequently than
+   one might think though.
+4. **Unwrap at the edges**: Most application frameworks and library consumers
    expect that any errors are propagated through exceptions (and hopefully
    documented). Therefore, it's advised to unwrap `Option`s, `Result`s and
    `Task`s at the out most layer of your code. In a simple CRUD application,
    this might be an error handling interceptor, a controller, or the
    implementation of your public API in case of a library.
-4. **Discriminate but don't over-accumulate**: It's often very tempting, to just
+5. **Discriminate but don't over-accumulate**: It's often very tempting, to just
    accumulate possible errors as a discriminated union when building out flows
    via composition of `Result` and `Task` pipelines and let the user or the next
    component in line figure out what to do next. This only works up to a certain
-   point.
+   point. Errors are important domain objects, and they should be modeled
+   accordingly.
+6. **Lift others up to help yourself out**: Use the
+   [composability helpers](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Result.liftFallible).
+   They really reduce noise and speed up integrating external code a lot.
+
+```typescript
+import { Option, Result } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+import * as semver from "https://deno.land/std@0.206.0/semver/mod.ts";
+
+const noInputProvidedError = Error("No input provided");
+const toParseError = (e: unknown) =>
+  TypeError("Could not parse version", { cause: e });
+
+const tryParse = Result.liftFallible(
+  semver.parse,
+  toParseError,
+);
+
+const version = Option.from(Deno.args[0])
+  .okOr(noInputProvidedError)
+  .andThen(tryParse);
+```
 
 ## FAQ
 
@@ -410,7 +385,7 @@ function processString(input: string | undefined): number {
 ```typescript
 /* Equivalent Result flow */
 
-import { Result } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+import { Result } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
 
 declare function toUpperCase(
   input: string | undefined,
@@ -453,7 +428,7 @@ async function processString(input: string | undefined): Promise<number> {
 ```typescript
 /* Equivalent Task flow */
 
-import { Result, Task } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+import { Result, Task } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
 
 declare function toUpperCase(
   input: string | undefined,
@@ -602,7 +577,7 @@ Since `Task<T, E>` is a subclass of `Promise<Result<T, E>>`, it's possible to
 return it as such from an async function though or just await it.
 
 ```typescript
-import { Result, Task } from "https://deno.land/x/eitherway@0.2.1/mod.ts";
+import { Result, Task } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
 
 async function toTask(str: string): Promise<Result<string, never>> {
   return Task.succeed(str);
