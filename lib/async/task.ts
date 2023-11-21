@@ -24,7 +24,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * =======================
    */
 
-  /** 
+  /**
    * Use this to create a task from a `Result<T, E>` value
    *
    * @category Task::Basic
@@ -357,7 +357,6 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    *  TASK ASYNC OPERATORS
    * ======================
    */
-
 
   /**
    * Use this to obtain a function, with returns the provided `Task` itself.

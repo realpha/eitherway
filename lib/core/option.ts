@@ -1855,7 +1855,6 @@ export namespace Option {
    * import { assert } from "./assert.ts";
    * import { Option, None, Some } from "./option.ts";
    *
-   * 
    * function fallible(input: number): number {
    *   if (input === 42) return input;
    *   throw TypeError("Not even!");
@@ -1881,11 +1880,10 @@ export namespace Option {
       try {
         return ctor(fn(...args));
       } catch (_) {
-        return None; 
+        return None;
       }
     };
   }
-
 }
 
 /**
