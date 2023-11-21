@@ -1,10 +1,12 @@
 import {
+IsExact,
   assertEquals,
   assertExists,
   assertNotEquals,
   assertNotStrictEquals,
   assertObjectMatch,
   assertStrictEquals,
+  assertType,
 } from "../../dev_deps.ts";
 import { None, Option, Options, Some } from "./option.ts";
 
@@ -261,6 +263,20 @@ Deno.test("eitherway::Option", async (t) => {
       assertStrictEquals(res.unwrap(), true);
     },
   );
+  await t.step("Option.liftFallible() -> returns None if lifted function panics", () => {
+    function panics(n: number): number {
+      if(n % 2 === 0) return n;
+      throw new Error("Panic");
+    }
+
+    const lifted = Option.liftFallible(panics, Option.fromCoercible);
+
+    const res = Option.from(41).andThen(lifted);
+
+    assertType<IsExact<Parameters<typeof lifted>, Parameters<typeof panics>>>(true);
+    assertType<IsExact<ReturnType<typeof lifted>, Option<number>>>(true);
+    assertStrictEquals(res.isNone(), true);
+  });
   await t.step(
     "Option[Symbol.hasInstance]() -> instanceof returns true for instances of Some & None",
     () => {
