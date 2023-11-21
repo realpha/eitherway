@@ -1,5 +1,6 @@
 import {
   assertEquals,
+  assertNotStrictEquals,
   assertStrictEquals,
   assertThrows,
   assertType,
@@ -330,6 +331,16 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 
       assertStrictEquals(ref, res);
     });
+
+    await t.step(".clone() -> returns a new instance with a deep copy of the encapsulated value", () => {
+      const record = { a: "thing" };
+      const ok = Ok(record);
+
+      const clone = ok.clone();
+
+      assertNotStrictEquals(clone, ok);
+      assertNotStrictEquals(clone.unwrap(), record);
+    });
   });
 
   await t.step("Ok<T> -> JS well-known Symbols and Methods", async (t) => {
@@ -418,6 +429,16 @@ Deno.test("eitherway::Result::Err", async (t) => {
 
       assertType<IsExact<typeof ref, typeof res>>(true);
       assertStrictEquals(ref, res);
+    });
+
+    await t.step(".clone(), -> returns a new instance with a deep copy of the encapsulated value", () => {
+      const record = { a: "thing" };
+      const err = Err(record);
+
+      const clone = err.clone();
+
+      assertNotStrictEquals(clone, err);
+      assertNotStrictEquals(clone.unwrap(), record);
     });
   });
 

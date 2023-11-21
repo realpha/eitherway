@@ -83,9 +83,88 @@ export interface IResult<T, E> {
    */
   id(): Result<T, E>;
 
+  /**
+   * Use this to obtain a deep clone of `Result<T, E>`
+   *
+   * Under the hood, this uses the `structuredClone` algorithm exposed via
+   * the global function of the same name
+   *
+   * May incur performance penalties, depending on the platform, size and type
+   * of the data to be cloned
+   *
+   * Can be handy if user-defined operations on reference types mutate the
+   * passed value and the original value should be retained
+   *
+   * CAUTION: Mutations in a chained series of operations are strongly
+   * discouraged
+   *
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone)
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const record = { a: "thing" };
+   * const ok = Ok(record);
+   * const err = Err(record);
+   *
+   * const okClone = ok.clone();
+   * const errClone = err.clone();
+   *
+   * assert(okClone !== ok);
+   * assert(errClone !== err);
+   * assert(okClone.unwrap() !== record);
+   * assert(errClone.unwrap() !== record);
+   * ```
+   */
   clone(): Result<T, E>;
+
+  /**
+   * Use
+   *
+   * @category Result::
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * assert
+   * ```
+   */
   map<T2>(mapFn: (value: T) => T2): Result<T2, E>;
+
+  /**
+   * Use
+   *
+   * @category Result::
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * assert
+   * ```
+   */
   mapOr<T2>(mapFn: (value: T) => T2, orValue: T2): Ok<T2>;
+
+  /**
+   * Use
+   *
+   * @category Result::
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * assert
+   * ```
+   */
   mapOrElse<T2>(mapFn: (value: T) => T2, elseFn: (err: E) => T2): Ok<T2>;
   mapErr<E2>(mapFn: (err: E) => E2): Result<T, E2>;
   andThen<T2, E2>(
