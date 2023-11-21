@@ -341,6 +341,30 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       assertNotStrictEquals(clone, ok);
       assertNotStrictEquals(clone.unwrap(), record);
     });
+
+    await t.step(".tap() -> calls tapFn with a deep copy of the encapsulated value", () => {
+      /**
+       * HOF to capture changes to the original value
+       */
+      const createTapFn = function<T>(
+        originalValue: T,
+        originalResult: Ok<T>,
+      ): (res: Result<T, unknown>) => void {
+        return (res: Result<T, unknown>) => {
+          assertNotStrictEquals(originalValue, res.unwrap());
+          assertNotStrictEquals(originalResult, res);
+          assertEquals(originalValue, res.unwrap());
+        };
+      };
+
+      const record = { a: "thing" };
+      const ok = Ok(record);
+      const tapAssertion = createTapFn(record, ok);
+
+      const res = ok.tap(tapAssertion);
+
+      assertStrictEquals(res, ok);
+    });
   });
 
   await t.step("Ok<T> -> JS well-known Symbols and Methods", async (t) => {
@@ -439,6 +463,30 @@ Deno.test("eitherway::Result::Err", async (t) => {
 
       assertNotStrictEquals(clone, err);
       assertNotStrictEquals(clone.unwrap(), record);
+    });
+
+    await t.step(".tap() -> calls the tapFn with a deep clone of the encapsulated value", () => {
+      /**
+       * HOF to capture changes to the original value
+       */
+      const createTapFn = function<E>(
+        originalValue: E,
+        originalResult: Err<E>,
+      ): (res: Result<unknown, E>) => void {
+        return (res: Result<unknown, E>) => {
+          assertNotStrictEquals(originalValue, res.unwrap());
+          assertNotStrictEquals(originalResult, res);
+          assertEquals(originalValue, res.unwrap());
+        };
+      };
+
+      const record = { a: "thing" };
+      const err = Err(record);
+      const tapAssertion = createTapFn(record, err);
+
+      const res = err.tap(tapAssertion);
+
+      assertStrictEquals(res, err);
     });
   });
 

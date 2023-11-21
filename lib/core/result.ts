@@ -230,6 +230,39 @@ export interface IResult<T, E> {
    * ```
    */
   iter(): IterableIterator<T>;
+
+  /**
+   * Use this to perform side-effects transparently.
+   *
+   * The `tapFn` receives a deep clone of `Result<T, E>` {@linkcode IResult#clone}
+   *
+   * This may have performance implications, dependending on the size of
+   * the wrapped value `<T | E>`, but ensures that the `tapFn` can never
+   * change or invalidate the state of the `Result<T, E>` instance
+   *
+   * See the [reference](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone)
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const record = { a: "thing" };
+   * const ok = Ok(record);
+   *
+   * let ref: Record<string, string> = {};
+   * const res = ok.tap((res) => {
+   *   ref = res.unwrap();
+   *   ref.a = "fling";
+   * });
+   *
+   * assert(res === ok);
+   * assert(ref !== record);
+   * assert(ref.a !== record.a);
+   * ```
+   */
   tap(tapFn: (res: Result<T, E>) => void): Result<T, E>;
   inspect(inspectFn: (value: T) => void): Result<T, E>;
   inspectErr(inspectFn: (err: E) => void): Result<T, E>;
