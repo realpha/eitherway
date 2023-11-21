@@ -300,7 +300,7 @@ Deno.test("eitherway::Results", async (t) => {
 });
 
 Deno.test("eitherway::Result::Ok", async (t) => {
-  await t.step("Ok<T> -> Type predicates", async (t) => {
+  await t.step("Ok<T> -> Type Predicates", async (t) => {
     await t.step(".isOk() -> narrows to Ok by returning true", () => {
       const res = Ok(42) as Result<number, TypeError>;
 
@@ -320,7 +320,16 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 
       assertStrictEquals(res.isErr(), false);
     })
-      
+  });
+
+  await t.step("Ok<T> -> Convenience Methods", async (t) => {
+    await t.step(".id() -> returns the instance itself", () => {
+      const res = Ok(42);
+
+      const ref = res.id();
+
+      assertStrictEquals(ref, res);
+    });
   });
 
   await t.step("Ok<T> -> JS well-known Symbols and Methods", async (t) => {
@@ -379,8 +388,8 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 });
 
 Deno.test("eitherway::Result::Err", async (t) => {
-  await t.step("Err<E> -> Type predicates", async (t) => {
-    await t.step(".isOk() -> narrows to Err by returning false", () => {
+  await t.step("Err<E> -> Type Predicates", async (t) => {
+    await t.step(".isOk() -> narrows to Ok by returning false", () => {
       const res = Err(TypeError()) as Result<number, TypeError>;
 
       if (res.isOk()) {
@@ -398,6 +407,17 @@ Deno.test("eitherway::Result::Err", async (t) => {
       } 
 
       assertStrictEquals(res.isErr(), true);
+    });
+  });
+
+  await t.step("Err<E> -> Convenience Methods", async (t) => {
+    await t.step(".id() -> returns the instance itself", () => {
+      const res = Err(1);
+
+      const ref = res.id();
+
+      assertType<IsExact<typeof ref, typeof res>>(true);
+      assertStrictEquals(ref, res);
     });
   });
 

@@ -90,7 +90,7 @@ export interface IOption<T> {
    * Canonical identity function
    *
    * Mainly useful for flattening types of `Option<Option<T>>` togehter
-   * with `andThen()`,
+   * with `.andThen()`,
    *
    * @category Option::Basic
    *

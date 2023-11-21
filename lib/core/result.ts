@@ -60,7 +60,29 @@ export interface IResult<T, E> {
    * ```
    */
   isErr(): this is Err<E>;
+
+  /**
+   * Use this to return the Result itself.
+   *
+   * Canonical identity function. Mainly useful for flattening instances of
+   * `Result<Result<T, E>, E>` in combination with `.andThen()`
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const res = Ok(Err(Error())) as Result<Result<number, Error>, TypeError>;
+   *
+   * const flattened: Result<number, Error> = res.andThen(res => res.id());
+   *
+   * assert(res.isErr() === true);
+   * ```
+   */
   id(): Result<T, E>;
+
   clone(): Result<T, E>;
   map<T2>(mapFn: (value: T) => T2): Result<T2, E>;
   mapOr<T2>(mapFn: (value: T) => T2, orValue: T2): Ok<T2>;
