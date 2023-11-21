@@ -561,8 +561,8 @@ export namespace Result {
   export function lift<Args extends unknown[], R, T = R, E = never>(
     fn: (...args: Args) => R,
     ctor: (arg: R) => Result<T, E> = Ok as (arg: R) => Result<T, E>,
-  ) {
-    return function (...args: Args): Result<T, E> {
+  ): (...args: Args) => Result<T, E> {
+    return function (...args: Args) {
       try {
         return ctor(fn(...args));
       } catch (e) {
@@ -597,7 +597,7 @@ export namespace Result {
    *
    * const lifted = Result.liftFallible(toSpecialString, toTypeError);
    *
-   * const res = Ok("abcd").andThen(lifted);
+   * const res: Result<string, TypeError> = Ok("abcd").andThen(lifted);
    *
    * assert(res.isOk() === false);
    * assert(res.unwrap() instanceof TypeError === true);
@@ -607,8 +607,8 @@ export namespace Result {
     fn: (...args: Args) => R,
     errMapFn: (e: unknown) => E,
     ctor: (arg: R) => Result<T, E> = Ok as (arg: R) => Result<T, E>,
-  ) {
-    return function (...args: Args): Result<T, E> {
+  ): (...args: Args) => Result<T, E> {
+    return function (...args: Args) {
       try {
         return ctor(fn(...args));
       } catch (e) {
