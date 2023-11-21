@@ -17,7 +17,48 @@ import { None, Option } from "./option.ts";
  * Base interface implemented by `Ok<T>` and `Err<E>`
  */
 export interface IResult<T, E> {
+  /**
+   * Type predicate - use this to narrow `Result<T, E>` to `Ok<T>`
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const res = Ok(42) as Result<number, Error>;
+   *
+   * if (res.isOk()) {
+   *   // Here we have access to the `Ok` variant
+   *   const n: number = res.unwrap();
+   * }
+   *
+   * assert(res.isOk() === true);
+   * ```
+   */
   isOk(): this is Ok<T>;
+
+  /**
+   * Type predicate - use this to narrow `Result<T, E>` to `Err<E>`
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const res = Err(Error()) as Result<number, Error>;
+   *
+   * if (res.isErr()) {
+   *   // Here we have access to the `Err` variant
+   *   const e: Error = res.unwrap();
+   * }
+   *
+   * assert(res.isErr() === true);
+   * ```
+   */
   isErr(): this is Err<E>;
   id(): Result<T, E>;
   clone(): Result<T, E>;

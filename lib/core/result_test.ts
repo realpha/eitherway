@@ -300,6 +300,29 @@ Deno.test("eitherway::Results", async (t) => {
 });
 
 Deno.test("eitherway::Result::Ok", async (t) => {
+  await t.step("Ok<T> -> Type predicates", async (t) => {
+    await t.step(".isOk() -> narrows to Ok by returning true", () => {
+      const res = Ok(42) as Result<number, TypeError>;
+
+      if (res.isOk()) {
+        assertType<IsExact<typeof res, Ok<number>>>(true);
+      } 
+
+      assertStrictEquals(res.isOk(), true);
+    })
+
+    await t.step(".isErr() -> narrows to Err by returning false", () => {
+      const res = Ok(42) as Result<number, TypeError>;
+
+      if (res.isErr()) {
+        assertType<IsExact<typeof res, Err<TypeError>>>(true);
+      } 
+
+      assertStrictEquals(res.isErr(), false);
+    })
+      
+  });
+
   await t.step("Ok<T> -> JS well-known Symbols and Methods", async (t) => {
     await t.step(".toString() -> returns the string tag", () => {
       const okTag = Ok("thing").toString();
@@ -356,6 +379,28 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 });
 
 Deno.test("eitherway::Result::Err", async (t) => {
+  await t.step("Err<E> -> Type predicates", async (t) => {
+    await t.step(".isOk() -> narrows to Err by returning false", () => {
+      const res = Err(TypeError()) as Result<number, TypeError>;
+
+      if (res.isOk()) {
+        assertType<IsExact<typeof res, Ok<number>>>(true);
+      } 
+
+      assertStrictEquals(res.isOk(), false);
+    })
+
+    await t.step(".isErr() -> narrows to Err by returning true", () => {
+      const res = Err(TypeError()) as Result<number, TypeError>;
+
+      if (res.isErr()) {
+        assertType<IsExact<typeof res, Err<TypeError>>>(true);
+      } 
+
+      assertStrictEquals(res.isErr(), true);
+    });
+  });
+
   await t.step("Err<E> -> JS well-known Symbols and Methods", async (t) => {
     await t.step(".toString() -> returns the string tag", () => {
       const errTag = Err(Error()).toString();
