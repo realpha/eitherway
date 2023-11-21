@@ -29,6 +29,9 @@ import { Err, Ok, Result } from "./result.ts";
  * ==============
  */
 
+/**
+ * The base interface implemented by {@linkcode Some} and {@linkcode None}
+ */
 export interface IOption<T> {
   /**
    * Type predicate - use this to narrow an `Option<T>` to `Some<T>`
@@ -1836,6 +1839,49 @@ export namespace Option {
   ) {
     return function (...args: Readonly<Args>): Option<R2> {
       return ctor(fn(...args));
+    };
+  }
+
+  /**
+   * Same as {@linkcode Option.lift} but with a safety net.
+   *
+   * Use this if the function to be lifted might throw. In case of an
+   * exception, `None` is returned.
+   *
+   * @category Option::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Option, None, Some } from "./option.ts";
+   *
+   * function fallible(input: number): number {
+   *   if (input === 42) return input;
+   *   throw TypeError("Not even!");
+   * }
+   *
+   * const lifted = Option.liftFallible(fallible, Option.fromCoercible);
+   *
+   * const maybe = Option.from(42).andThen(lifted);
+   *
+   * assert(maybe.isSome() === true);
+   * assert(maybe.unwrap() === 42);
+   * ```
+   */
+  export function liftFallible<
+    Args extends Readonly<unknown[]>,
+    R1,
+    R2 = NonNullish<R1>,
+  >(
+    fn: (...args: Args) => R1,
+    ctor: (arg: R1) => Option<R2> = Option.from as (arg: R1) => Option<R2>,
+  ) {
+    return function (...args: Readonly<Args>): Option<R2> {
+      try {
+        return ctor(fn(...args));
+      } catch (_) {
+        return None;
+      }
     };
   }
 }

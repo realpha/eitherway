@@ -1,7 +1,7 @@
 import { asInfallible, Err, Ok, Result, Results } from "./mod.ts";
 
 /**
- * #Task<T, E>
+ * # Task<T, E>
  *
  * `Task<T, E>` is a composeable extension of `Promise<Result<T, E>>`
  *
@@ -24,6 +24,22 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * =======================
    */
 
+  /**
+   * Use this to create a task from a `Result<T, E>` value
+   *
+   * @category Task::Basic
+   *
+   * @example
+   * ```typescript
+   * import { Ok, Result, Task } from "./mod.ts";
+   *
+   * async function produceRes(): Promise<Result<number, TypeError>> {
+   *  return Ok(42);
+   * }
+   *
+   * const task = Task.of(produceRes());
+   * ```
+   */
   static of<T, E>(
     value: Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
@@ -63,13 +79,44 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return new Task<T, E>((resolve) => resolve(p));
   }
 
-  static liftFallible<Args extends unknown[], T, E>(
-    fn: (...args: Args) => T | PromiseLike<T>,
+  /**
+   * Use this lift a function into a `Task` context, by composing the wrapped
+   * function with a `Result` constructor and an error mapping function.
+   *
+   * If no constructor is provided, `Ok` is used as a default.
+   *
+   * This higher order function is especially useful to intergrate 3rd party
+   * code into your `Task` pipelines.
+   *
+   * @category Task::Advanced
+   *
+   * @example
+   * ```
+   * import { Err, Ok, Result, Task } from "./mod.ts";
+   *
+   * async function toSpecialString(s: string): Promise<string> {
+   *   if (s.length % 3 === 0) return s;
+   *   throw TypeError("Not confomrming to schema");
+   * }
+   *
+   * function toTypeError(e: unknown): TypeError {
+   *   if (e instanceof TypeError) return e;
+   *   return TypeError("Unexpected error", { cause: e });
+   * }
+   *
+   * const lifted = Task.liftFallible(toSpecialString, toTypeError);
+   *
+   * const task: Task<string, TypeError> = Task.succeed("abcd").andThen(lifted);
+   * ```
+   */
+  static liftFallible<Args extends unknown[], R, E, T = R>(
+    fn: (...args: Args) => R | PromiseLike<R>,
     errorMapFn: (reason: unknown) => E,
-  ) {
-    return function (...args: Args): Task<T, E> {
-      const p = new Promise<T>((resolve) => resolve(fn(...args))).then((v) =>
-        Ok(v)
+    ctor: (arg: R) => Result<T, E> = Ok as (arg: R) => Result<T, E>,
+  ): (...args: Args) => Task<T, E> {
+    return function (...args: Args) {
+      const p = new Promise<R>((resolve) => resolve(fn(...args))).then((v) =>
+        ctor(v)
       )
         .catch((e) => Err(errorMapFn(e)));
       return new Task<T, E>((resolve) => resolve(p));
@@ -82,6 +129,15 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * ======================
    */
 
+  /**
+   * Use this to return the `Task` itself. Canonical identity function.
+   *
+   * Mostly useful for flattening or en lieu of a noop.
+   *
+   * This is mostly provided for compatibility with with `Result<T, E>`.
+   *
+   * @category Task::Basic
+   */
   id(): Task<T, E> {
     return this;
   }
@@ -302,6 +358,16 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * ======================
    */
 
+  /**
+   * Use this to obtain a function, with returns the provided `Task` itself.
+   * Canonical identity function.
+   *
+   * Mostly useful for flattening or en lieu of a noop.
+   *
+   * This is mostly provided for compatibility with with `Result<T, E>`.
+   *
+   * @category Task::Basic
+   */
   static id<T, E>() {
     return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
       return idTask(res);

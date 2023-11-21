@@ -3,6 +3,7 @@ import { asInfallible, Err, Ok, Result } from "../core/mod.ts";
 import { Task, Tasks } from "./task.ts";
 import {
   assertEquals,
+  assertInstanceOf,
   assertStrictEquals,
   assertType,
 } from "../../dev_deps.ts";
@@ -71,6 +72,7 @@ Deno.test("eitherway::Task", async (t) => {
 
         const infallible = await Task.fromPromise(futureNumber, asInfallible);
 
+        assertType<IsExact<typeof infallible, Result<number, never>>>(true);
         assertStrictEquals(infallible.isErr(), false);
       },
     );
@@ -102,6 +104,7 @@ Deno.test("eitherway::Task", async (t) => {
 
         const failed = await Task.fromPromise(futureTypeError, errMapFn);
 
+        assertType<IsExact<typeof failed, Result<never, TypeError>>>(true);
         assertStrictEquals(failed.unwrap(), te);
       },
     );
@@ -127,6 +130,8 @@ Deno.test("eitherway::Task", async (t) => {
           errMapFn,
         );
 
+        assertType<IsExact<typeof failed, Result<never, TypeError>>>(true);
+        assertType<IsExact<typeof alsoFailed, Result<void, TypeError>>>(true);
         assertStrictEquals(failed.unwrap(), te);
         assertStrictEquals(alsoFailed.unwrap(), te);
       },
@@ -153,6 +158,78 @@ Deno.test("eitherway::Task", async (t) => {
         shouldProduceInfallibleAsync().catch((e) =>
           assertStrictEquals(e?.cause, te)
         );
+      },
+    );
+
+    await t.step(
+      ".liftFallible -> composes functions and constructors correctly",
+      async () => {
+        async function toSpecialString(s: string): Promise<string> {
+          if (s.length % 3 === 0) return s;
+          throw TypeError("Not confomrming to schema");
+        }
+
+        function toNumber(str: string): Result<number, never> {
+          return Ok(str.length);
+        }
+
+        function toTypeError(e: unknown): TypeError {
+          if (e instanceof TypeError) return e;
+          return TypeError("Unexpected error", { cause: e });
+        }
+
+        const lifted = Task.liftFallible(
+          toSpecialString,
+          toTypeError,
+          toNumber,
+        );
+
+        const task = Task.succeed("abc").andThen(lifted);
+
+        const res = await task;
+
+        assertType<
+          IsExact<Parameters<typeof lifted>, Parameters<typeof toSpecialString>>
+        >(true);
+        assertType<IsExact<typeof task, Task<number, TypeError>>>(true);
+        assertStrictEquals(res.isOk(), true);
+        assertStrictEquals(res.unwrap(), 3);
+      },
+    );
+
+    await t.step(
+      ".liftFallible -> maps caught exceptions correctly",
+      async () => {
+        async function toSpecialString(s: string): Promise<string> {
+          if (s.length % 3 === 0) return s;
+          throw TypeError("Not confomrming to schema");
+        }
+
+        function toNumber(str: string): Result<number, never> {
+          return Ok(str.length);
+        }
+
+        function toTypeError(e: unknown): TypeError {
+          if (e instanceof TypeError) return e;
+          return TypeError("Unexpected error", { cause: e });
+        }
+
+        const lifted = Task.liftFallible(
+          toSpecialString,
+          toTypeError,
+          toNumber,
+        );
+
+        const task = Task.succeed("abcd").andThen(lifted);
+
+        const res = await task;
+
+        assertType<
+          IsExact<Parameters<typeof lifted>, Parameters<typeof toSpecialString>>
+        >(true);
+        assertType<IsExact<typeof task, Task<number, TypeError>>>(true);
+        assertStrictEquals(res.isErr(), true);
+        assertInstanceOf(res.unwrap(), TypeError);
       },
     );
   });
