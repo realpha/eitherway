@@ -533,6 +533,31 @@ export namespace Result {
       return Err(errMapFn(e));
     }
   }
+
+  /**
+   * Use this to lift a function into a `Result` context, by composing
+   * the wrapped function with a `Result` constructor.
+   *
+   * If no constructor is provided, `Ok` is used as default.
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./mod.ts";
+   *
+   * function powerOfTwo(n: number): number {
+   *   return Math.pow(2, n);
+   * }
+   *
+   * const lifted = Result.lift(powerOfTwo);
+   *
+   * const res = Ok(2).andThen(lifted);
+   *
+   * assert(res.isOk() === true);
+   * assert(res.unwrap() === 4);
+   */
   export function lift<Args extends unknown[], R, T = R, E = never>(
     fn: (...args: Args) => R,
     ctor: (arg: R) => Result<T, E> = Ok as (arg: R) => Result<T, E>,
@@ -545,6 +570,39 @@ export namespace Result {
       }
     };
   }
+
+  /**
+   * Use this to lift a fallible function into a `Result` context, by composing
+   * the wrapped function with a `Result` constructor and an error mapping
+   * function.
+   *
+   * If no constructor is provided, `Ok` is used as default.
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./mod.ts";
+   *
+   * function toSpecialString(s: string): string {
+   *   if (s.length % 3 === 0) return s;
+   *   throw TypeError("Not confomrming to schema");
+   * }
+   *
+   * function toTypeError(e: unknown): TypeError {
+   *   if (e instanceof TypeError) return e;
+   *   return TypeError("Unexpected error", { cause: e });
+   * }
+   *
+   * const lifted = Result.liftFallible(toSpecialString, toTypeError);
+   *
+   * const res = Ok("abcd").andThen(lifted);
+   *
+   * assert(res.isOk() === false);
+   * assert(res.unwrap() instanceof TypeError === true);
+   * ```
+   */
   export function liftFallible<Args extends unknown[], R, E, T = R>(
     fn: (...args: Args) => R,
     errMapFn: (e: unknown) => E,
