@@ -365,6 +365,34 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 
       assertStrictEquals(res, ok);
     });
+
+    await t.step(".inspect() -> calls the provided inspectFn with the encapsulated value", () => {
+      const createInspectFn = function<T>(originalValue: T): (value: T) => void {
+        return (value: T) => {
+          assertStrictEquals(value, originalValue);
+        };
+      };
+      const record = { a: "thing" };
+      const ok = Ok(record);
+      const inspectAssertion = createInspectFn(record);
+
+      const res = ok.inspectErr(inspectAssertion);
+
+      assertStrictEquals(res, ok);
+    });
+
+    await t.step(".inspectErr() -> short-circuits and returns immediately", () => {
+      let count = 0;
+      const inspectFn = () => {
+        count += 1;
+      }
+      const ok = Ok(1);
+
+      const res = ok.inspectErr(inspectFn);
+
+      assertStrictEquals(res, ok);
+      assertStrictEquals(count, 0);
+    });
   });
 
   await t.step("Ok<T> -> JS well-known Symbols and Methods", async (t) => {
@@ -485,6 +513,34 @@ Deno.test("eitherway::Result::Err", async (t) => {
       const tapAssertion = createTapFn(record, err);
 
       const res = err.tap(tapAssertion);
+
+      assertStrictEquals(res, err);
+    });
+
+    await t.step(".inspect() -> short-circuits and returns immediately", () => {
+      let count = 0;
+      const inspectFn = () => {
+        count += 1;
+      }
+      const err = Err(1);
+
+      const res = err.inspect(inspectFn);
+
+      assertStrictEquals(res, err);
+      assertStrictEquals(count, 0);
+    });
+
+    await t.step(".inspectErr() -> calls the provided inspectFn with the encapsulated value", () => {
+      const createInspectFn = function<E>(originalValue: E): (value: E) => void {
+        return (value: E) => {
+          assertStrictEquals(value, originalValue);
+        };
+      };
+      const record = { a: "thing" };
+      const err = Err(record);
+      const inspectAssertion = createInspectFn(record);
+
+      const res = err.inspectErr(inspectAssertion);
 
       assertStrictEquals(res, err);
     });

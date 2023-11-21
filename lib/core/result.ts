@@ -251,8 +251,8 @@ export interface IResult<T, E> {
    *
    * const record = { a: "thing" };
    * const ok = Ok(record);
-   *
    * let ref: Record<string, string> = {};
+   * 
    * const res = ok.tap((res) => {
    *   ref = res.unwrap();
    *   ref.a = "fling";
@@ -264,7 +264,61 @@ export interface IResult<T, E> {
    * ```
    */
   tap(tapFn: (res: Result<T, E>) => void): Result<T, E>;
+
+  /**
+   * Use this to inspect the the encapsulated value `<T>` transparently.
+   *
+   * Mainly used for debugging and logging purposes.
+   *
+   * In case of `Err<E>`, this method short-cuits and returns the `Err<E>`
+   * instance. See {@linkcode IResult#inspectErr} for the opposite case;
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const record = { a: "thing" };
+   * const ok = Ok(record);
+   * const err = Err(record);
+   *
+   * const okRes = ok.inspect(console.log);   // logs '{ a: "thing" }'
+   * const errRes = err.inspect(console.log); // not called
+   *
+   * assert(okRes === ok);
+   * assert(errRes === err);
+   * ```
+   */
   inspect(inspectFn: (value: T) => void): Result<T, E>;
+
+  /**
+   * Use this to inspect the the encapsulated value `<E>` transparently.
+   *
+   * Mainly used for debugging and logging purposes.
+   *
+   * In case of `Ok<T>`, this method short-cuits and returns the `Ok<T>`
+   * instance. See {@linkcode IResult#inspect} for the opposite case;
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const record = { a: "thing" };
+   * const ok = Ok(record);
+   * const err = Err(record);
+   *
+   * const okRes = ok.inspectErr(console.log);   // not called
+   * const errRes = err.inspectErr(console.log); // logs '{ a: "thing" }'
+   *
+   * assert(okRes === ok);
+   * assert(errRes === err);
+   * ```
+   */
   inspectErr(inspectFn: (err: E) => void): Result<T, E>;
 
   /**
