@@ -123,56 +123,325 @@ export interface IResult<T, E> {
   clone(): Result<T, E>;
 
   /**
-   * Use
+   * Use this to map the encapsulated value `<T>' to `<T2>`.
    *
-   * @category Result::
+   * In case of `Err<E>` this method short-circuits. See {@linkcode IResult#mapErr}
+   * for the opposite case.
+   *
+   * @category Result::Basic
    *
    * @example
    * ```typescript
    * import { assert } from "./assert.ts";
    * import { Err, Ok, Result } from "./result.ts";
    *
-   * assert
+   * const double = (n: number) => n * 2;
+   * const ok = Ok(42);
+   * const err = Err(Error());
+   *
+   * const okRes = ok.map(double);
+   * const errRes = err.map(double);
+   *
+   * assert(okRes.isOk() === true);
+   * assert(okRes.unwrap() === 84);
+   * assert(errRes.isErr() === true);
+   * assert(errRes === err);
    * ```
    */
   map<T2>(mapFn: (value: T) => T2): Result<T2, E>;
 
   /**
-   * Use
+   * Same as `.map()` but in case of `Err<E>, a new instance 
+   * of `Ok`, wrapping the provided `orValue` will be returned.
    *
-   * @category Result::
+   * @category Result::Intermediate
    *
    * @example
    * ```typescript
    * import { assert } from "./assert.ts";
    * import { Err, Ok, Result } from "./result.ts";
    *
-   * assert
+   * const fallback = 10;
+   * const double = (n: number) => n * 2;
+   * const ok = Ok(5);
+   * const err = Err(Error());
+   *
+   * const mappedOk = ok.mapOr(double, fallback);
+   * const mappedErr = err.mapOr(double, fallback);
+   *
+   * assert(mappedOk.isOk() === true);
+   * assert(mappedOk.unwrap() === 10);
+   * assert(mappedErr.isErr() === false);
+   * assert(mappedErr.unwrap() === 10);
    * ```
    */
   mapOr<T2>(mapFn: (value: T) => T2, orValue: T2): Ok<T2>;
 
   /**
-   * Use
+   * Same as `.map()` but in case of `Err<E>, a new instance 
+   * of `Ok`, wrapping the return value of the provided `elseFn` will be returned.
    *
-   * @category Result::
+   * Use this if the fallback value is expensive to produce.
+   *
+   * @category Result::Intermediate
    *
    * @example
    * ```typescript
    * import { assert } from "./assert.ts";
    * import { Err, Ok, Result } from "./result.ts";
    *
-   * assert
+   * const fallback = (e: TypeError) => e.message.length;
+   * const double = (n: number) => n * 2;
+   * const ok = Ok(5);
+   * const err = Err(TypeError("Booom"));
+   *
+   * const mappedOk = ok.mapOrElse(double, fallback);
+   * const mappedErr = err.mapOrElse(double, fallback);
+   *
+   * assert(mappedOk.isOk() === true);
+   * assert(mappedOk.unwrap() === 10);
+   * assert(mappedErr.isErr() === false);
+   * assert(mappedErr.unwrap() === 5);
    * ```
    */
   mapOrElse<T2>(mapFn: (value: T) => T2, elseFn: (err: E) => T2): Ok<T2>;
+  
+  /**
+   * Use this to map the encapsulated value `<E>` to `<E2>`. In case of
+   * `Ok<T>`, this method short-circuits. See {@linkcode IResult#map}
+   * for the opposite case.
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const toTypeError = (e: Error) => TypeError("Something went wrong", { cause: e });
+   * const ok = Ok(42);
+   * const err = Err(Error("This went wrong"));
+   *
+   * const mappedOk = ok.mapErr(toTypeError);
+   * const mappedErr = err.mapErr(toTypeError);
+   *
+   * assert(mappedOk.isOk() === true);
+   * assert(mappedOk === ok);
+   * assert(mappedErr.isErr() === true);
+   * assert(mappedErr !== err);
+   * assert(mappedErr.unwrap().cause === err.unwrap());
+   * ```
+   */
   mapErr<E2>(mapFn: (err: E) => E2): Result<T, E2>;
+
+  
+  /**
+   * Use this to produce a new instance of `Result<T2, E2>` from the 
+   * encapsulated value `<T>`. Can be used to flatten an instance of
+   * `Result<Result<T2, E2>, E>` to `Result<T2, E | E2>`.
+   *
+   * In case of `Err<E>`, this method short-circuits.
+   *
+   * See {@linkcode IResult#orElse} for the opposite case.
+   *
+   * Canonical `.flatMap()` or `.chain()` method.
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const processString = function(str: string): Result<number, TypeError> {
+   *  if(str.length > 5) return Ok(str.length);
+   *  return Err(TypeError("String too short"));
+   * }
+   *
+   * const ok = Ok("Hello!");
+   * const err = Err(TypeError("Something went wrong"));
+   * const nested = Ok(Ok(42));
+   *
+   * const chained = ok.andThen(processString);
+   * const chainedErr = err.andThen(processString);
+   * const flattened = nested.andThen((r) => r.id());
+   *  
+   * assert(chained.isOk() === true);
+   * assert(chained.unwrap() === 6);
+   * assert(chainedErr.isErr() === true);
+   * assert(chainedErr === err);
+   * assert(flattened.isOk() === true);
+   * assert(flattened.unwrap() === 42);
+   * ```
+   */
   andThen<T2, E2>(
     thenFn: (value: T) => Result<T2, E2>,
   ): Err<E> | Result<T2, E2>;
+    
+  /**
+   * Use this to produce a new instance of `Result<T2, E2>` from the
+   * encapsulated value `<E>`. Can be used to flatten an instance of
+   * `Result<T, Result<T2, E2>>` to `Result<T | T2, E2>`.
+   *
+   * In case of `Ok<T>`, this method short-circuits.
+   *
+   * See {@linkcode IResult#andThen} for the opposite case.
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Option, Result } from "./mod.ts";
+   *
+   * function recover(e: Error): Result<string, Error> {
+   *   return Option(e.cause)
+   *     .filter((v): v is string => typeof v === "string")
+   *     .okOr(e);
+   * }
+   *
+   * const ok = Ok("ido!");
+   * const err = Err(Error("Panic!", { cause: "Fear" }));
+   * const nested = Err(Ok(42));
+   *
+   * const chained = ok.orElse(recover);
+   * const chainedErr = err.orElse(recover);
+   * const flattened = nested.orElse((r) => r.id());
+   *
+   * assert(chained.isOk() === true);
+   * assert(chained === ok);
+   * assert(chainedErr.isErr() === false);
+   * assert(chainedErr !== err);
+   * assert(flattened.isOk() === true);
+   * assert(flattened.unwrap() === 42);
+   * ```
+   */
   orElse<T2, E2>(elseFn: (err: E) => Result<T2, E2>): Ok<T> | Result<T2, E2>;
+
+  /**
+   * Use this to conditionally pass-through the encapsulated value `<T>`
+   * based upon the outcome of the supplied `tripFn`.
+   *
+   * In case of `Err<E>`, this method short-circuits.
+   *
+   * In case of `Ok<T>`, the supplied `tripFn` is called with the encapsulated
+   * value `<T>` and if the return value is:
+   *  - `Ok<T2>`: it is discarded and the original `Ok<T>` is returned
+   *  - `Err<E2>`: `Err<E2>` is returned
+   *
+   * See {@linkcode IResult#rise} for the opposite case.
+   *
+   * This is equivalent to chaining:
+   * `original.andThen(tripFn).and(original)`
+   *
+   * |**LHS `trip` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:----------------:|:-------------:|:--------------:|
+   * |  **LHS: Ok<T>**  |     Ok<T>     |     Err<E2>    |
+   * |  **LHS: Err<E>** |     Err<E>    |     Err<E>     |
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Empty, Err, Ok, Result } from "./mod.ts";
+   * import { emptyDirSync } from "https://deno.land/std@0.207.0/fs/empty_dir.ts";
+   *
+   * const { BadResource, NotFound, PermissionDenied } = Deno.errors;
+   * type BadResource = typeof BadResource;
+   * type NotFound = typeof NotFound;
+   * type PermissionDenied = typeof PermissionDenied;
+   *
+   * const castTo = function<E>(e: unknown): E {
+   *   return e as E;
+   * }
+   *
+   * const getPath = function(): Result<string, NotFound> {
+   *   //perform a few checks...
+   *   return Ok(Deno.args[0]);
+   * }
+   *
+   * const prepareDir = Result.liftFallible(
+   *   emptyDirSync,
+   *   castTo<PermissionDenied>,
+   * ); 
+   *
+   * const writeBlobs = function(path: string): Result<Empty, BadResource> {
+   *   // create files and write something to them...
+   *   return Ok.empty();
+   * }
+   *
+   * const res = getPath()  // here we try get a path...
+   *   .trip(prepareDir)    // ...and if THIS works, we pass it on...
+   *   .andThen(writeBlobs) // ...so that we can process it here.
+   *   .inspect((_) => console.log("done"))
+   *   .inspectErr(console.error); 
+   *
+   * assert(res.unwrap() != null);
+   * ```
+   */
   trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
+
+  /**
+   * Use this to conditionally pass-through the encapsulated value `<E>`
+   * based upon the outcome of the supplied `riseFn`.
+   *
+   * In case of `Ok<T>`, this method short-circuits.
+   *
+   * In case of `Err<E>`, the supplied `riseFn` is called with the encapsulated
+   * value `<E>` and if the return value is:
+   *  - `Ok<T2>`: it is returned
+   *  - `Err<T2>`: it is discarded and the original `Err<E>` is returned
+   *
+   * See {@linkcode IResult#trip} for the opposite case.
+   *
+   * This is equivalent to chaining:
+   * `original.orElse(riseFn).or(original)`
+   *
+   * |**LHS `rise` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:----------------:|:-------------:|:--------------:|
+   * |  **LHS: Ok<T>**  |     Ok<T>     |     Ok<T>      |
+   * |  **LHS: Err<E>** |     Ok<T2>    |     Err<E>     |
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const { BadResource, NotFound, PermissionDenied } = Deno.errors;
+   * type BadResource = typeof BadResource;
+   * type NotFound = typeof NotFound;
+   * type PermissionDenied = typeof PermissionDenied;
+   *
+   * type Config = Record<string, string>;
+   *
+   * const readConfig = function(): Result<Config, NotFound> {
+   *   // Oh boy, that didn't work out...
+   *   return Err(NotFound("Config not found"));
+   * }
+   *
+   * const readFallbackConfig = function(): Result<Config, PermissionDenied> {
+   *   // ...also doesn't work
+   *   return Err(PermissionDenied());
+   * }
+   *
+   * const doSomething = function(cfg: Config): Result<string, BadResource> {
+   *   // do some processing here...
+   *   return Ok(JSON.stringify(cfg));
+   * }
+   *   
+   * const res = readConfig()      // Let's try to read the config...
+   *   .rise(readFallbackConfig)   // ...try the fallback...
+   *   .andThen(doSomething)       // ...but we retain the original error
+   *   .inspect(console.log)       // Ok<string>
+   *   .inspectErr(console.error); // Err<NotFound> | Err<BadResource>
+   *
+   * assert(res.isErr() === true);
+   */
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
+
   and<T2, E2>(rhs: Result<T2, E2>): Err<E> | Result<T2, E2>;
   or<T2, E2>(rhs: Result<T2, E2>): Ok<T> | Result<T2, E2>;
   zip<T2, E2>(rhs: Result<T2, E2>): Ok<[T, T2]> | Err<E> | Err<E2>;
@@ -513,8 +782,7 @@ class _Ok<T> implements IResult<T, never> {
     return Ok([this.#value, rhs.unwrap()]);
   }
   trip<T2, E2>(thenFn: (value: T) => Result<T2, E2>): Ok<T> | Err<E2> {
-    const clone = this.clone().unwrap();
-    const lhs = thenFn(clone);
+    const lhs = thenFn(this.#value);
 
     return lhs.and(this);
   }
@@ -627,8 +895,7 @@ class _Err<E> implements IResult<never, E> {
     return this;
   }
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Ok<T2> | Err<E> {
-    const clone = this.clone().unwrap();
-    const lhs = riseFn(clone);
+    const lhs = riseFn(this.#err);
 
     return lhs.or(this);
   }
