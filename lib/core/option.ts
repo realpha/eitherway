@@ -588,7 +588,6 @@ export interface IOption<T> {
    * |  LHS: Some<T>  |    Some<T>   |     None    |
    * |  LHS:  None    |      None    |     None    |
    *
-   *
    * Can be used to perform synchronous side-effects which can derail the
    * current `Option<T>`
    *

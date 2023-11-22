@@ -151,7 +151,7 @@ export interface IResult<T, E> {
   map<T2>(mapFn: (value: T) => T2): Result<T2, E>;
 
   /**
-   * Same as `.map()` but in case of `Err<E>, a new instance 
+   * Same as `.map()` but in case of `Err<E>, a new instance
    * of `Ok`, wrapping the provided `orValue` will be returned.
    *
    * @category Result::Intermediate
@@ -178,7 +178,7 @@ export interface IResult<T, E> {
   mapOr<T2>(mapFn: (value: T) => T2, orValue: T2): Ok<T2>;
 
   /**
-   * Same as `.map()` but in case of `Err<E>, a new instance 
+   * Same as `.map()` but in case of `Err<E>, a new instance
    * of `Ok`, wrapping the return value of the provided `elseFn` will be returned.
    *
    * Use this if the fallback value is expensive to produce.
@@ -205,7 +205,7 @@ export interface IResult<T, E> {
    * ```
    */
   mapOrElse<T2>(mapFn: (value: T) => T2, elseFn: (err: E) => T2): Ok<T2>;
-  
+
   /**
    * Use this to map the encapsulated value `<E>` to `<E2>`. In case of
    * `Ok<T>`, this method short-circuits. See {@linkcode IResult#map}
@@ -234,9 +234,8 @@ export interface IResult<T, E> {
    */
   mapErr<E2>(mapFn: (err: E) => E2): Result<T, E2>;
 
-  
   /**
-   * Use this to produce a new instance of `Result<T2, E2>` from the 
+   * Use this to produce a new instance of `Result<T2, E2>` from the
    * encapsulated value `<T>`. Can be used to flatten an instance of
    * `Result<Result<T2, E2>, E>` to `Result<T2, E | E2>`.
    *
@@ -265,7 +264,7 @@ export interface IResult<T, E> {
    * const chained = ok.andThen(processString);
    * const chainedErr = err.andThen(processString);
    * const flattened = nested.andThen((r) => r.id());
-   *  
+   *
    * assert(chained.isOk() === true);
    * assert(chained.unwrap() === 6);
    * assert(chainedErr.isErr() === true);
@@ -277,7 +276,7 @@ export interface IResult<T, E> {
   andThen<T2, E2>(
     thenFn: (value: T) => Result<T2, E2>,
   ): Err<E> | Result<T2, E2>;
-    
+
   /**
    * Use this to produce a new instance of `Result<T2, E2>` from the
    * encapsulated value `<E>`. Can be used to flatten an instance of
@@ -364,7 +363,7 @@ export interface IResult<T, E> {
    * const prepareDir = Result.liftFallible(
    *   emptyDirSync,
    *   castTo<PermissionDenied>,
-   * ); 
+   * );
    *
    * const writeBlobs = function(path: string): Result<Empty, BadResource> {
    *   // create files and write something to them...
@@ -375,7 +374,7 @@ export interface IResult<T, E> {
    *   .trip(prepareDir)    // ...and if THIS works, we pass it on...
    *   .andThen(writeBlobs) // ...so that we can process it here.
    *   .inspect((_) => console.log("done"))
-   *   .inspectErr(console.error); 
+   *   .inspectErr(console.error);
    *
    * assert(res.unwrap() != null);
    * ```
@@ -431,7 +430,7 @@ export interface IResult<T, E> {
    *   // do some processing here...
    *   return Ok(JSON.stringify(cfg));
    * }
-   *   
+   *
    * const res = readConfig()      // Let's try to read the config...
    *   .rise(readFallbackConfig)   // ...try the fallback...
    *   .andThen(doSomething)       // ...but we retain the original error
@@ -521,7 +520,7 @@ export interface IResult<T, E> {
    * const record = { a: "thing" };
    * const ok = Ok(record);
    * let ref: Record<string, string> = {};
-   * 
+   *
    * const res = ok.tap((res) => {
    *   ref = res.unwrap();
    *   ref.a = "fling";

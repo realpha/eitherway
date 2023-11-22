@@ -309,60 +309,70 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 
       if (res.isOk()) {
         assertType<IsExact<typeof res, Ok<number>>>(true);
-      } 
+      }
 
       assertStrictEquals(res.isOk(), true);
-    })
+    });
 
     await t.step(".isErr() -> narrows to Err by returning false", () => {
       const res = Ok(42) as Result<number, TypeError>;
 
       if (res.isErr()) {
         assertType<IsExact<typeof res, Err<TypeError>>>(true);
-      } 
+      }
 
       assertStrictEquals(res.isErr(), false);
-    })
+    });
   });
 
   await t.step("Ok<T> -> Map Methods", async (t) => {
-    await t.step(".map() -> returns new instance of Ok with applied mapFn", () => {
-      const toNumber = (str: string) => str.length;
-      const ok = Ok("thing") as Result<string, Error>;
+    await t.step(
+      ".map() -> returns new instance of Ok with applied mapFn",
+      () => {
+        const toNumber = (str: string) => str.length;
+        const ok = Ok("thing") as Result<string, Error>;
 
-      const res = ok.map(toNumber);
+        const res = ok.map(toNumber);
 
-      assertType<IsExact<typeof res, Result<number, Error>>>(true);
-      assertStrictEquals(res.isOk(), true);
-      assertStrictEquals(res.unwrap(), 5);
-    });
+        assertType<IsExact<typeof res, Result<number, Error>>>(true);
+        assertStrictEquals(res.isOk(), true);
+        assertStrictEquals(res.unwrap(), 5);
+      },
+    );
 
-    await t.step(".mapOr() -> returns new instance of Ok with applied mapFn", () => {
-      const fallback = 10;
-      const toNumber = (str: string) => str.length;
-      const ok = Ok("thing") as Result<string, Error>;
+    await t.step(
+      ".mapOr() -> returns new instance of Ok with applied mapFn",
+      () => {
+        const fallback = 10;
+        const toNumber = (str: string) => str.length;
+        const ok = Ok("thing") as Result<string, Error>;
 
-      const res = ok.mapOr(toNumber, fallback);
+        const res = ok.mapOr(toNumber, fallback);
 
-      assertType<IsExact<typeof res, Ok<number>>>(true);
-      assertStrictEquals(res.isOk(), true);
-      assertStrictEquals(res.unwrap(), 5);
-    });
+        assertType<IsExact<typeof res, Ok<number>>>(true);
+        assertStrictEquals(res.isOk(), true);
+        assertStrictEquals(res.unwrap(), 5);
+      },
+    );
 
-    await t.step(".mapOrElse() -> returns new instance of Ok with applied mapFn", () => {
-      const fallback = () => 10;
-      const toNumber = (str: string) => str.length;
-      const ok = Ok("thing") as Result<string, Error>;
+    await t.step(
+      ".mapOrElse() -> returns new instance of Ok with applied mapFn",
+      () => {
+        const fallback = () => 10;
+        const toNumber = (str: string) => str.length;
+        const ok = Ok("thing") as Result<string, Error>;
 
-      const res = ok.mapOrElse(toNumber, fallback);
+        const res = ok.mapOrElse(toNumber, fallback);
 
-      assertType<IsExact<typeof res, Ok<number>>>(true);
-      assertStrictEquals(res.isOk(), true);
-      assertStrictEquals(res.unwrap(), 5);
-    });
+        assertType<IsExact<typeof res, Ok<number>>>(true);
+        assertStrictEquals(res.isOk(), true);
+        assertStrictEquals(res.unwrap(), 5);
+      },
+    );
 
     await t.step(".mapErr() -> short-circuits and returns immediately", () => {
-      const toTypeError = (e: Error) => TypeError("Something went wrong", { cause: e });
+      const toTypeError = (e: Error) =>
+        TypeError("Something went wrong", { cause: e });
       const ok = Ok(42) as Result<number, Error>;
 
       const mapped = ok.mapErr(toTypeError);
@@ -373,35 +383,44 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       assertStrictEquals(mapped.unwrap(), 42);
     });
 
-    await t.step(".andThen() -> returns new instance of Result with supplied thenFn", () => {
-      const processString = function(str: string): Result<number, TypeError> {
-        if (str.length > 5) return Ok(str.length);
-        return Err(TypeError("String too short"));
-      }
-      const ok = Ok("thing!") as Result<string, Error>;
+    await t.step(
+      ".andThen() -> returns new instance of Result with supplied thenFn",
+      () => {
+        const processString = function (
+          str: string,
+        ): Result<number, TypeError> {
+          if (str.length > 5) return Ok(str.length);
+          return Err(TypeError("String too short"));
+        };
+        const ok = Ok("thing!") as Result<string, Error>;
 
-      const chained = ok.andThen(processString);
+        const chained = ok.andThen(processString);
 
-      assertType<IsExact<typeof chained, Result<number, TypeError | Error>>>(true);
-      assertStrictEquals(chained.isOk(), true);
-      assertStrictEquals(chained.unwrap(), 6);
-    });
+        assertType<IsExact<typeof chained, Result<number, TypeError | Error>>>(
+          true,
+        );
+        assertStrictEquals(chained.isOk(), true);
+        assertStrictEquals(chained.unwrap(), 6);
+      },
+    );
 
     await t.step(".andThen() -> flattens nested Result instance", () => {
       const nested = Ok(Ok(42)) as Result<Result<number, TypeError>, Error>;
 
       const flattened = nested.andThen((res) => res);
 
-      assertType<IsExact<typeof flattened, Result<number, TypeError | Error>>>(true);
+      assertType<IsExact<typeof flattened, Result<number, TypeError | Error>>>(
+        true,
+      );
       assertStrictEquals(flattened.isOk(), true);
       assertStrictEquals(flattened.unwrap(), 42);
     });
 
     await t.step(".orElse() -> short-circuits and returns immediately", () => {
-      const recover = function(e: Error): Result<string, never> {
+      const recover = function (e: Error): Result<string, never> {
         const recovered = e.cause as string ?? "xDefaultx";
         return Ok(recovered);
-      }
+      };
 
       const ok = Ok("thing") as Result<string, Error>;
 
@@ -413,48 +432,60 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       assertStrictEquals(chained.unwrap(), "thing");
     });
 
-    await t.step(".trip() -> returns a new Err instance upon failure of tripFn", () => {
-      const checkIfEven = function(n: number): Result<Empty, TypeError> {
-        if (n % 2 === 0) return Ok.empty();
-        return Err(TypeError());
-      }
+    await t.step(
+      ".trip() -> returns a new Err instance upon failure of tripFn",
+      () => {
+        const checkIfEven = function (n: number): Result<Empty, TypeError> {
+          if (n % 2 === 0) return Ok.empty();
+          return Err(TypeError());
+        };
 
-      const ok = Ok(41) as Result<number, Error>;
+        const ok = Ok(41) as Result<number, Error>;
 
-      const tripped = ok.trip(checkIfEven);
+        const tripped = ok.trip(checkIfEven);
 
-      assertType<IsExact<typeof tripped, Result<number, Error | TypeError>>>(true);
-      assertStrictEquals(tripped.isErr(), true);
-      assertInstanceOf(tripped.unwrap(), TypeError);
-    });
+        assertType<IsExact<typeof tripped, Result<number, Error | TypeError>>>(
+          true,
+        );
+        assertStrictEquals(tripped.isErr(), true);
+        assertInstanceOf(tripped.unwrap(), TypeError);
+      },
+    );
 
-    await t.step(".trip() -> retains original Ok instance upon success of tripFn", () => {
-      const checkIfEven = function(n: number): Result<Empty, TypeError> {
-        if (n % 2 === 0) return Ok.empty();
-        return Err(TypeError());
-      }
+    await t.step(
+      ".trip() -> retains original Ok instance upon success of tripFn",
+      () => {
+        const checkIfEven = function (n: number): Result<Empty, TypeError> {
+          if (n % 2 === 0) return Ok.empty();
+          return Err(TypeError());
+        };
 
-      const ok = Ok(42) as Result<number, Error>;
+        const ok = Ok(42) as Result<number, Error>;
 
-      const tripped = ok.trip(checkIfEven);
+        const tripped = ok.trip(checkIfEven);
 
-      assertType<IsExact<typeof tripped, Result<number, Error | TypeError>>>(true);
-      assertStrictEquals(tripped, ok);
-      assertStrictEquals(tripped.isOk(), true);
-      assertStrictEquals(tripped.unwrap(), 42);
-    });
+        assertType<IsExact<typeof tripped, Result<number, Error | TypeError>>>(
+          true,
+        );
+        assertStrictEquals(tripped, ok);
+        assertStrictEquals(tripped.isOk(), true);
+        assertStrictEquals(tripped.unwrap(), 42);
+      },
+    );
 
     await t.step(".rise() -> short-circuits and returns immediately", () => {
-      const recover = function(e: Error): Result<string, TypeError> {
+      const recover = function (e: Error): Result<string, TypeError> {
         const recovered = e.cause as string ?? "xDefaultx";
         return Ok(recovered);
-      }
+      };
 
       const ok = Ok("thing") as Result<string, Error>;
 
       const risen = ok.rise(recover);
 
-      assertType<IsExact<typeof risen, Result<string, Error | TypeError>>>(true);
+      assertType<IsExact<typeof risen, Result<string, Error | TypeError>>>(
+        true,
+      );
       assertStrictEquals(risen, ok);
       assertStrictEquals(risen.isOk(), true);
       assertStrictEquals(risen.unwrap(), "thing");
@@ -470,67 +501,81 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       assertStrictEquals(ref, res);
     });
 
-    await t.step(".clone() -> returns a new instance with a deep copy of the encapsulated value", () => {
-      const record = { a: "thing" };
-      const ok = Ok(record);
+    await t.step(
+      ".clone() -> returns a new instance with a deep copy of the encapsulated value",
+      () => {
+        const record = { a: "thing" };
+        const ok = Ok(record);
 
-      const clone = ok.clone();
+        const clone = ok.clone();
 
-      assertNotStrictEquals(clone, ok);
-      assertNotStrictEquals(clone.unwrap(), record);
-    });
+        assertNotStrictEquals(clone, ok);
+        assertNotStrictEquals(clone.unwrap(), record);
+      },
+    );
 
-    await t.step(".tap() -> calls tapFn with a deep copy of the encapsulated value", () => {
-      /**
-       * HOF to capture changes to the original value
-       */
-      const createTapFn = function<T>(
-        originalValue: T,
-        originalResult: Ok<T>,
-      ): (res: Result<T, unknown>) => void {
-        return (res: Result<T, unknown>) => {
-          assertNotStrictEquals(originalValue, res.unwrap());
-          assertNotStrictEquals(originalResult, res);
-          assertEquals(originalValue, res.unwrap());
+    await t.step(
+      ".tap() -> calls tapFn with a deep copy of the encapsulated value",
+      () => {
+        /**
+         * HOF to capture changes to the original value
+         */
+        const createTapFn = function <T>(
+          originalValue: T,
+          originalResult: Ok<T>,
+        ): (res: Result<T, unknown>) => void {
+          return (res: Result<T, unknown>) => {
+            assertNotStrictEquals(originalValue, res.unwrap());
+            assertNotStrictEquals(originalResult, res);
+            assertEquals(originalValue, res.unwrap());
+          };
         };
-      };
 
-      const record = { a: "thing" };
-      const ok = Ok(record);
-      const tapAssertion = createTapFn(record, ok);
+        const record = { a: "thing" };
+        const ok = Ok(record);
+        const tapAssertion = createTapFn(record, ok);
 
-      const res = ok.tap(tapAssertion);
+        const res = ok.tap(tapAssertion);
 
-      assertStrictEquals(res, ok);
-    });
+        assertStrictEquals(res, ok);
+      },
+    );
 
-    await t.step(".inspect() -> calls the provided inspectFn with the encapsulated value", () => {
-      const createInspectFn = function<T>(originalValue: T): (value: T) => void {
-        return (value: T) => {
-          assertStrictEquals(value, originalValue);
+    await t.step(
+      ".inspect() -> calls the provided inspectFn with the encapsulated value",
+      () => {
+        const createInspectFn = function <T>(
+          originalValue: T,
+        ): (value: T) => void {
+          return (value: T) => {
+            assertStrictEquals(value, originalValue);
+          };
         };
-      };
-      const record = { a: "thing" };
-      const ok = Ok(record);
-      const inspectAssertion = createInspectFn(record);
+        const record = { a: "thing" };
+        const ok = Ok(record);
+        const inspectAssertion = createInspectFn(record);
 
-      const res = ok.inspectErr(inspectAssertion);
+        const res = ok.inspectErr(inspectAssertion);
 
-      assertStrictEquals(res, ok);
-    });
+        assertStrictEquals(res, ok);
+      },
+    );
 
-    await t.step(".inspectErr() -> short-circuits and returns immediately", () => {
-      let count = 0;
-      const inspectFn = () => {
-        count += 1;
-      }
-      const ok = Ok(1);
+    await t.step(
+      ".inspectErr() -> short-circuits and returns immediately",
+      () => {
+        let count = 0;
+        const inspectFn = () => {
+          count += 1;
+        };
+        const ok = Ok(1);
 
-      const res = ok.inspectErr(inspectFn);
+        const res = ok.inspectErr(inspectFn);
 
-      assertStrictEquals(res, ok);
-      assertStrictEquals(count, 0);
-    });
+        assertStrictEquals(res, ok);
+        assertStrictEquals(count, 0);
+      },
+    );
   });
 
   await t.step("Ok<T> -> JS well-known Symbols and Methods", async (t) => {
@@ -595,17 +640,17 @@ Deno.test("eitherway::Result::Err", async (t) => {
 
       if (res.isOk()) {
         assertType<IsExact<typeof res, Ok<number>>>(true);
-      } 
+      }
 
       assertStrictEquals(res.isOk(), false);
-    })
+    });
 
     await t.step(".isErr() -> narrows to Err by returning true", () => {
       const res = Err(TypeError()) as Result<number, TypeError>;
 
       if (res.isErr()) {
         assertType<IsExact<typeof res, Err<TypeError>>>(true);
-      } 
+      }
 
       assertStrictEquals(res.isErr(), true);
     });
@@ -624,122 +669,151 @@ Deno.test("eitherway::Result::Err", async (t) => {
       assertStrictEquals(mapped.unwrap(), "thing");
     });
 
-    await t.step(".mapOr() -> returns new instance of Ok with supplied orValue", () => {
-      const fallback = 10;
-      const toNumber = (str: string) => str.length;
-      const err = Err(Error()) as Result<string, Error>;
+    await t.step(
+      ".mapOr() -> returns new instance of Ok with supplied orValue",
+      () => {
+        const fallback = 10;
+        const toNumber = (str: string) => str.length;
+        const err = Err(Error()) as Result<string, Error>;
 
-      const mapped = err.mapOr(toNumber, fallback);
+        const mapped = err.mapOr(toNumber, fallback);
 
-      assertType<IsExact<typeof mapped, Ok<number>>>(true);
-      assertStrictEquals(mapped.isOk(), true);
-      assertStrictEquals(mapped.unwrap(), 10);
-    });
+        assertType<IsExact<typeof mapped, Ok<number>>>(true);
+        assertStrictEquals(mapped.isOk(), true);
+        assertStrictEquals(mapped.unwrap(), 10);
+      },
+    );
 
-    await t.step(".mapOrElse() -> returns new instance of Ok with return value of elseFn", () => {
-      const fallback = () => 10;
-      const toNumber = (str: string) => str.length;
-      const err = Err(Error());
+    await t.step(
+      ".mapOrElse() -> returns new instance of Ok with return value of elseFn",
+      () => {
+        const fallback = () => 10;
+        const toNumber = (str: string) => str.length;
+        const err = Err(Error());
 
-      const mapped = err.mapOrElse(toNumber, fallback);
+        const mapped = err.mapOrElse(toNumber, fallback);
 
-      assertType<IsExact<typeof mapped, Ok<number>>>(true);
-      assertStrictEquals(mapped.isOk(), true);
-      assertStrictEquals(mapped.unwrap(), 10);
-    });
+        assertType<IsExact<typeof mapped, Ok<number>>>(true);
+        assertStrictEquals(mapped.isOk(), true);
+        assertStrictEquals(mapped.unwrap(), 10);
+      },
+    );
 
-    await t.step(".mapErr() -> returns new instance of Err with the supplied mapFn", () => {
-      const toTypeError = (e: Error) => TypeError("Something went wrong", { cause: e });
-      const err = Err(Error()) as Result<number, Error>;
+    await t.step(
+      ".mapErr() -> returns new instance of Err with the supplied mapFn",
+      () => {
+        const toTypeError = (e: Error) =>
+          TypeError("Something went wrong", { cause: e });
+        const err = Err(Error()) as Result<number, Error>;
 
-      const mapped = err.mapErr(toTypeError);
+        const mapped = err.mapErr(toTypeError);
 
-      assertType<IsExact<typeof mapped, Result<number, TypeError>>>(true);
-      assertStrictEquals(mapped.isErr(), true);
-      assertNotStrictEquals(mapped, err);
-    });
+        assertType<IsExact<typeof mapped, Result<number, TypeError>>>(true);
+        assertStrictEquals(mapped.isErr(), true);
+        assertNotStrictEquals(mapped, err);
+      },
+    );
 
     await t.step(".andThen() -> short-circuits and returns immediately", () => {
-      const processString = function(str: string): Result<number, TypeError> {
+      const processString = function (str: string): Result<number, TypeError> {
         if (str.length > 5) return Ok(str.length);
         return Err(TypeError("String too short"));
-      }
+      };
 
       const err = Err(Error()) as Result<string, Error>;
 
       const chained = err.andThen(processString);
 
-      assertType<IsExact<typeof chained, Result<number, Error | TypeError>>>(true);
+      assertType<IsExact<typeof chained, Result<number, Error | TypeError>>>(
+        true,
+      );
       assertStrictEquals(chained, err);
     });
 
-    await t.step(".orElse() -> returns new instance of Result with the supplied elseFn", () => {
-      const recover = function(e: Error): Result<string, never> {
-        const recovered = e.cause as string ?? "xDefaultx";
-        return Ok(recovered);
-      }
+    await t.step(
+      ".orElse() -> returns new instance of Result with the supplied elseFn",
+      () => {
+        const recover = function (e: Error): Result<string, never> {
+          const recovered = e.cause as string ?? "xDefaultx";
+          return Ok(recovered);
+        };
 
-      const err = Err(Error()) as Result<string, Error>;
+        const err = Err(Error()) as Result<string, Error>;
 
-      const chained = err.orElse(recover);
+        const chained = err.orElse(recover);
 
-      assertType<IsExact<typeof chained, Result<string, never>>>(true);
-      assertNotStrictEquals(chained, err);
-      assertStrictEquals(chained.isOk(), true);
-    });
+        assertType<IsExact<typeof chained, Result<string, never>>>(true);
+        assertNotStrictEquals(chained, err);
+        assertStrictEquals(chained.isOk(), true);
+      },
+    );
 
     await t.step(".orElse() -> flattens nested Result instance", () => {
       const nested = Err(Err(Error())) as Result<string, Result<number, Error>>;
 
-      const flattened = nested.orElse((res) => res); 
+      const flattened = nested.orElse((res) => res);
 
-      assertType<IsExact<typeof flattened, Ok<string> | Result<number, Error>>>(true);
+      assertType<IsExact<typeof flattened, Ok<string> | Result<number, Error>>>(
+        true,
+      );
       assertStrictEquals(flattened.isErr(), true);
     });
 
     await t.step(".trip() -> short-circuits and returns immediately", () => {
       let count = 0;
-      const noop = function(): Result<Empty, TypeError> {
+      const noop = function (): Result<Empty, TypeError> {
         count += 1;
         return Ok.empty();
-      }
+      };
 
       const err = Err(Error()) as Result<string, Error>;
 
       const tripped = err.trip(noop);
 
-      assertType<IsExact<typeof tripped, Result<string, Error | TypeError>>>(true);
+      assertType<IsExact<typeof tripped, Result<string, Error | TypeError>>>(
+        true,
+      );
       assertStrictEquals(count, 0);
       assertStrictEquals(tripped, err);
     });
 
-    await t.step(".rise() -> returns the new Ok instance upon success of riseFn", () => {
-      const recover = function(e: Error): Result<string, TypeError> {
-        const recovered = e.cause as string ?? "xDefaultx";
-        return Ok(recovered);
-      }
+    await t.step(
+      ".rise() -> returns the new Ok instance upon success of riseFn",
+      () => {
+        const recover = function (e: Error): Result<string, TypeError> {
+          const recovered = e.cause as string ?? "xDefaultx";
+          return Ok(recovered);
+        };
 
-      const err = Err(Error()) as Result<number, Error>;
+        const err = Err(Error()) as Result<number, Error>;
 
-      const risen = err.rise(recover);
+        const risen = err.rise(recover);
 
-      assertType<IsExact<typeof risen, Ok<string> | Result<number, Error>>>(true);
-      assertStrictEquals(risen.isOk(), true);
-    });
+        assertType<IsExact<typeof risen, Ok<string> | Result<number, Error>>>(
+          true,
+        );
+        assertStrictEquals(risen.isOk(), true);
+      },
+    );
 
-    await t.step("rise() -> passes on the original Err variant if riseFn fails", () => {
-      const recover = function(_: Error): Result<string, TypeError> {
-        return Err(TypeError());
-      }
+    await t.step(
+      "rise() -> passes on the original Err variant if riseFn fails",
+      () => {
+        const recover = function (_: Error): Result<string, TypeError> {
+          return Err(TypeError());
+        };
 
-      const err = Err(Error()) as Result<number, Error>;
+        const err = Err(Error()) as Result<number, Error>;
 
-      const risen = err.rise(recover);
+        const risen = err.rise(recover);
 
-      assertType<IsExact<typeof risen, Ok<string> | Result<number, Error>>>(true);
-      assertStrictEquals(risen.isErr(), true);
-      assertStrictEquals(risen, err);
-    });
+        assertType<IsExact<typeof risen, Ok<string> | Result<number, Error>>>(
+          true,
+        );
+        assertStrictEquals(risen.isErr(), true);
+        assertStrictEquals(risen, err);
+      },
+    );
   });
 
   await t.step("Err<E> -> Convenience Methods", async (t) => {
@@ -752,45 +826,51 @@ Deno.test("eitherway::Result::Err", async (t) => {
       assertStrictEquals(ref, res);
     });
 
-    await t.step(".clone(), -> returns a new instance with a deep copy of the encapsulated value", () => {
-      const record = { a: "thing" };
-      const err = Err(record);
+    await t.step(
+      ".clone(), -> returns a new instance with a deep copy of the encapsulated value",
+      () => {
+        const record = { a: "thing" };
+        const err = Err(record);
 
-      const clone = err.clone();
+        const clone = err.clone();
 
-      assertNotStrictEquals(clone, err);
-      assertNotStrictEquals(clone.unwrap(), record);
-    });
+        assertNotStrictEquals(clone, err);
+        assertNotStrictEquals(clone.unwrap(), record);
+      },
+    );
 
-    await t.step(".tap() -> calls the tapFn with a deep clone of the encapsulated value", () => {
-      /**
-       * HOF to capture changes to the original value
-       */
-      const createTapFn = function<E>(
-        originalValue: E,
-        originalResult: Err<E>,
-      ): (res: Result<unknown, E>) => void {
-        return (res: Result<unknown, E>) => {
-          assertNotStrictEquals(originalValue, res.unwrap());
-          assertNotStrictEquals(originalResult, res);
-          assertEquals(originalValue, res.unwrap());
+    await t.step(
+      ".tap() -> calls the tapFn with a deep clone of the encapsulated value",
+      () => {
+        /**
+         * HOF to capture changes to the original value
+         */
+        const createTapFn = function <E>(
+          originalValue: E,
+          originalResult: Err<E>,
+        ): (res: Result<unknown, E>) => void {
+          return (res: Result<unknown, E>) => {
+            assertNotStrictEquals(originalValue, res.unwrap());
+            assertNotStrictEquals(originalResult, res);
+            assertEquals(originalValue, res.unwrap());
+          };
         };
-      };
 
-      const record = { a: "thing" };
-      const err = Err(record);
-      const tapAssertion = createTapFn(record, err);
+        const record = { a: "thing" };
+        const err = Err(record);
+        const tapAssertion = createTapFn(record, err);
 
-      const res = err.tap(tapAssertion);
+        const res = err.tap(tapAssertion);
 
-      assertStrictEquals(res, err);
-    });
+        assertStrictEquals(res, err);
+      },
+    );
 
     await t.step(".inspect() -> short-circuits and returns immediately", () => {
       let count = 0;
       const inspectFn = () => {
         count += 1;
-      }
+      };
       const err = Err(1);
 
       const res = err.inspect(inspectFn);
@@ -799,20 +879,25 @@ Deno.test("eitherway::Result::Err", async (t) => {
       assertStrictEquals(count, 0);
     });
 
-    await t.step(".inspectErr() -> calls the provided inspectFn with the encapsulated value", () => {
-      const createInspectFn = function<E>(originalValue: E): (value: E) => void {
-        return (value: E) => {
-          assertStrictEquals(value, originalValue);
+    await t.step(
+      ".inspectErr() -> calls the provided inspectFn with the encapsulated value",
+      () => {
+        const createInspectFn = function <E>(
+          originalValue: E,
+        ): (value: E) => void {
+          return (value: E) => {
+            assertStrictEquals(value, originalValue);
+          };
         };
-      };
-      const record = { a: "thing" };
-      const err = Err(record);
-      const inspectAssertion = createInspectFn(record);
+        const record = { a: "thing" };
+        const err = Err(record);
+        const inspectAssertion = createInspectFn(record);
 
-      const res = err.inspectErr(inspectAssertion);
+        const res = err.inspectErr(inspectAssertion);
 
-      assertStrictEquals(res, err);
-    });
+        assertStrictEquals(res, err);
+      },
+    );
   });
 
   await t.step("Err<E> -> JS well-known Symbols and Methods", async (t) => {
