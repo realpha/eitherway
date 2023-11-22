@@ -90,7 +90,7 @@ export interface IOption<T> {
    * Canonical identity function
    *
    * Mainly useful for flattening types of `Option<Option<T>>` togehter
-   * with `andThen()`,
+   * with `.andThen()`,
    *
    * @category Option::Basic
    *
@@ -288,7 +288,7 @@ export interface IOption<T> {
    *
    * In case of `None`, this method short-circuits and returns `None`
    *
-   * This is equivalent to the canonical `flatMap()` method in traditional
+   * This is equivalent to the canonical `.flatMap()` method in traditional
    * functional idioms, thus it can be used to flatten instances of
    * `Option<Option<T>>` to `Option<T>`
    *
@@ -570,8 +570,15 @@ export interface IOption<T> {
   zip<U>(rhs: Option<U>): Option<[T, U]>;
 
   /**
-   * Use this to perform synchronous side-effects which can derail the
-   * current `Option<T>`
+   * Use this to conditionally pass-through the encapsulated value of
+   * type `<T>` based upon the outcome of the supplied `tripFn`
+   *
+   * In case of `None` this method short-circuits and returns `None`
+   *
+   * In case of `Some<T>`, the provided `tripFn` gets called with a value
+   * of type `<T>` and if the return value is:
+   *  - `Some<U>`: it is discarded and the original `Some<T>` is returned
+   *  - `None`: `None` is returned
    *
    * This is equivalent to chaining:
    * `original.andThen(tripFn).and(original)`
@@ -581,12 +588,8 @@ export interface IOption<T> {
    * |  LHS: Some<T>  |    Some<T>   |     None    |
    * |  LHS:  None    |      None    |     None    |
    *
-   * In case of `None` this method short-circuits and returns `None`
-   *
-   * In case of `Some<T>`, the provided `tripFn` gets called with a value
-   * of type `<T>` and if the return value is:
-   *  - `Some<U>` - it is discarded and the original `Some<T>` is returned
-   *  - `None`: `None` is returned
+   * Can be used to perform synchronous side-effects which can derail the
+   * current `Option<T>`
    *
    * @category Option::Advanced
    *
@@ -836,7 +839,7 @@ export interface IOption<T> {
   tap(tapFn: (arg: Option<T>) => void): Option<T>;
 
   /**
-   * Use this to inspect the value inside an instace of `Some<T>`
+   * Use this to inspect the value inside an instance of `Some<T>`
    * in a transparent manner
    *
    * Short-curcuits in case of `None'
