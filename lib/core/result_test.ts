@@ -492,6 +492,64 @@ Deno.test("eitherway::Result::Ok", async (t) => {
     });
   });
 
+  await t.step("Ok<T> -> Combination Methods", async (t) => {
+    await t.step(".and() -> returns RHS", () => {
+      const lhs = Ok(42);
+      const rhs = Err(TypeError()) as Result<string, TypeError>;
+
+      const res = lhs.and(rhs);
+
+      assertType<IsExact<typeof res, Result<string, TypeError>>>(true);
+      assertStrictEquals(res, rhs);
+      assertStrictEquals(res.isErr(), true);
+    });
+
+    await t.step(".or() -> returns LHS", () => {
+      const lhs = Ok(42);
+      const rhs = Err(TypeError()) as Result<string, TypeError>;
+
+      const res = lhs.or(rhs);
+
+      assertType<IsExact<typeof res, Ok<number>>>(true);
+      assertStrictEquals(res, lhs);
+      assertStrictEquals(res.isOk(), true);
+    });
+
+    await t.step(
+      ".zip() -> produces a tuple when zipped with an Ok instance",
+      () => {
+        const sum = function (...nums: number[]): Result<number, TypeError> {
+          const sum = nums.reduce((acc, num) => acc + num, 0);
+          return Ok(sum);
+        };
+
+        const summandOne = Ok(31);
+        const summandTwo = Ok(11);
+
+        const res = summandOne
+          .zip(summandTwo)
+          .andThen((nums) => sum(...nums));
+
+        assertType<IsExact<typeof res, Result<number, unknown>>>(true);
+        assertStrictEquals(res.isOk(), true);
+        assertStrictEquals(res.unwrap(), 42);
+      },
+    );
+
+    await t.step(".zip() -> returns RHS if it is Err", () => {
+      const lhs = Ok(42);
+      const rhs = Err(TypeError()) as Result<string, TypeError>;
+
+      const res = lhs.zip(rhs);
+
+      assertType<IsExact<typeof res, Result<[number, string], TypeError>>>(
+        true,
+      );
+      assertStrictEquals(res.isErr(), true);
+      assertStrictEquals(res, rhs);
+    });
+  });
+
   await t.step("Ok<T> -> Convenience Methods", async (t) => {
     await t.step(".id() -> returns the instance itself", () => {
       const res = Ok(42);
@@ -814,6 +872,41 @@ Deno.test("eitherway::Result::Err", async (t) => {
         assertStrictEquals(risen, err);
       },
     );
+  });
+
+  await t.step("Err<E> -> Combination Methods", async (t) => {
+    await t.step(".and() -> returns LHS", () => {
+      const lhs = Err(Error());
+      const rhs = Ok(42) as Result<number, TypeError>;
+
+      const res = lhs.and(rhs);
+
+      assertType<IsExact<typeof res, Err<Error>>>(true);
+      assertStrictEquals(res, lhs);
+      assertStrictEquals(res.isErr(), true);
+    });
+
+    await t.step(".or() -> returns RHS", () => {
+      const lhs = Err(Error());
+      const rhs = Ok(42) as Result<number, TypeError>;
+
+      const res = lhs.or(rhs);
+
+      assertType<IsExact<typeof res, Result<number, TypeError>>>(true);
+      assertStrictEquals(res, rhs);
+      assertStrictEquals(res.isOk(), true);
+    });
+
+    await t.step(".zip() -> returns LHS", () => {
+      const lhs = Err(Error());
+      const rhs = Ok(42) as Result<number, TypeError>;
+
+      const res = lhs.zip(rhs);
+
+      assertType<IsExact<typeof res, Err<Error>>>(true);
+      assertStrictEquals(res, lhs);
+      assertStrictEquals(res.isErr(), true);
+    });
   });
 
   await t.step("Err<E> -> Convenience Methods", async (t) => {

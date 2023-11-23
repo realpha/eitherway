@@ -441,9 +441,102 @@ export interface IResult<T, E> {
    */
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
 
+  /**
+   * Logical AND (`&&`)
+   * Returns RHS if LHS is `Ok`, otherwise returns LHS
+   *
+   * |**LHS `&&` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:--------------:|:-------------:|:--------------:|
+   * |**LHS: Ok<T>**  |     Ok<T2>    |     Err<E2>    |
+   * |**LHS: Err<E>** |     Err<E>    |     Err<E>     |
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const ok = Ok(42);
+   * const err = Err(TypeError());
+   *
+   * const rhs = ok.and(err);
+   * const lhs = err.and(ok);
+   *
+   * assert(rhs === err);
+   * assert(lhs === err);
+   * ```
+   */
   and<T2, E2>(rhs: Result<T2, E2>): Err<E> | Result<T2, E2>;
+
+  /**
+   * Logical OR (`||`)
+   * Returns RHS if LHS is `Err`, otherwise returns LHS
+   *
+   * |**LHS `||` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:--------------:|:-------------:|:--------------:|
+   * |**LHS: Ok<T>**  |     Ok<T>     |     Ok<T>      |
+   * |**LHS: Err<E>** |     Ok<T2>    |     Err<E2>    |
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const ok = Ok(42);
+   * const err = Err(TypeError());
+   *
+   * const lhs = ok.or(err);
+   * const rhs = err.or(ok);
+   *
+   * assert(lhs === ok);
+   * assert(rhs === ok);
+   * ```
+   */
   or<T2, E2>(rhs: Result<T2, E2>): Ok<T> | Result<T2, E2>;
+
+  /**
+   * Use this to zip the encapsulated values of two `Ok` instances into
+   * a new `Ok` instance wrapping a tuple of them.
+   *
+   * In case any of the two `Result` instances is `Err`, the respective
+   * `Err` instance is returned in left-to-right evaluation order.
+   *
+   * |**LHS `zip` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:---------------:|:-------------:|:--------------:|
+   * | **LHS: Ok<T>**  |  Ok<[T, T2]>  |     Err<E2>    |
+   * | **LHS: Err<E>** |     Err<E>    |     Err<E>     |
+   *
+   * This is not only useful to produce tuples, but also to collect
+   * arguments to be passed to a function down the line.
+   *
+   * @category Result::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const sum = function(...nums: number[]): Result<number, TypeError> {
+   *   const sum = nums.reduce((acc, num) => acc + num, 0);
+   *   return Ok(sum);
+   * }
+   *
+   * const summandOne = Ok(31);
+   * const summandTwo = Ok(11);
+   *
+   * const res = summandOne
+   *   .zip(summandTwo)
+   *   .andThen((nums) => sum(...nums));
+   *
+   * assert(res.isOk());
+   * assert(res.unwrap() === 42);
+   * ```
+   */
   zip<T2, E2>(rhs: Result<T2, E2>): Ok<[T, T2]> | Err<E> | Err<E2>;
+
   unwrap(): T | E;
   unwrapOr<T2>(orValue: T2): T | T2;
   unwrapOrElse<T2>(elseFn: (err: E) => T2): T | T2;
