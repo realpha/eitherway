@@ -82,11 +82,7 @@ productivity by focusing on the following goals:
 ## `eitherway` in Action
 
 ```typescript
-import {
-  Option,
-  Result,
-  Task,
-} from "https://deno.land/x/eitherway/mod.ts";
+import { Option, Result, Task } from "https://deno.land/x/eitherway/mod.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -285,15 +281,15 @@ Some notable additions, which you may have been missing in other libraries:
 ### Option
 
 1. [Overview and factories](https://deno.land/x/eitherway/mod.ts?s=Option)
-2. [Base interface](https://deno.land/x/eitherway/mod.ts?s=IOption)
-   implemented by `Some<T>` and `None`
+2. [Base interface](https://deno.land/x/eitherway/mod.ts?s=IOption) implemented
+   by `Some<T>` and `None`
 3. [Collection helpers](https://deno.land/x/eitherway/mod.ts?s=Options)
 
 ### Result
 
 1. [Overview and factories](https://deno.land/x/eitherway/mod.ts?s=Result)
-2. [Base interface](https://deno.land/x/eitherway/mod.ts?s=IResult)
-   implemented by `Ok<T>` and `Err<E>`
+2. [Base interface](https://deno.land/x/eitherway/mod.ts?s=IResult) implemented
+   by `Ok<T>` and `Err<E>`
 3. [Collection helpers](https://deno.land/x/eitherway/mod.ts?s=Results)
 
 ### Task
