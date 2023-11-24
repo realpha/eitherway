@@ -537,9 +537,94 @@ export interface IResult<T, E> {
    */
   zip<T2, E2>(rhs: Result<T2, E2>): Ok<[T, T2]> | Err<E> | Err<E2>;
 
+  /**
+   * Use this to get the wrapped value out of an `Result<T, E>` instance
+   *
+   * Returns the wrapped value of type `<T>` in case of `Ok<T>` OR
+   * `<E>` in case of `Err<E>`.
+   *
+   * It is necessary to narrow the instance to `Ok<T>` or `Err<E>` in
+   * order to narrow the return value.
+   *
+   * In contrast to other implementations, this method NEVER throws an
+   * exception
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const ok = Ok(42) as Result<number, string>;
+   * const err = Err("Oh no") as Result<number, string>;
+   *
+   * let num: number = 0;
+   * let str: string = "";
+   *
+   * if (ok.isOk()) {
+   *   num = ok.unwrap();
+   * }
+   *
+   * if (err.isErr()) {
+   *   str = err.unwrap();
+   * }
+   *
+   * const union: number | string = ok.unwrap();
+   *
+   * assert(num === 42);
+   * assert(str === "Oh no");
+   * ```
+   */
   unwrap(): T | E;
+
+  /**
+   * Same as `.unwrap()` but returns a default value in case of `Err<E>`
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const ok = Ok(42) as Result<number, string>;
+   * const err = Err("Oh no") as Result<number, string>;
+   *
+   * const num = ok.unwrapOr(0);
+   * const zero = err.unwrapOr(0);
+   *
+   * assert(num === 42);
+   * assert(zero === 0);
+   * ```
+   */
   unwrapOr<T2>(orValue: T2): T | T2;
+
+  /**
+   * Same as `.unwrap()` but returns a the result of the provided `elseFn` in
+   * case of `Err<E>`
+   *
+   * Use this if the fallback value is expensive to produce
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const ok = Ok(42) as Result<number, string>;
+   * const err = Err("Oh no") as Result<number, string>;
+   *
+   * const num = ok.unwrapOrElse(() => 0);
+   * const zero = err.unwrapOr(() => 0);
+   *
+   * assert(num === 42);
+   * assert(zero === 0);
+   * ```
+   */
   unwrapOrElse<T2>(elseFn: (err: E) => T2): T | T2;
+
   toTuple(): [T, never] | [never, E] | [never, never];
   ok(): Option<T>;
   err(): Option<E>;

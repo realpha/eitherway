@@ -550,6 +550,50 @@ Deno.test("eitherway::Result::Ok", async (t) => {
     });
   });
 
+  await t.step("Ok<T> -> Unwrap Methods", async (t) => {
+    await t.step(".unwrap() -> returns the encapsulated value <T>", () => {
+      const ok = Ok(42);
+      const res = Ok(42) as Result<number, Error>;
+
+      const num = ok.unwrap();
+      const union = res.unwrap();
+
+      assertType<IsExact<typeof num, number>>(true);
+      assertType<IsExact<typeof union, number | Error>>(true);
+      assertStrictEquals(num, 42);
+      assertStrictEquals(union, 42);
+    });
+
+    await t.step(".unwrapOr() -> returns the encapsulated value <T>", () => {
+      const ok = Ok(42);
+      const res = Ok(42) as Result<number, Error>;
+
+      const num = ok.unwrapOr(10);
+      const union = res.unwrapOr("thing" as string);
+
+      assertType<IsExact<typeof num, number>>(true);
+      assertType<IsExact<typeof union, number | string>>(true);
+      assertStrictEquals(num, 42);
+      assertStrictEquals(union, 42);
+    });
+
+    await t.step(
+      ".unwrapOrElse() -> returns the encapsulated value <T>",
+      () => {
+        const ok = Ok(42);
+        const res = Ok(42) as Result<number, Error>;
+
+        const num = ok.unwrapOrElse(() => 10);
+        const union = res.unwrapOrElse(() => "thing" as string);
+
+        assertType<IsExact<typeof num, number>>(true);
+        assertType<IsExact<typeof union, number | string>>(true);
+        assertStrictEquals(num, 42);
+        assertStrictEquals(union, 42);
+      },
+    );
+  });
+
   await t.step("Ok<T> -> Convenience Methods", async (t) => {
     await t.step(".id() -> returns the instance itself", () => {
       const res = Ok(42);
@@ -907,6 +951,50 @@ Deno.test("eitherway::Result::Err", async (t) => {
       assertStrictEquals(res, lhs);
       assertStrictEquals(res.isErr(), true);
     });
+  });
+
+  await t.step("Err<E> -> Unwrap Methods", async (t) => {
+    await t.step(".unwrap() -> returns encapsulated value <E>", () => {
+      const err = Err("Oh no");
+      const res = Err("Oh no") as Result<number, string>;
+
+      const str = err.unwrap();
+      const union = res.unwrap();
+
+      assertType<IsExact<typeof str, string>>(true);
+      assertType<IsExact<typeof union, number | string>>(true);
+      assertStrictEquals(str, "Oh no");
+      assertStrictEquals(union, "Oh no");
+    });
+
+    await t.step(".unwrapOr() -> returns the provided orValue", () => {
+      const err = Err("Oh no");
+      const res = Err("Oh no") as Result<number, string>;
+
+      const num = err.unwrapOr(42 as number);
+      const union = res.unwrapOr(true as boolean);
+
+      assertType<IsExact<typeof num, number>>(true);
+      assertType<IsExact<typeof union, number | boolean>>(true);
+      assertStrictEquals(num, 42);
+      assertStrictEquals(union, true);
+    });
+
+    await t.step(
+      ".unwrapOrElse() -> returns the return value of the provided elseFn",
+      () => {
+        const err = Err("Oh no");
+        const res = Err("Oh no") as Result<number, string>;
+
+        const num = err.unwrapOrElse(() => 42 as number);
+        const union = res.unwrapOrElse(() => true as boolean);
+
+        assertType<IsExact<typeof num, number>>(true);
+        assertType<IsExact<typeof union, number | boolean>>(true);
+        assertStrictEquals(num, 42);
+        assertStrictEquals(union, true);
+      },
+    );
   });
 
   await t.step("Err<E> -> Convenience Methods", async (t) => {
