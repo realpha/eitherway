@@ -86,7 +86,7 @@ import {
   Option,
   Result,
   Task,
-} from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+} from "https://deno.land/x/eitherway/mod.ts";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -181,7 +181,7 @@ import {
   Result,
   Some,
   Task,
-} from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+} from "https://deno.land/x/eitherway/mod.ts";
 ```
 
 #### `node`
@@ -229,7 +229,7 @@ with most parts already. A couple of things are handled differently though:
   or `unchecked` variants for methods like `.unwrap()`.
 
 ```typescript
-import { Ok, Option, Result } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+import { Ok, Option, Result } from "https://deno.land/x/eitherway/mod.ts";
 
 const opt: Option<string> = Option("foo");
 const res: Result<number, TypeError> = Ok(1);
@@ -284,22 +284,22 @@ Some notable additions, which you may have been missing in other libraries:
 
 ### Option
 
-1. [Overview and factories](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Option)
-2. [Base interface](https://deno.land/x/eitherway@0.3.0/mod.ts?s=IOption)
+1. [Overview and factories](https://deno.land/x/eitherway/mod.ts?s=Option)
+2. [Base interface](https://deno.land/x/eitherway/mod.ts?s=IOption)
    implemented by `Some<T>` and `None`
-3. [Collection helpers](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Options)
+3. [Collection helpers](https://deno.land/x/eitherway/mod.ts?s=Options)
 
 ### Result
 
-1. [Overview and factories](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Result)
-2. [Base interface](https://deno.land/x/eitherway@0.3.0/mod.ts?s=IResult)
+1. [Overview and factories](https://deno.land/x/eitherway/mod.ts?s=Result)
+2. [Base interface](https://deno.land/x/eitherway/mod.ts?s=IResult)
    implemented by `Ok<T>` and `Err<E>`
-3. [Collection helpers](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Results)
+3. [Collection helpers](https://deno.land/x/eitherway/mod.ts?s=Results)
 
 ### Task
 
-1. [Overview and factories](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Task)
-2. [Collection helpers](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Tasks)
+1. [Overview and factories](https://deno.land/x/eitherway/mod.ts?s=Task)
+2. [Collection helpers](https://deno.land/x/eitherway/mod.ts?s=Tasks)
 
 ## Best Practices
 
@@ -325,11 +325,11 @@ Some notable additions, which you may have been missing in other libraries:
    point. Errors are important domain objects, and they should be modeled
    accordingly.
 6. **Lift others up to help yourself out**: Use the
-   [composability helpers](https://deno.land/x/eitherway@0.3.0/mod.ts?s=Result.liftFallible).
+   [composability helpers](https://deno.land/x/eitherway/mod.ts?s=Result.liftFallible).
    They really reduce noise and speed up integrating external code a lot.
 
 ```typescript
-import { Option, Result } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+import { Option, Result } from "https://deno.land/x/eitherway/mod.ts";
 import * as semver from "https://deno.land/std@0.206.0/semver/mod.ts";
 
 const noInputProvidedError = Error("No input provided");
@@ -385,7 +385,7 @@ function processString(input: string | undefined): number {
 ```typescript
 /* Equivalent Result flow */
 
-import { Result } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+import { Result } from "https://deno.land/x/eitherway/mod.ts";
 
 declare function toUpperCase(
   input: string | undefined,
@@ -428,7 +428,7 @@ async function processString(input: string | undefined): Promise<number> {
 ```typescript
 /* Equivalent Task flow */
 
-import { Result, Task } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+import { Result, Task } from "https://deno.land/x/eitherway/mod.ts";
 
 declare function toUpperCase(
   input: string | undefined,
@@ -577,7 +577,7 @@ Since `Task<T, E>` is a subclass of `Promise<Result<T, E>>`, it's possible to
 return it as such from an async function though or just await it.
 
 ```typescript
-import { Result, Task } from "https://deno.land/x/eitherway@0.3.0/mod.ts";
+import { Result, Task } from "https://deno.land/x/eitherway/mod.ts";
 
 async function toTask(str: string): Promise<Result<string, never>> {
   return Task.succeed(str);
