@@ -625,6 +625,33 @@ export interface IResult<T, E> {
    */
   unwrapOrElse<T2>(elseFn: (err: E) => T2): T | T2;
 
+  /**
+   * Use this to cast an instance of `Ok<T>` or `Err<E>` to it's `Result`
+   * representation. This is a safe, inherent type cast. Does not alter
+   * the runtime behaviour.
+   *
+   * Mostly useful in the context of early returns or combination methods,
+   * where an already narrowed instance would result in one of the variants
+   * being inferred as `unknown` otherwise.
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const res = Ok(42);
+   * const ok = Ok("success");
+   *
+   * const notCasted = res.and(ok);         // Result<string, unknown>
+   * const casted = res.and(ok.asResult()); // Result<string, never>
+   *
+   * assert(casted === notCasted);
+   * ```
+   */
+  asResult(): Result<T, E>;
+
   toTuple(): [T, never] | [never, E] | [never, never];
   ok(): Option<T>;
   err(): Option<E>;
@@ -938,6 +965,9 @@ class _Ok<T> implements IResult<T, never> {
   unwrapOrElse<T2>(elseFn: (err: never) => T2): T {
     return this.#value;
   }
+  asResult(): Result<T, never> {
+    return this;
+  }
   toTuple(): [T, never] {
     return [this.#value, undefined as never];
   }
@@ -1048,6 +1078,9 @@ class _Err<E> implements IResult<never, E> {
   }
   unwrapOrElse<T2>(elseFn: (err: E) => T2): T2 {
     return elseFn(this.#err);
+  }
+  asResult(): Result<never, E> {
+    return this;
   }
   toTuple(): [never, E] {
     return [undefined as never, this.#err];
