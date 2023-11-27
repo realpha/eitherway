@@ -81,6 +81,7 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
       postBuild() {
         Deno.copyFileSync(LICENSE, `${OUT_DIR}/LICENSE.md`);
         Deno.copyFileSync(README, `${OUT_DIR}/README.md`);
+        Deno.removeSync(`${OUT_DIR}/src`, { recursive: true });
       },
     });
     return Ok(undefined);
