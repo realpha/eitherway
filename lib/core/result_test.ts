@@ -594,6 +594,24 @@ Deno.test("eitherway::Result::Ok", async (t) => {
     );
   });
 
+  await t.step("Ok<T> -> Transformation Methods", async (t) => {
+    await t.step(".asResult() -> casts Ok<T> to Result<T, never>", () => {
+      const ok = Ok(42);
+      const res = ok as Result<number, Error>;
+      const casted = ok.asResult();
+
+      const withCasted = ok.and(casted);
+      const unknownErr = ok.and(ok);
+      const castedResult = res.asResult();
+
+      assertType<IsExact<typeof casted, Result<number, never>>>(true);
+      assertType<IsExact<typeof withCasted, Result<number, never>>>(true);
+      assertType<IsExact<typeof unknownErr, Result<number, unknown>>>(true);
+      assertType<IsExact<typeof castedResult, Result<number, Error>>>(true);
+      assertStrictEquals(casted, ok);
+    });
+  });
+
   await t.step("Ok<T> -> Convenience Methods", async (t) => {
     await t.step(".id() -> returns the instance itself", () => {
       const res = Ok(42);
@@ -995,6 +1013,20 @@ Deno.test("eitherway::Result::Err", async (t) => {
         assertStrictEquals(union, true);
       },
     );
+  });
+
+  await t.step("Err<E> -> Transformation Methods", async (t) => {
+    await t.step(".asResult() -> casts Err<E> to Result<never, E>", () => {
+      const err = Err(Error());
+      const casted = err.asResult();
+
+      const withCasted = err.or(casted);
+      const unknownOk = err.or(err);
+
+      assertType<IsExact<typeof withCasted, Result<never, Error>>>(true);
+      assertType<IsExact<typeof unknownOk, Result<unknown, Error>>>(true);
+      assertStrictEquals(withCasted, unknownOk);
+    });
   });
 
   await t.step("Err<E> -> Convenience Methods", async (t) => {
