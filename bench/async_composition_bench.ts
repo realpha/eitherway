@@ -1,6 +1,58 @@
 //deno-lint-ignore-file
 import { Option, Result } from "../lib/core/mod.ts";
 import { Task } from "../lib/async/task.ts";
+import * as TaskOps from "../lib/async/operators.ts";
+
+const INPUTS = [
+  undefined,
+  "fortytwo",
+  "lenghtySuperLenghtyGibberishString",
+  "",
+  "5",
+];
+
+Deno.bench({
+  name: "Async Exceptions",
+  group: "Async::Composition",
+  fn: async () => {
+    for (const i of INPUTS) {
+      try {
+        await AsyncExceptions.processString(i);
+      } catch (e) {
+      }
+    }
+  },
+});
+
+Deno.bench({
+  name: "Task Instance Composition",
+  group: "Async::Composition",
+  fn: async () => {
+    for (const i of INPUTS) {
+      await TaskFlows.instanceComposition(i);
+    }
+  },
+});
+
+Deno.bench({
+  name: "Task Operator Composition",
+  group: "Async::Composition",
+  fn: async () => {
+    for (const i of INPUTS) {
+      await TaskFlows.operatorComposition(i);
+    }
+  },
+});
+
+Deno.bench({
+  name: "Task Propagation with Early Return",
+  group: "Async::Composition",
+  fn: async () => {
+    for (const i of INPUTS) {
+      await TaskFlows.earlyReturn(i);
+    }
+  },
+});
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -95,8 +147,8 @@ namespace TaskFlows {
     input: string | undefined,
   ): Promise<Result<number, TypeError>> {
     return toUpperCase(input)
-      .then(Task.andThen(stringToLength))
-      .then(Task.andThen(powerOfSelf));
+      .then(TaskOps.andThen(stringToLength))
+      .then(TaskOps.andThen(powerOfSelf));
   }
 
   export async function earlyReturn(
@@ -110,54 +162,3 @@ namespace TaskFlows {
     return powerOfSelf(resNum.unwrap());
   }
 }
-
-const INPUTS = [
-  undefined,
-  "fortytwo",
-  "lenghtySuperLenghtyGibberishString",
-  "",
-  "5",
-];
-
-Deno.bench({
-  name: "AsyncExceptions",
-  group: "Async",
-  fn: async () => {
-    for (const i of INPUTS) {
-      try {
-        await AsyncExceptions.processString(i);
-      } catch (e) {
-      }
-    }
-  },
-});
-
-Deno.bench({
-  name: "TaskInstanceFlow",
-  group: "Async",
-  fn: async () => {
-    for (const i of INPUTS) {
-      await TaskFlows.instanceComposition(i);
-    }
-  },
-});
-
-Deno.bench({
-  name: "TaskOperatorFlow",
-  group: "Async",
-  fn: async () => {
-    for (const i of INPUTS) {
-      await TaskFlows.operatorComposition(i);
-    }
-  },
-});
-
-Deno.bench({
-  name: "TaskEarlyReturnFlow",
-  group: "Async",
-  fn: async () => {
-    for (const i of INPUTS) {
-      await TaskFlows.earlyReturn(i);
-    }
-  },
-});
