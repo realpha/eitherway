@@ -3,19 +3,8 @@ import { Err, Ok, Result } from "../core/mod.ts";
 import { Task } from "./task.ts";
 import * as Operators from "./operators.ts";
 import {
-  assertEquals,
   assertStrictEquals,
-  assertType,
 } from "../../dev_deps.ts";
-import type { IsExact } from "../../dev_deps.ts";
-import type {
-  InferredFailureTuple,
-  InferredFailureType,
-  InferredFailureUnion,
-  InferredSuccessTuple,
-  InferredSuccessType,
-  InferredSuccessUnion,
-} from "./task.ts";
 
 Deno.test("eitherway::Task::Operators", async (t) => {
   await t.step("Map Operators", async (t) => {
