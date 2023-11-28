@@ -1,14 +1,14 @@
 import { asInfallible, Err, Ok, Result, Results } from "../core/mod.ts";
 import type { ExecutorFn } from "./_internal/mod.ts";
 import {
-  chainTaskSuccess,
   chainTaskFailure,
+  chainTaskSuccess,
   cloneTask,
-  inspectTaskSuccess,
   inspectTaskFailure,
+  inspectTaskSuccess,
   iterTask,
-  mapTaskSuccess,
   mapTaskFailure,
+  mapTaskSuccess,
   mapTaskSuccessOr,
   mapTaskSuccessOrElse,
   riseTask,

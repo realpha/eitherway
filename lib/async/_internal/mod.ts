@@ -1,4 +1,4 @@
-import { Ok, Err } from "../../core/mod.ts";
+import { Err, Ok } from "../../core/mod.ts";
 import type { Result } from "../../core/mod.ts";
 
 /**
@@ -9,7 +9,9 @@ import type { Result } from "../../core/mod.ts";
 type Future<T, E> = PromiseLike<Result<T, E>>;
 type Either<T, E> = Result<T, E> | Future<T, E>;
 
-export type ExecutorFn<T, E> = ConstructorParameters<typeof Promise<Result<T, E>>>[0];
+export type ExecutorFn<T, E> = ConstructorParameters<
+  typeof Promise<Result<T, E>>
+>[0];
 
 /**
  * Helper functions to leverage the same functionality in operators
@@ -22,7 +24,9 @@ export async function idTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {
   return await task;
 }
 
-export async function cloneTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {
+export async function cloneTask<T, E>(
+  task: Either<T, E>,
+): Promise<Result<T, E>> {
   return (await task).clone();
 }
 
@@ -190,7 +194,9 @@ export async function unwrapTaskOrElse<T, E, T2>(
   return orFn(res.unwrap());
 }
 
-export async function* iterTask<T, E>(task: Either<T, E>): AsyncIterableIterator<T> {
+export async function* iterTask<T, E>(
+  task: Either<T, E>,
+): AsyncIterableIterator<T> {
   const res = await task;
 
   if (res.isErr()) return;

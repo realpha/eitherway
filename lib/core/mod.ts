@@ -1,5 +1,5 @@
-export { Option, Options, None, Some } from "./option.ts";
-export { Err, Ok, Result, Results, asInfallible } from "./result.ts";
+export { None, Option, Options, Some } from "./option.ts";
+export { asInfallible, Err, Ok, Result, Results } from "./result.ts";
 export * from "./result.ts";
 export type {
   Empty,
