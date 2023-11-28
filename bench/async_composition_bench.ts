@@ -25,17 +25,6 @@ Deno.bench({
 });
 
 Deno.bench({
-  name: "Task Instance Composition",
-  group: "Async::Composition",
-  baseline: true,
-  fn: async () => {
-    for (const i of INPUTS) {
-      await TaskFlows.instanceComposition(i);
-    }
-  },
-});
-
-Deno.bench({
   name: "Task Operator Composition",
   group: "Async::Composition",
   fn: async () => {
@@ -54,6 +43,21 @@ Deno.bench({
     }
   },
 });
+
+Deno.bench({
+  name: "Task Instance Composition",
+  group: "Async::Composition",
+  baseline: true,
+  fn: async () => {
+    for (const i of INPUTS) {
+      await TaskFlows.instanceComposition(i);
+    }
+  },
+});
+
+
+
+
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));

@@ -13,7 +13,7 @@ Deno.bench({
 });
 
 Deno.bench({
-  name: "Sync Error Propagation",
+  name: "Result Error Propagation",
   group: "Sync::Propagation",
   baseline: true,
   fn: () => {

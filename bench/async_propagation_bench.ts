@@ -6,22 +6,22 @@ Deno.bench({
   group: "Async::Propagation",
   fn: async () => {
     try {
-      await AsyncExceptionCallStack.rethrow();
+      await AsyncExceptions.rethrow();
     } catch (e) {
     }
   },
 });
 
 Deno.bench({
-  name: "Async Error Propagation",
+  name: "Task Error Propagation",
   group: "Async::Propagation",
   baseline: true,
   fn: async () => {
-    await TaskCallStack.linearReturn();
+    await TaskErrors.linearReturn();
   },
 });
 
-export namespace AsyncExceptionCallStack {
+export namespace AsyncExceptions {
   async function fail() {
     throw TypeError("Fail!");
   }
@@ -41,7 +41,7 @@ export namespace AsyncExceptionCallStack {
   }
 }
 
-export namespace TaskCallStack {
+export namespace TaskErrors {
   function fail() {
     return Task.fail(TypeError("Fail!"));
   }
