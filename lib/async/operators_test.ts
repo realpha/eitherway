@@ -2,9 +2,7 @@
 import { Err, Ok, Result } from "../core/mod.ts";
 import { Task } from "./task.ts";
 import * as Operators from "./operators.ts";
-import {
-  assertStrictEquals,
-} from "../../dev_deps.ts";
+import { assertStrictEquals } from "../../dev_deps.ts";
 
 Deno.test("eitherway::Task::Operators", async (t) => {
   await t.step("Map Operators", async (t) => {
