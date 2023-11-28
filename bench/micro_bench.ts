@@ -58,4 +58,3 @@ Deno.bench({
     const res = Option("foo");
   },
 });
-

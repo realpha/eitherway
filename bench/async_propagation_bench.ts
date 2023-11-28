@@ -15,6 +15,7 @@ Deno.bench({
 Deno.bench({
   name: "Async Error Propagation",
   group: "Async::Propagation",
+  baseline: true,
   fn: async () => {
     await TaskCallStack.linearReturn();
   },

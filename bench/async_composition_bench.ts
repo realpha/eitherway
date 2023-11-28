@@ -27,6 +27,7 @@ Deno.bench({
 Deno.bench({
   name: "Task Instance Composition",
   group: "Async::Composition",
+  baseline: true,
   fn: async () => {
     for (const i of INPUTS) {
       await TaskFlows.instanceComposition(i);
@@ -45,7 +46,7 @@ Deno.bench({
 });
 
 Deno.bench({
-  name: "Task Propagation with Early Return",
+  name: "Task Early Return",
   group: "Async::Composition",
   fn: async () => {
     for (const i of INPUTS) {

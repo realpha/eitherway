@@ -26,6 +26,7 @@ Deno.bench({
 Deno.bench({
   name: "Result Instance Composition",
   group: "Sync::Composition",
+  baseline: true,
   fn: () => {
     INPUTS.forEach((i) => SyncResults.instanceComposition(i));
   },
