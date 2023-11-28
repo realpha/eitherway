@@ -40,7 +40,6 @@ Deno.bench({
   },
 });
 
-
 namespace SyncExceptions {
   function toUpperCase(input: string | undefined): string {
     if (typeof input === "undefined") {
@@ -111,12 +110,14 @@ namespace SyncResults {
       .andThen(powerOfSelf);
   }
 
-  export function earlyReturn(input: string | undefined): Result<number, TypeError> {
+  export function earlyReturn(
+    input: string | undefined,
+  ): Result<number, TypeError> {
     const upperCased = toUpperCase(input);
     if (upperCased.isErr()) return upperCased;
 
     const length = stringToLength(upperCased.unwrap());
-    if(length.isErr()) return length;
+    if (length.isErr()) return length;
 
     return powerOfSelf(length.unwrap());
   }
