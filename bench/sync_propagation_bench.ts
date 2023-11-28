@@ -1,53 +1,53 @@
 //deno-lint-ignore-file
-import { Task } from "../lib/async/mod.ts";
+import { Err } from "../lib/core/mod.ts";
 
 Deno.bench({
-  name: "Async Exception Propagation",
-  group: "Async::Propagation",
-  fn: async () => {
+  name: "Sync Exception Propagation",
+  group: "Sync::Propagation",
+  fn: () => {
     try {
-      await AsyncExceptionCallStack.rethrow();
+      Exceptions.rethrow();
     } catch (e) {
     }
   },
 });
 
 Deno.bench({
-  name: "Async Error Propagation",
-  group: "Async::Propagation",
-  fn: async () => {
-    await TaskCallStack.linearReturn();
+  name: "Sync Error Propagation",
+  group: "Sync::Propagation",
+  fn: () => {
+    Errors.linearReturn();
   },
 });
 
-export namespace AsyncExceptionCallStack {
-  async function fail() {
+export namespace Exceptions {
+  function fail() {
     throw TypeError("Fail!");
   }
-  async function propagate() {
+  function propagate() {
     try {
-      return await fail();
+      return fail();
     } catch (e) {
       throw e;
     }
   }
-  export async function rethrow() {
+  export function rethrow() {
     try {
-      return await propagate();
+      return propagate();
     } catch (e) {
       throw e;
     }
   }
 }
 
-export namespace TaskCallStack {
+export namespace Errors {
   function fail() {
-    return Task.fail(TypeError("Fail!"));
+    return Err(TypeError("Fail!"));
   }
-  async function propagate() {
-    return await fail();
+  function propagate() {
+    return fail();
   }
-  export async function linearReturn() {
-    return await propagate();
+  export function linearReturn() {
+    return propagate();
   }
 }

@@ -40,6 +40,7 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
       entryPoints: [ENTRY_POINT],
       outDir: OUT_DIR,
       typeCheck: "both",
+      declaration: "separate",
       test: false,
       shims: {
         deno: false,
