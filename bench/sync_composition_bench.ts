@@ -1,5 +1,44 @@
 //deno-lint-ignore-file
-import { Err, None, Ok, Option, Result, Some } from "../lib/core/mod.ts";
+import { Option, Result } from "../lib/core/mod.ts";
+
+const INPUTS = [
+  undefined,
+  "fortytwo",
+  "lenghtySuperLenghtyGibberishString",
+  "",
+  "5",
+];
+
+Deno.bench({
+  name: "Sync Exceptions",
+  group: "Sync::Composition",
+  fn: () => {
+    INPUTS.forEach((i) => {
+      try {
+        SyncExceptions.processString(i);
+      } catch (e) {
+        //nothing to do here
+      }
+    });
+  },
+});
+
+Deno.bench({
+  name: "Result Instance Composition",
+  group: "Sync::Composition",
+  baseline: true,
+  fn: () => {
+    INPUTS.forEach((i) => SyncResults.instanceComposition(i));
+  },
+});
+
+Deno.bench({
+  name: "Result Early Return",
+  group: "Sync::Composition",
+  fn: () => {
+    INPUTS.forEach((i) => SyncResults.earlyReturn(i));
+  },
+});
 
 namespace SyncExceptions {
   function toUpperCase(input: string | undefined): string {
@@ -36,17 +75,12 @@ namespace SyncExceptions {
       const length = stringToLength(upperCased);
       return powerOfSelf(length);
     } catch (error) {
-      // if (error instanceof TypeError) {
-      //   console.error(error.message);
-      // } else {
-      //   console.error("An unexpected error occurred:", error);
-      // }
       throw error;
     }
   }
 }
 
-namespace SyncResultFlow {
+namespace SyncResults {
   function toUpperCase(input: string | undefined): Result<string, TypeError> {
     return Option(input)
       .okOrElse(() => TypeError("Input is undefined"))
@@ -68,42 +102,23 @@ namespace SyncResultFlow {
       });
   }
 
-  export function processString(
+  export function instanceComposition(
     input: string | undefined,
   ): Result<number, TypeError> {
     return toUpperCase(input)
       .andThen(stringToLength)
       .andThen(powerOfSelf);
-    // .inspectErr(e => console.error(e.message));
+  }
+
+  export function earlyReturn(
+    input: string | undefined,
+  ): Result<number, TypeError> {
+    const upperCased = toUpperCase(input);
+    if (upperCased.isErr()) return upperCased;
+
+    const length = stringToLength(upperCased.unwrap());
+    if (length.isErr()) return length;
+
+    return powerOfSelf(length.unwrap());
   }
 }
-
-const INPUTS = [
-  undefined,
-  "fortytwo",
-  "lenghtySuperLenghtyGibberishString",
-  "",
-  "5",
-];
-
-Deno.bench({
-  name: "SyncExceptions",
-  group: "Sync",
-  fn: () => {
-    INPUTS.forEach((i) => {
-      try {
-        SyncExceptions.processString(i);
-      } catch (e) {
-        //nothing to do here
-      }
-    });
-  },
-});
-
-Deno.bench({
-  name: "SyncResultFlow",
-  group: "Sync",
-  fn: () => {
-    INPUTS.forEach((i) => SyncResultFlow.processString(i));
-  },
-});
