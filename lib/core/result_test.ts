@@ -7,7 +7,7 @@ import {
   assertType,
 } from "../../dev_deps.ts";
 import type { IsExact } from "../../dev_deps.ts";
-import { Empty } from "./mod.ts";
+import { Empty, None, Option } from "./mod.ts";
 import { Err, Ok, Result, Results } from "./result.ts";
 import type {
   InferredErrTuple,
@@ -610,6 +610,56 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       assertType<IsExact<typeof castedResult, Result<number, Error>>>(true);
       assertStrictEquals(casted, ok);
     });
+
+    await t.step(".toTuple() -> transforms Ok<T> to [T, never]", () => {
+      const okRes = Ok(42);
+      const res = Ok(42) as Result<number, Error>;
+
+      const okTuple = okRes.toTuple();
+      const tuple = res.toTuple();
+      const [ok, err] = okRes.toTuple();
+
+      assertType<IsExact<typeof okTuple, [number, never]>>(true);
+      assertType<IsExact<typeof tuple, [number, never] | [never, Error]>>(true);
+      assertType<IsExact<typeof ok, number>>(true);
+      assertType<IsExact<typeof err, never>>(true);
+      assertStrictEquals(ok, 42);
+      assertStrictEquals(err, undefined);
+    });
+
+    await t.step(".ok() -> transforms Ok<T> to Option<T>", () => {
+      const res = Ok(42);
+      const nullishRes = Ok(undefined);
+
+      const ok = res.ok();
+      const notOk = nullishRes.ok();
+
+      assertType<IsExact<typeof ok, Option<number>>>(true);
+      assertType<IsExact<typeof notOk, Option<never>>>(true);
+      assertStrictEquals(ok.isSome(), true);
+      assertStrictEquals(notOk.isSome(), false);
+    });
+
+    await t.step(".err() ->transforms Ok<T> to None", () => {
+      const res = Ok(42);
+
+      const ok = res.err();
+
+      assertType<IsExact<typeof ok, None>>(true);
+      assertStrictEquals(ok.isNone(), true);
+    });
+
+    await t.step(".into() -> passes Ok<T> to the supplied intoFn", () => {
+      const intoFn = function (res: Result<number, Error>): number {
+        return res.unwrapOr(0);
+      };
+      const err = Ok(42);
+
+      const num = err.into(intoFn);
+
+      assertType<IsExact<typeof num, number>>(true);
+      assertStrictEquals(num, 42);
+    });
   });
 
   await t.step("Ok<T> -> Convenience Methods", async (t) => {
@@ -1026,6 +1076,54 @@ Deno.test("eitherway::Result::Err", async (t) => {
       assertType<IsExact<typeof withCasted, Result<never, Error>>>(true);
       assertType<IsExact<typeof unknownOk, Result<unknown, Error>>>(true);
       assertStrictEquals(withCasted, unknownOk);
+    });
+
+    await t.step(".toTuple() -> transforms Err<E> to [never, E]", () => {
+      const errInstance = Error();
+      const errRes = Err(errInstance);
+
+      const tuple = errRes.toTuple();
+      const [ok, err] = errRes.toTuple();
+
+      assertType<IsExact<typeof tuple, [never, Error]>>(true);
+      assertType<IsExact<typeof ok, never>>(true);
+      assertType<IsExact<typeof err, Error>>(true);
+      assertStrictEquals(ok, undefined);
+      assertStrictEquals(err, errInstance);
+    });
+
+    await t.step(".ok() -> transforms Err<E> to None", () => {
+      const res = Err(Error());
+
+      const err = res.ok();
+
+      assertType<IsExact<typeof err, None>>(true);
+      assertStrictEquals(err.isNone(), true);
+    });
+
+    await t.step(".err() -> transforms Err<E> to Option<E>", () => {
+      const res = Err(42);
+      const nullishRes = Err(undefined);
+
+      const err = res.err();
+      const notErr = nullishRes.err();
+
+      assertType<IsExact<typeof err, Option<number>>>(true);
+      assertType<IsExact<typeof notErr, Option<never>>>(true);
+      assertStrictEquals(err.isSome(), true);
+      assertStrictEquals(notErr.isSome(), false);
+    });
+
+    await t.step(".into() -> passes Err<E> to the supplied intoFn", () => {
+      const intoFn = function (res: Result<number, Error>): number {
+        return res.unwrapOr(0);
+      };
+      const err = Err(Error());
+
+      const num = err.into(intoFn);
+
+      assertType<IsExact<typeof num, number>>(true);
+      assertStrictEquals(num, 0);
     });
   });
 

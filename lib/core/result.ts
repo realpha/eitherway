@@ -652,9 +652,94 @@ export interface IResult<T, E> {
    */
   asResult(): Result<T, E>;
 
+  /**
+   * Use this to obtain a tuple representation of `Result<T, E>`
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const res = Ok(42) as Result<number, string>;
+   *
+   * const [ ok, err ] = res.toTuple();
+   *
+   * assert(ok === 42);
+   * assert(err === undefined);
+   * ```
+   */
   toTuple(): [T, never] | [never, E] | [never, never];
+
+  /**
+   * Use this to transform an instance of `Result<T, E>` into an `Option<T>`.
+   *
+   * See {@linkcode IResult#err} for the opposite case.
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const ok = Ok(42).ok();
+   * const err = Err(Error()).ok();
+   *
+   * assert(ok.isSome() === true);
+   * assert(err.isSome() === false);
+   * ```
+   */
   ok(): Option<T>;
+
+  /**
+   * Use this to transform an instance of `Result<T, E>` into an `Option<E>`.
+   *
+   * See {@linkcode IResult#ok} for the opposite case.
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   *
+   * const ok = Ok(42).err();
+   * const err = Err(Error()).err();
+   *
+   * assert(ok.isSome() === false);
+   * assert(err.isSome() === true);
+   * ```
+   */
   err(): Option<E>;
+
+  /**
+   * Use this to transform an instance of `Result<T, E>` into a type of your
+   * choosing.
+   *
+   * This is mostly useful to push the instance into an async context.
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./result.ts";
+   * import { Task } from "../async/task.ts";
+   *
+   * const futureNumber = Promise.resolve(2);
+   *
+   * const task = Ok(42).asResult()
+   *   .into((res) => Task.of(res))
+   *   .map(async (n) => n * await futureNumber);
+   *
+   * task
+   *   .then((res) => assert(res.unwrap() === 84))
+   *   .catch(() => "Unreachable")
+   *   .finally(() => console.log("Done"));
+   * ```
+   */
   into<T2>(intoFn: (res: Result<T, E>) => T2): T2;
 
   /**
@@ -974,7 +1059,7 @@ class _Ok<T> implements IResult<T, never> {
   ok(): Option<NonNullish<T>> {
     return Option(this.#value);
   }
-  err(): Option<never> {
+  err(): None {
     return None;
   }
   into<U>(intoFn: (res: Ok<T>) => U): U {
@@ -1211,7 +1296,7 @@ export namespace Err {
  * @namespace
  */
 export type Result<T, E> = Ok<T> | Err<E>;
-export function Result<T, E extends Error>(value: T | E) {
+export function Result<T, E extends Error>(value: T | E): Result<T, E> {
   if (value instanceof Error) return Err(value);
   return Ok(value);
 }
