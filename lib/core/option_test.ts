@@ -71,7 +71,7 @@ const allFallible = nullish.concat([err]);
 const allValues = allNonNullish.concat(nullish);
 
 Deno.test("eitherway::Option", async (t) => {
-  await t.step("Option() -> returns Some for NonNullish values", () => {
+  await t.step("() -> returns Some for NonNullish values", () => {
     allNonNullish.forEach((val) => {
       const some = Option(val);
       assertEquals(some.isSome(), true, `${String(val)} should be Some`);
@@ -79,7 +79,7 @@ Deno.test("eitherway::Option", async (t) => {
       assertStrictEquals(some.unwrap(), val);
     });
   });
-  await t.step("Option() -> returns None for Nullish values", () => {
+  await t.step("() -> returns None for Nullish values", () => {
     nullish.forEach((val) => {
       const none = Option(val);
 
@@ -88,7 +88,7 @@ Deno.test("eitherway::Option", async (t) => {
       assertStrictEquals(none.unwrap(), undefined);
     });
   });
-  await t.step("Option.from() -> returns Some for NonNullish values", () => {
+  await t.step(".from() -> returns Some for NonNullish values", () => {
     allNonNullish.forEach((val) => {
       const some = Option.from(val);
 
@@ -97,7 +97,7 @@ Deno.test("eitherway::Option", async (t) => {
       assertStrictEquals(some.unwrap(), val);
     });
   });
-  await t.step("Option.from() -> returns None for Nullish values", () => {
+  await t.step(".from() -> returns None for Nullish values", () => {
     nullish.forEach((val) => {
       const none = Option.from(val);
 
@@ -107,7 +107,7 @@ Deno.test("eitherway::Option", async (t) => {
     });
   });
   await t.step(
-    "Option.fromFallibe() -> returns Some for Truthy and FalsyNotNullish values",
+    ".fromFallibe() -> returns Some for Truthy and FalsyNotNullish values",
     () => {
       allInfallible.forEach((val) => {
         const some = Option.fromFallible(val);
@@ -119,7 +119,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option.fromFallibe() -> returns None for Nullish and Error values",
+    ".fromFallibe() -> returns None for Nullish and Error values",
     () => {
       allFallible.forEach((val) => {
         const none = Option.fromFallible(val);
@@ -131,7 +131,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option.fromCoercible() -> returns Some for Truthy values",
+    ".fromCoercible() -> returns Some for Truthy values",
     () => {
       allTruthy.forEach((val) => {
         const some = Option.fromCoercible(val);
@@ -143,7 +143,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option.fromCoercible() -> returns None for Falsy values",
+    ".fromCoercible() -> returns None for Falsy values",
     () => {
       allFalsy.forEach((val) => {
         const none = Option.fromCoercible(val);
@@ -155,7 +155,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option.apply() -> returns the correct result for variadic functions",
+    ".apply() -> returns the correct result for variadic functions",
     () => {
       type UserRecord = {
         name: string;
@@ -184,7 +184,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option.lift() -> composes functions and constructors correctly",
+    ".lift() -> composes functions and constructors correctly",
     () => {
       function chainDivide(n: number, ...divisors: number[]) {
         return divisors.reduce((acc, divisor) => acc /= divisor, n);
@@ -224,7 +224,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option.lift() -> allows for composition of custom Option constructors",
+    ".lift() -> allows for composition of custom Option constructors",
     () => {
       type Left<L> = { tag: "Left"; value: L };
       type Right<R> = { tag: "Right"; value: R };
@@ -264,7 +264,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option.liftFallible() -> returns None if lifted function panics",
+    ".liftFallible() -> returns None if lifted function panics",
     () => {
       function panics(n: number): number {
         if (n % 2 === 0) return n;
@@ -283,7 +283,7 @@ Deno.test("eitherway::Option", async (t) => {
     },
   );
   await t.step(
-    "Option[Symbol.hasInstance]() -> instanceof returns true for instances of Some & None",
+    "[Symbol.hasInstance]() -> instanceof returns true for instances of Some & None",
     () => {
       allValues.forEach((val) => {
         const opt = Option.from(val);
@@ -360,7 +360,7 @@ Deno.test("eitherway::Options", async (t) => {
     },
   );
   await t.step(
-    "Option.any() -> returns the first Some found in Option<T>[]",
+    ".any() -> returns the first Some found in Option<T>[]",
     () => {
       type Prime = number;
       const toPrime = function (n: number): Option<Prime> {

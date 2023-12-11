@@ -19,6 +19,33 @@ import type {
 } from "./result.ts";
 
 Deno.test("eitherway::Result", async (t) => {
+  await t.step("() -> produces an instance of Result for union types", () => {
+    const str = "str";
+    const te = TypeError();
+    const union = 5 as number | RangeError;
+    const undef = undefined;
+
+    const ok = Result(str);
+    const err = Result(te);
+    const okUnion = Result(union);
+    const okVoid = Result(undef);
+    const tag = Object.prototype.toString.call(Result);
+
+    assertType<IsExact<typeof ok, Result<string, never>>>(true);
+    assertType<IsExact<typeof err, Result<never, TypeError>>>(true);
+    assertType<IsExact<typeof okUnion, Result<number, RangeError>>>(true);
+    assertType<IsExact<typeof okVoid, Result<undefined, never>>>(true);
+    assertStrictEquals(ok.isOk(), true);
+    assertStrictEquals(ok instanceof Result, true);
+    assertStrictEquals(err.isErr(), true);
+    assertStrictEquals(err instanceof Result, true);
+    assertStrictEquals(okUnion.isOk(), true);
+    assertStrictEquals(okUnion instanceof Result, true);
+    assertStrictEquals(okVoid.isOk(), true);
+    assertStrictEquals(okVoid instanceof Result, true);
+    assertStrictEquals(tag, "[object eitherway::Result]");
+  });
+
   await t.step(".from() -> returns Result<T, never> inferred from fn", () => {
     const produceNum = () => 42;
 
@@ -87,6 +114,19 @@ Deno.test("eitherway::Result", async (t) => {
       assertType<IsExact<typeof res, Result<number, TypeError>>>(true);
       assertStrictEquals(res.isOk(), false);
       assertStrictEquals(res.unwrap().constructor, TypeError);
+    },
+  );
+
+  await t.step(
+    ".lift() -> propagates exception if lifted function panics",
+    () => {
+      const panic = (_n: number): number => {
+        throw new Error("Panic");
+      };
+
+      const lifted = Result.lift(panic);
+
+      assertThrows(() => lifted(1));
     },
   );
 
@@ -303,6 +343,25 @@ Deno.test("eitherway::Results", async (t) => {
 });
 
 Deno.test("eitherway::Result::Ok", async (t) => {
+  await t.step("Ok<T> -> Constructors", async (t) => {
+    await t.step("() -> returns Ok", () => {
+      const ok = Ok(undefined);
+      const tag = Object.prototype.toString.call(Ok);
+
+      assertStrictEquals(ok instanceof Result, true);
+      assertStrictEquals(ok instanceof Ok, true);
+      assertStrictEquals(ok.isOk(), true);
+      assertStrictEquals(tag, "[object eitherway::Result::Ok]");
+    });
+
+    await t.step(".empty() -> returns Ok<Empty>", () => {
+      const empty = Ok.empty();
+
+      assertType<IsExact<typeof empty, Ok<Empty>>>(true);
+      assertStrictEquals(empty.isOk(), true);
+    });
+  });
+
   await t.step("Ok<T> -> Type Predicates", async (t) => {
     await t.step(".isOk() -> narrows to Ok by returning true", () => {
       const res = Ok(42) as Result<number, TypeError>;
@@ -660,6 +719,16 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       assertType<IsExact<typeof num, number>>(true);
       assertStrictEquals(num, 42);
     });
+
+    await t.step(".iter() -> produces and IterableIterator<T>", () => {
+      const ok = Ok("abc");
+
+      const iter = ok.iter();
+      const arr = [...iter];
+
+      assertType<IsExact<typeof iter, IterableIterator<string>>>(true);
+      assertEquals(arr, ["abc"]);
+    });
   });
 
   await t.step("Ok<T> -> Convenience Methods", async (t) => {
@@ -725,7 +794,7 @@ Deno.test("eitherway::Result::Ok", async (t) => {
         const ok = Ok(record);
         const inspectAssertion = createInspectFn(record);
 
-        const res = ok.inspectErr(inspectAssertion);
+        const res = ok.inspect(inspectAssertion);
 
         assertStrictEquals(res, ok);
       },
@@ -760,6 +829,16 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 
       assertStrictEquals(fqn, "eitherway::Result::Ok<thing>");
     });
+
+    await t.step(
+      "[Symbol.toStringTag] -> returns the FQN while preserving object tags",
+      () => {
+        const fqn = Ok(["thing"])[Symbol.toStringTag];
+
+        assertStrictEquals(fqn, "eitherway::Result::Ok<[object Array]>");
+      },
+    );
+
     await t.step(
       "[Symbol.iterator]() -> conforms iterator protocol and delegates to underlying implementation",
       () => {
@@ -804,6 +883,25 @@ Deno.test("eitherway::Result::Ok", async (t) => {
 });
 
 Deno.test("eitherway::Result::Err", async (t) => {
+  await t.step("Err<E> -> Constructors", async (t) => {
+    await t.step("() -> returns Err<E>", () => {
+      const err = Err(undefined);
+      const tag = Object.prototype.toString.call(Err);
+
+      assertStrictEquals(err instanceof Err, true);
+      assertStrictEquals(err instanceof Result, true);
+      assertStrictEquals(err.isErr(), true);
+      assertStrictEquals(tag, "[object eitherway::Result::Err]");
+    });
+
+    await t.step(".empty() -> returns Err<Empty>", () => {
+      const empty = Err.empty();
+
+      assertType<IsExact<typeof empty, Err<Empty>>>(true);
+      assertStrictEquals(empty.isErr(), true);
+    });
+  });
+
   await t.step("Err<E> -> Type Predicates", async (t) => {
     await t.step(".isOk() -> narrows to Ok by returning false", () => {
       const res = Err(TypeError()) as Result<number, TypeError>;
@@ -967,7 +1065,7 @@ Deno.test("eitherway::Result::Err", async (t) => {
     );
 
     await t.step(
-      "rise() -> passes on the original Err variant if riseFn fails",
+      ".rise() -> passes on the original Err variant if riseFn fails",
       () => {
         const recover = function (_: Error): Result<string, TypeError> {
           return Err(TypeError());
@@ -1125,6 +1223,16 @@ Deno.test("eitherway::Result::Err", async (t) => {
       assertType<IsExact<typeof num, number>>(true);
       assertStrictEquals(num, 0);
     });
+
+    await t.step(".iter() -> produces and IterableIterator<never>", () => {
+      const err = Err(Error());
+
+      const iter = err.iter();
+      const arr = [...iter];
+
+      assertType<IsExact<typeof iter, IterableIterator<never>>>(true);
+      assertEquals(arr, []);
+    });
   });
 
   await t.step("Err<E> -> Convenience Methods", async (t) => {
@@ -1222,10 +1330,20 @@ Deno.test("eitherway::Result::Err", async (t) => {
     });
 
     await t.step("[Symbol.toStringTag] -> returns the FQN", () => {
-      const fqn = Err(Error())[Symbol.toStringTag];
+      const fqn = Err(123)[Symbol.toStringTag];
 
-      assertStrictEquals(fqn, "eitherway::Result::Err<[object Error]>");
+      assertStrictEquals(fqn, "eitherway::Result::Err<123>");
     });
+
+    await t.step(
+      "[Symbol.toStringTag] -> returns the FQN while preserving object tags",
+      () => {
+        const fqn = Err(["thing"])[Symbol.toStringTag];
+
+        assertStrictEquals(fqn, "eitherway::Result::Err<[object Array]>");
+      },
+    );
+
     await t.step(
       "[Symbol.iterator]() -> conforms iterator protocol and represents the empty iterator",
       () => {
