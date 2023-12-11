@@ -1,6 +1,7 @@
 export { None, Option, Options, Some } from "./option.ts";
 export { asInfallible, Err, Ok, Result, Results } from "./result.ts";
-export * from "./result.ts";
+export type { IOption } from "./option.ts";
+export type { IResult } from "./result.ts";
 export type {
   Empty,
   Fallible,

@@ -1558,8 +1558,8 @@ Object.freeze(None);
  * It's impossible to create an instance of `Some<null | undefined>`
  *
  * The namespace provides additional constructors when it's desired that
- * the return type is invariant over fallible (i.e. Error) or falsy types,
- * as well as a couple of collection helpers
+ * the return type is invariant over fallible (i.e. Error) or falsy types.
+ * The namespace {@linkcode Options} provides a couple of collection helpers.
  *
  * @property {<T>(value: T) => Option<NonNullish<T>>} from - alias for Option()
  * @property {<T>(value: T) => Option<Infallible<T>>} fromFallible - also returns None for instances of Error

@@ -99,28 +99,3 @@ export function isPrimitive(arg: unknown): arg is string | number | boolean {
   const type = typeof arg;
   return type === "string" || type === "number" || type === "boolean";
 }
-
-/**
- * ===============
- *   DECORATORS
- * ===============
- */
-
-/**
- * Waiting for this to simplify module structure
- * https://github.com/denoland/deno/issues/19160
- */
-export function callable<
-  //deno-lint-ignore no-explicit-any
-  T extends new (...args: any[]) => any,
-  Ctx extends ClassDecoratorContext<T>,
-  R = InstanceType<T>,
->(
-  ctor: T,
-  ctx: Ctx,
-) {
-  if (ctx.kind !== "class") return;
-  return function (...args: ConstructorParameters<T>): R {
-    return new ctor(...args);
-  };
-}

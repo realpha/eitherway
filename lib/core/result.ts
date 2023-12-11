@@ -3,7 +3,8 @@
  * NOTE: the "no-unused-vars" lint rule is ignored in order to ensure
  * method parameter names are symetrical
  */
-import type { Empty, NonNullish } from "./type_utils.ts";
+import type { Empty, Fallible, NonNullish } from "./type_utils.ts";
+import { AssertionError } from "./assert.ts";
 import { EMPTY } from "./type_utils.ts";
 import { None, Option } from "./option.ts";
 
@@ -1230,13 +1231,50 @@ class _Err<E> implements IResult<never, E> {
  *
  * The success variant of a `Result<T, E>`
  *
- * @category Result:Basic
- * @implements {@linkcode IResult}
+ * @category Result::Basic
+ * @implements {IResult<T, never>}
+ * @property {() => Ok<Empty>} empty - returns `Ok<Empty>`
+ *
+ * @example
+ * ```typescript
+ * import { assert } from "./assert.ts";
+ * import { Err, Ok, Result } from "./result.ts";
+ *
+ * const ok = Ok(42);
+ * const tag = Object.prototype.toString.call(Ok);
+ *
+ * assert(ok instanceof Ok);
+ * assert(ok instanceof Result);
+ * assert(tag === "[object eitherway::Result::Ok]");
+ * ```
  */
 export type Ok<T> = _Ok<T>;
-export function Ok<T>(value: T) {
+export function Ok<T>(value: T): Ok<T> {
   return new _Ok(value);
 }
+
+/**
+ * Use this to signal success irrespective of the actual wrapped type as alternative to `Ok<void>`.
+ *
+ * This is useful in combination with `Option<T>`, where a variant of `Ok<void>` would produce `None`.
+ *
+ * @category Result::Basic
+ *
+ * @example
+ * ```typescript
+ * import { assert } from "./assert.ts";
+ * import { Err, Ok, Result } from "./result.ts";
+ *
+ * const empty = Ok.empty().ok();
+ * const undef = Ok(undefined).ok();
+ *
+ * assert(empty.isSome() === true);
+ * assert(undef.isSome() === false);
+ * ```
+ */
+Ok.empty = function (): Ok<Empty> {
+  return Ok(EMPTY);
+};
 Object.defineProperty(Ok, Symbol.hasInstance, {
   value: function (lhs: unknown): lhs is Ok<unknown> {
     return lhs instanceof _Ok;
@@ -1245,25 +1283,56 @@ Object.defineProperty(Ok, Symbol.hasInstance, {
 Object.defineProperty(Ok, Symbol.toStringTag, {
   value: "eitherway::Result::Ok",
 });
-//deno-lint-ignore no-namespace
-export namespace Ok {
-  export function empty(): Ok<Empty> {
-    return Ok(EMPTY);
-  }
-}
 
 /**
  * # Err<E>
  *
  * The failure variant of a `Result<T, E>`
  *
- * @category Result:Basic
- * @implements {@linkcode IResult}
+ * @category Result::Basic
+ * @implements {IResult<never, E>}
+ * @property {() => Err<Empty>} empty - returns `Err<Empty>`
+ *
+ * @example
+ * ```typescript
+ * import { assert } from "./assert.ts";
+ * import { Err, Ok, Result } from "./result.ts";
+ *
+ * const err = Err("Problem");
+ * const tag = Object.prototype.toString.call(Err);
+ *
+ * assert(err instanceof Err);
+ * assert(err instanceof Result);
+ * assert(tag === "[object eitherway::Result::Err]");
+ * ```
  */
 export type Err<E> = _Err<E>;
 export function Err<E>(err: E): Err<E> {
   return new _Err(err);
 }
+
+/**
+ * Use this to signal failure irrespective of the actual wrapped type as alternative to `Err<void>`.
+ *
+ * This is useful in combination with `Option<T>`, where a variant of `Err<void>` would produce `None`.
+ *
+ * @category Result::Basic
+ *
+ * @example
+ * ```typescript
+ * import { assert } from "./assert.ts";
+ * import { Err, Ok, Result } from "./result.ts";
+ *
+ * const empty = Err.empty().err();
+ * const undef = Err(undefined).err();
+ *
+ * assert(empty.isSome() === true);
+ * assert(undef.isSome() === false);
+ * ```
+ */
+Err.empty = function (): Err<Empty> {
+  return Err(EMPTY);
+};
 Object.defineProperty(Err, Symbol.hasInstance, {
   value: function (lhs: unknown): lhs is Err<unknown> {
     return lhs instanceof _Err;
@@ -1272,12 +1341,6 @@ Object.defineProperty(Err, Symbol.hasInstance, {
 Object.defineProperty(Err, Symbol.toStringTag, {
   value: "eitherway::Result::Err",
 });
-//deno-lint-ignore no-namespace
-export namespace Err {
-  export function empty(): Err<Empty> {
-    return Err(EMPTY);
-  }
-}
 
 /**
  * # Result<T, E>
@@ -1291,14 +1354,40 @@ export namespace Err {
  * to ease working with collections of `Result<T, E>` (indexed and plain
  * Iterables)
  *
- * @implements {@linkcode IResult}
+ * @implements {IResult<T, E>}
  * @category Result::Basic
  * @namespace
+ *
+ * @example
+ * ```typescript
+ * import { assert } from "./assert.ts";
+ * import { Err, Ok, Result } from "./result.ts";
+ *
+ * type StrOrTypeError = string | TypeError;
+ * const str = "thing" as StrOrTypeError;
+ * const num = 42;
+ * const rangeErr = RangeError();
+ * const tag = Object.prototype.toString.call(Result);
+ *
+ * const res: Result<string, TypeError> = Result(str);
+ * const ok: Result<number, never> = Result(num);
+ * const err: Result<never, RangeError> = Result(rangeErr);
+ *
+ * assert(res instanceof Result);
+ * assert(res.isOk());
+ * assert(ok instanceof Result);
+ * assert(ok.isOk());
+ * assert(err instanceof Result);
+ * assert(err.isErr());
+ * assert(tag === "[object eitherway::Result]");
+ * ```
  */
 export type Result<T, E> = Ok<T> | Err<E>;
-export function Result<T, E extends Error>(value: T | E): Result<T, E> {
-  if (value instanceof Error) return Err(value);
-  return Ok(value);
+export function Result<TE>(
+  value: TE,
+): Result<Exclude<TE, Fallible<TE>>, Fallible<TE>> {
+  if (value && value instanceof Error) return Err(value as Fallible<TE>);
+  return Ok(value as Exclude<TE, Fallible<TE>>);
 }
 Object.defineProperty(Result, Symbol.hasInstance, {
   value: function (lhs: unknown): lhs is Result<unknown, unknown> {
@@ -1311,9 +1400,51 @@ Object.defineProperty(Result, Symbol.toStringTag, {
 
 //deno-lint-ignore no-namespace
 export namespace Result {
+  /**
+   * Use this to lift the result of an infallible function into a `Result`
+   * context.
+   *
+   * In case, the supplied function panics, an exception is thrown, wrapping
+   * the original exception.
+   *
+   * @throws AssertionError
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./mod.ts";
+   *
+   * const produceArr = () => [1,2,3];
+   * const res = Result.from(produceArr);
+   *
+   * assert(res.isOk());
+   * ```
+   */
   export function from<T>(fn: () => T): Result<T, never> {
     return Result.fromFallible(fn, asInfallible);
   }
+
+  /**
+   * Use this to lift the result of a fallible function into a `Result`
+   * context.
+   *
+   * @category Result::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Err, Ok, Result } from "./mod.ts";
+   *
+   * const castToErr = <E>(e: unknown): E => e as E;
+   * const produceArr = () => [1,2,3];
+   *
+   * const res: Result<number[], TypeError> = Result.fromFallible(produceArr, castToErr<TypeError>);
+   *
+   * assert(res.isOk());
+   * ```
+   */
   export function fromFallible<T, E>(
     fn: () => T,
     errMapFn: (e: unknown) => E,
@@ -1330,6 +1461,9 @@ export namespace Result {
    * the wrapped function with a `Result` constructor.
    *
    * If no constructor is provided, `Ok` is used as default.
+   *
+   * This is useful for integrating 3rd party code without the need to manually
+   * wrap it.
    *
    * @category Result::Advanced
    *
@@ -1369,6 +1503,9 @@ export namespace Result {
    *
    * If no constructor is provided, `Ok` is used as default.
    *
+   * This is useful for integrating 3rd party code without the need to manually
+   * wrap it.
+   *
    * @category Result::Advanced
    *
    * @example
@@ -1378,7 +1515,7 @@ export namespace Result {
    *
    * function toSpecialString(s: string): string {
    *   if (s.length % 3 === 0) return s;
-   *   throw TypeError("Not confomrming to schema");
+   *   throw TypeError("Not conforming to schema");
    * }
    *
    * function toTypeError(e: unknown): TypeError {
@@ -1416,6 +1553,35 @@ export namespace Result {
  */
 //deno-lint-ignore no-namespace
 export namespace Results {
+  /**
+   * Use this to collect all `Ok<T>` values from an `Array<Result<T,E>>` or
+   * `Iterable<Result<T,E>>` into an `Ok<T[]>`.
+   * Upon encountring the first `Err<E>` value, this value is returned.
+   *
+   * This function also works on variadic tuples and preserves the individual
+   * types of the tuple members.
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Result, Results } from "./mod.ts";
+   *
+   * const str = "thing" as string | TypeError;
+   * const num = 5 as number | RangeError;
+   * const bool = true as boolean | ReferenceError;
+   *
+   * const tuple = [ Result(str), Result(num), Result(bool) ] as const;
+   *
+   * const res: Result<
+   *   readonly [string, number, boolean],
+   *   TypeError | RangeError | ReferenceError
+   * > = Results.all(tuple);
+   *
+   * assert(res.isOk());
+   * ```
+   */
   export function all<R extends Readonly<ArrayLike<Result<unknown, unknown>>>>(
     results: R,
   ): Result<InferredOkTuple<R>, InferredErrUnion<R>>;
@@ -1434,6 +1600,36 @@ export namespace Results {
     return Ok(areOk);
   }
 
+  /**
+   * Use this to obtain the first found `Ok<T>` from an `Array<Result<T,E>>` or
+   * `Iterable<Result<T,E>>`.
+   * If no `Ok<T>` value is found, the `Err<E>` values are collected into an
+   * array and returned.
+   *
+   * This function also works on variadic tuples and preserves the individual
+   * types of the tuple members.
+   *
+   * @category Result::Intermediate
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "./assert.ts";
+   * import { Result, Results } from "./mod.ts";
+   *
+   * const str = "thing" as string | TypeError;
+   * const num = 5 as number | RangeError;
+   * const bool = true as boolean | ReferenceError;
+   *
+   * const tuple = [ Result(str), Result(num), Result(bool) ] as const;
+   *
+   * const res: Result<
+   *   string | number | boolean,
+   *   readonly [TypeError, RangeError, ReferenceError]
+   * > = Results.any(tuple);
+   *
+   * assert(res.isOk());
+   * ```
+   */
   export function any<R extends Readonly<ArrayLike<Result<unknown, unknown>>>>(
     results: R,
   ): Result<InferredOkUnion<R>, InferredErrTuple<R>>;
@@ -1517,7 +1713,7 @@ export type InferredErrUnion<
  * If the lifted function or Promise throws an exception, the error will be
  * propagated
  *
- * @throws Error
+ * @throws AssertionError
  *
  * @category Result::Intermediate
  *
@@ -1538,7 +1734,7 @@ export type InferredErrUnion<
  * ```
  */
 export function asInfallible(e: unknown): never {
-  throw new Error(
+  throw new AssertionError(
     `eitherway::core -> A function you've passed as infallible threw an exception: ${e}`,
     { cause: e },
   );
