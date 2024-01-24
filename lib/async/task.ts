@@ -132,7 +132,9 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   static liftFallible<Args extends unknown[], R, E, T = R>(
     fn: (...args: Args) => R | PromiseLike<R>,
     errorMapFn: (reason: unknown) => E,
-    ctor: (arg: R) => Result<T, E> = Ok as (arg: R) => Result<T, E>,
+    ctor: (arg: R) => Result<T, E> | PromiseLike<Result<T, E>> = Ok as (
+      arg: R,
+    ) => Result<T, E>,
   ): (...args: Args) => Task<T, E> {
     return function (...args: Args) {
       const p = new Promise<R>((resolve) => resolve(fn(...args))).then((v) =>

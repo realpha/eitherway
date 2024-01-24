@@ -1,21 +1,25 @@
 import { Task } from "../../../async/task.ts";
+import { Err, Ok } from "../../../core/result.ts";
+
 import {
   assertEquals,
   assertExists,
+  assertInstanceOf,
+  assertObjectMatch,
   assertStrictEquals,
   assertType,
   IsExact,
 } from "../../../../dev_deps.ts";
 import {
+  FailedRequest,
   FetchException,
   isFetchException,
-  liftFetchLike,
-  ResponseError,
-  resultFromResponse,
+  liftFetch,
+  toFetchResult,
 } from "./mod.ts";
 
 Deno.test("eitherway::adapters::web::fetch", async (t) => {
-  await t.step("ResponseError<R>", async (t) => {
+  await t.step("FailedRequest<R>", async (t) => {
     await t.step(".from() -> produces a new generic instance", () => {
       const responseLike = {
         ok: false,
@@ -24,11 +28,11 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
       } as const;
       type RL = typeof responseLike;
 
-      const error = ResponseError.from(responseLike);
+      const error = FailedRequest.from(responseLike);
       type Inner = ReturnType<typeof error.getResponse>;
 
       assertType<IsExact<Inner, RL>>(true);
-      assertStrictEquals(error.name, "ResponseError");
+      assertStrictEquals(error.name, "FailedRequest");
       assertStrictEquals(error.status, responseLike.status);
       assertStrictEquals(error.statusText, responseLike.statusText);
       assertStrictEquals(error.getResponse(), responseLike);
@@ -40,10 +44,10 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
         const status = 500;
         const statusText = "Internal Server Error";
 
-        const error = ResponseError.with(status, statusText);
+        const error = FailedRequest.with(status, statusText);
         const internalResponse = error.getResponse();
 
-        assertType<IsExact<typeof error, ResponseError<Response>>>(true);
+        assertType<IsExact<typeof error, FailedRequest<Response>>>(true);
         assertType<IsExact<typeof internalResponse, Response>>(true);
         assertStrictEquals(error.status, internalResponse.status);
         assertStrictEquals(error.statusText, internalResponse.statusText);
@@ -54,7 +58,7 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
       const status = 500;
       const statusText = "Internal Server Error";
 
-      const error = ResponseError.with(status, statusText);
+      const error = FailedRequest.with(status, statusText);
 
       assertStrictEquals(
         JSON.stringify(error),
@@ -90,20 +94,20 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
     });
   });
 
-  await t.step("resultFromResponse", async (t) => {
+  await t.step("toFetchResult", async (t) => {
     await t.step(
-      "() -> returns an instance of Err<ResponseError<R>> for non-ok response like inputs",
+      "() -> returns an instance of Err<FailedRequest<R>> for non-ok response like inputs",
       () => {
         const errorResponse = Response.error();
 
-        const err = resultFromResponse(errorResponse);
+        const err = toFetchResult(errorResponse);
         const unwrapped = err.unwrap();
 
         assertType<
-          IsExact<typeof unwrapped, Response | ResponseError<Response>>
+          IsExact<typeof unwrapped, Response | FailedRequest<Response>>
         >(true);
         assertStrictEquals(err.isErr(), true);
-        assertEquals(unwrapped, ResponseError.from(errorResponse));
+        assertEquals(unwrapped, FailedRequest.from(errorResponse));
       },
     );
 
@@ -112,11 +116,11 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
       () => {
         const response = Response.json({ id: 1 });
 
-        const ok = resultFromResponse(response);
+        const ok = toFetchResult(response);
         const unwrapped = ok.unwrap();
 
         assertType<
-          IsExact<typeof unwrapped, Response | ResponseError<Response>>
+          IsExact<typeof unwrapped, Response | FailedRequest<Response>>
         >(true);
         assertStrictEquals(ok.isErr(), false);
         assertStrictEquals(unwrapped, response);
@@ -124,24 +128,15 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
     );
   });
 
-  await t.step("liftFetchLike", async (t) => {
+  await t.step("liftFetch", async (t) => {
+    /*
+     * Shared interfaces
+     */
     interface User {
       id: number;
     }
-    interface GetUserResponse extends Response {
+    interface UserResponse extends Response {
       json(): Promise<User>;
-    }
-    async function getUser(id: number): Promise<GetUserResponse> {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      return Response.json({ id });
-    }
-    async function getUserNotFound(_id: number): Promise<GetUserResponse> {
-      await new Promise((resolve) => setTimeout(resolve, 10));
-      return new Response(null, { status: 404, statusText: "Not Found" });
-    }
-    async function failingFetch(_id: number): Promise<GetUserResponse> {
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      throw new Error("Network error");
     }
 
     await t.step(
@@ -149,7 +144,7 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
       async () => {
         const testUrl = "https://jsonplaceholder.typicode.com/users/1";
 
-        const lifted = liftFetchLike(fetch);
+        const lifted = liftFetch(fetch);
         const result = await lifted(testUrl)
           .trip(() => Task.succeed("Just to test"))
           .inspectErr(console.error)
@@ -161,7 +156,7 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
         assertType<
           IsExact<
             ReturnType<typeof lifted>,
-            Task<Response, ResponseError<Response> | FetchException>
+            Task<Response, FailedRequest<Response> | FetchException>
           >
         >(true);
         assertStrictEquals(result.isOk(), true);
@@ -172,9 +167,16 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
     await t.step(
       "() -> lifts typed fetch with defauft errMapFn and ctor",
       async () => {
-        const lifted = liftFetchLike(getUser);
+        async function getUser(id: number): Promise<UserResponse> {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return Response.json({ id });
+        }
 
-        const result = await lifted(1).map((response) => response.json());
+        const lifted = liftFetch(getUser);
+
+        const result = await lifted(1)
+          .map((response) => response.json())
+          .inspect((user) => assertType<IsExact<typeof user, User>>(true));
 
         assertType<
           IsExact<Parameters<typeof lifted>, Parameters<typeof getUser>>
@@ -183,13 +185,106 @@ Deno.test("eitherway::adapters::web::fetch", async (t) => {
           IsExact<
             ReturnType<typeof lifted>,
             Task<
-              GetUserResponse,
-              ResponseError<GetUserResponse> | FetchException
+              UserResponse,
+              FailedRequest<UserResponse> | FetchException
             >
           >
         >(true);
         assertStrictEquals(result.isOk(), true);
         assertEquals(result.unwrap(), { id: 1 });
+      },
+    );
+
+    await t.step(
+      "() -> propagates errors correctly via the Err path",
+      async () => {
+        async function getUserNotFound(_id: number): Promise<UserResponse> {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          return new Response(null, { status: 404, statusText: "Not Found" });
+        }
+
+        const lifted = liftFetch(getUserNotFound);
+
+        const result = await lifted(11);
+
+        assertType<
+          IsExact<Parameters<typeof lifted>, Parameters<typeof getUserNotFound>>
+        >(true);
+        assertType<
+          IsExact<
+            ReturnType<typeof lifted>,
+            Task<
+              UserResponse,
+              FailedRequest<UserResponse> | FetchException
+            >
+          >
+        >(true);
+        assertStrictEquals(result.isErr(), true);
+        assertInstanceOf(result.unwrap(), FailedRequest);
+        assertEquals(result.unwrap(), FailedRequest.with(404, "Not Found"));
+      },
+    );
+
+    await t.step(
+      "() -> propagates exceptions correctly via the Err path",
+      async () => {
+        async function failingFetch(_id: number): Promise<UserResponse> {
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          throw new Error("Network error");
+        }
+
+        const lifted = liftFetch(failingFetch);
+
+        const result = await lifted(11);
+
+        assertType<
+          IsExact<Parameters<typeof lifted>, Parameters<typeof failingFetch>>
+        >(true);
+        assertType<
+          IsExact<
+            ReturnType<typeof lifted>,
+            Task<
+              UserResponse,
+              FailedRequest<UserResponse> | FetchException
+            >
+          >
+        >(true);
+        assertStrictEquals(result.isErr(), true);
+        assertInstanceOf(result.unwrap(), FetchException);
+        assertEquals(
+          result.unwrap(),
+          FetchException.from(Error("Network error")),
+        );
+      },
+    );
+
+    await t.step(
+      "() -> lifts provided fetch like fn with custom errMapFn and ctor",
+      async () => {
+        const testUrl = "https://jsonplaceholder.typicode.com/users/1";
+        async function ctor(res: UserResponse) {
+          if (res.ok) return Ok(await res.json());
+          return Err(TypeError("Oh no", { cause: res }));
+        }
+        const errMapFn = (cause: unknown) => ReferenceError("Dunno", { cause });
+
+        const lifted = liftFetch(fetch, ctor, errMapFn);
+        const result = await lifted(testUrl);
+
+        assertType<
+          IsExact<Parameters<typeof lifted>, Parameters<typeof fetch>>
+        >(true);
+        assertType<
+          IsExact<
+            ReturnType<typeof lifted>,
+            Task<
+              User,
+              TypeError | ReferenceError
+            >
+          >
+        >(true);
+        assertStrictEquals(result.isOk(), true);
+        assertObjectMatch(result.unwrap(), { id: 1 });
       },
     );
   });
