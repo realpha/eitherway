@@ -20,10 +20,19 @@ import {
   zipTask,
 } from "./_internal/mod.ts";
 
+export interface DeferredTask<T, E> {
+  task: Task<T, E>;
+  succeed: (value: T) => void;
+  fail: (error: E) => void;
+}
+
 /**
  * # Task<T, E>
  *
  * `Task<T, E>` is a composeable extension of `Promise<Result<T, E>>`
+ *
+ * It is a `Promise` sub-class, which never rejects, but always resolves.
+ * Either with an `Ok<T>` or an `Err<E>`
  *
  * It supports almost the same API as {@linkcode Result} and allows for
  * the same composition patterns as {@linkcode Result}
@@ -66,12 +75,72 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return Task.from(() => value);
   }
 
+  /**
+   * Use this to create a `Task` which always succeeds with a value `<T>`
+   *
+   * @category Task::Basic
+   *
+   * @example 
+   * ```typescript
+   * import { Task } from "https://deno.land/x/eitherway/mod.ts";
+   *
+   * const task: Task<number, never> = Task.succeed(42);
+   * ```
+   */
   static succeed<T>(value: T): Task<T, never> {
     return new Task((resolve) => resolve(Ok(value)));
   }
 
+  /**
+   * Use this to create a `Task` which always fails with a value `<E>`
+   *
+   * @category Task::Basic
+   *
+   * @example 
+   * ```typescript
+   * import { Task } from "https://deno.land/x/eitherway/mod.ts";
+   *
+   * const task: Task<never, number> = Task.fail(1);
+   * ```
+   */
   static fail<E>(error: E): Task<never, E> {
     return new Task((resolve) => resolve(Err(error)));
+  }
+
+  /**
+   * Use this to create a deferred `Task<T, E>` which will either succedd with 
+   * a value of type `<T>` or fail with a value of type `<E>`
+   *
+   * You have to provide the generic types explicitly, otherwise `<T, E>` will
+   * be inferred as `<unknown, unknown>`
+   *
+   * This is mostly useful when working with push-based APIs
+   *
+   * @category Task::Advanced
+   *
+   * @example 
+   * ```typescript
+   * import { Task } from "./task.ts";
+   *
+   * class TimeoutError extends Error {}
+   *
+   * const { task, succeed, fail } = Task.deferred<number, TimeoutError>();
+   *
+   * setTimeout(() => succeed(42), Math.random() * 1000);
+   * setTimeout(() => fail(new TimeoutError()), 500);
+   *
+   * await task
+   *   .inspect(console.log)
+   *   .inspectErr(console.error);
+   *```
+   */
+  static deferred<T, E>(): DeferredTask<T, E>{
+    const { promise, resolve } = Task.withResolvers<Result<T, E>>();
+    const task = promise as Task<T, E>;
+    const succeed = (value: T) => resolve(Ok(value));
+    const fail = (error: E) => resolve(Err(error));
+
+    return { task, succeed, fail };
   }
 
   static from<T, E>(
