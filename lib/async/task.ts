@@ -80,7 +80,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    *
    * @category Task::Basic
    *
-   * @example 
+   * @example
    * ```typescript
    * import { Task } from "https://deno.land/x/eitherway/mod.ts";
    *
@@ -96,7 +96,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    *
    * @category Task::Basic
    *
-   * @example 
+   * @example
    * ```typescript
    * import { Task } from "https://deno.land/x/eitherway/mod.ts";
    *
@@ -108,7 +108,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   }
 
   /**
-   * Use this to create a deferred `Task<T, E>` which will either succedd with 
+   * Use this to create a deferred `Task<T, E>` which will either succedd with
    * a value of type `<T>` or fail with a value of type `<E>`
    *
    * You have to provide the generic types explicitly, otherwise `<T, E>` will
@@ -118,7 +118,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    *
    * @category Task::Advanced
    *
-   * @example 
+   * @example
    * ```typescript
    * import { Task } from "./task.ts";
    *
@@ -132,9 +132,9 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * await task
    *   .inspect(console.log)
    *   .inspectErr(console.error);
-   *```
+   * ```
    */
-  static deferred<T, E>(): DeferredTask<T, E>{
+  static deferred<T, E>(): DeferredTask<T, E> {
     const { promise, resolve } = Task.withResolvers<Result<T, E>>();
     const task = promise as Task<T, E>;
     const succeed = (value: T) => resolve(Ok(value));
