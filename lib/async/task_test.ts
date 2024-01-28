@@ -54,19 +54,22 @@ Deno.test("eitherway::Task", async (t) => {
       clearTimeout(failureId);
     });
 
-    await t.step(".deferred() -> subsequent calls don't alter the state, once the task is resolved", async () => {
-      const { task, succeed, fail } = Task.deferred<number, string>();
+    await t.step(
+      ".deferred() -> subsequent calls don't alter the state, once the task is resolved",
+      async () => {
+        const { task, succeed, fail } = Task.deferred<number, string>();
 
-      succeed(1);
-      succeed(2);
-      fail("Fail!");
-      succeed(3);
+        succeed(1);
+        succeed(2);
+        fail("Fail!");
+        succeed(3);
 
-      const res = await task;
+        const res = await task;
 
-      assertStrictEquals(res.isOk(), true);
-      assertStrictEquals(res.unwrap(), 1);
-    });
+        assertStrictEquals(res.isOk(), true);
+        assertStrictEquals(res.unwrap(), 1);
+      },
+    );
 
     await t.step(
       ".from() -> propagates exception asynchronously if infallible function throws",
