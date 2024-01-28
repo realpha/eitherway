@@ -311,7 +311,7 @@ export interface IResult<T, E> {
    * assert(chained.isOk() === true);
    * assert(chained === ok);
    * assert(chainedErr.isErr() === false);
-   * assert(chainedErr !== err);
+   * assert(chainedErr.asResult() !== err);
    * assert(flattened.isOk() === true);
    * assert(flattened.unwrap() === 42);
    * ```

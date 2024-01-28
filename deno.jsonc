@@ -1,4 +1,7 @@
 {
+  "fmt": {
+    "exclude": ["cov/"]
+  },
   "tasks": {
     "build:npm": "deno run -A ./scripts/build_npm.ts",
     "build:cov": "deno coverage --lcov --output=./cov.lcov ./cov/",
