@@ -135,10 +135,12 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * ```
    */
   static deferred<T, E>(): DeferredTask<T, E> {
-    const { promise, resolve } = Task.withResolvers<Result<T, E>>();
-    const task = promise as Task<T, E>;
-    const succeed = (value: T) => resolve(Ok(value));
-    const fail = (error: E) => resolve(Err(error));
+    let resolveBinding: (res: Result<T, E>) => void;
+    const task = new Task<T, E>((resolve) => {
+      resolveBinding = resolve;
+    });
+    const succeed = (value: T) => resolveBinding(Ok(value));
+    const fail = (error: E) => resolveBinding(Err(error));
 
     return { task, succeed, fail };
   }
