@@ -47,6 +47,7 @@ Deno.test("eitherway::Task", async (t) => {
 
       const res = await task;
 
+      assertStrictEquals(task instanceof Task, true);
       assertStrictEquals(res.isErr(), true);
       assertInstanceOf(res.unwrap(), TimeoutError);
 
