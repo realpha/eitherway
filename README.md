@@ -301,8 +301,7 @@ Some notable additions, which you may have been missing in other libraries:
 
 1. **Computations - not data**: The abstractions provided by `eitherway` are
    meant to represent the results of computations, not data.
-2. **Embrace immutability**: Just don't mutate your state. It's not worth it
-   down the line.
+2. **Embrace immutability**: Don't mutate your state. That's it.
 3. **Return early occasionally**: When building up longer pipelines of
    operations, especially if they involve synchronous and asynchronous
    operations, you may want to break out of a pipeline to not enqueue
@@ -311,16 +310,23 @@ Some notable additions, which you may have been missing in other libraries:
 4. **Unwrap at the edges**: Most application frameworks and library consumers
    expect that any errors are propagated through exceptions (and hopefully
    documented). Therefore, it's advised to unwrap `Option`s, `Result`s and
-   `Task`s at the out most layer of your code. In a simple CRUD application,
+   `Task`s at the outer most layer of your code. In a simple CRUD application,
    this might be an error handling interceptor, a controller, or the
    implementation of your public API in case of a library.
-5. **Discriminate but don't over-accumulate**: It's often very tempting, to just
+5. **Some errors are unrecoverable**: In certain situations the "errors are
+   values" premise falls short on practicality.
+   [burntsushi](https://blog.burntsushi.net/unwrap/),
+   [Rob Pike](https://go.dev/doc/effective_go#errors) and many others have
+   already written extensively about this. When encountering a truly
+   unrecoverable error or an impossible state, throwing a runtime exception is a
+   perfectly valid solution.
+6. **Discriminate but don't over-accumulate**: It's often very tempting, to just
    accumulate possible errors as a discriminated union when building out flows
    via composition of `Result` and `Task` pipelines and let the user or the next
    component in line figure out what to do next. This only works up to a certain
    point. Errors are important domain objects, and they should be modeled
    accordingly.
-6. **Lift others up to help yourself out**: Use the
+7. **Lift others up to help yourself out**: Use the
    [composability helpers](https://deno.land/x/eitherway/mod.ts?s=Result.liftFallible).
    They really reduce noise and speed up integrating external code a lot.
 
