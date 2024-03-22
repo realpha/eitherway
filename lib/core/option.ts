@@ -22,6 +22,7 @@ import {
   isTruthy,
 } from "./type_utils.ts";
 import { Err, Ok, Result } from "./result.ts";
+import { assertNotNullish } from "./assert.ts";
 
 /**
  * ==============
@@ -1233,6 +1234,7 @@ class _None<T = never> implements IOption<never> {
 class _Some<T> implements IOption<T> {
   #value: T;
   constructor(value: T) {
+    assertNotNullish(value);
     this.#value = value;
   }
 
@@ -1267,13 +1269,6 @@ class _Some<T> implements IOption<T> {
   filter<U extends T>(predicate: (arg: T) => boolean): Option<U>;
   //deno-lint-ignore no-explicit-any
   filter<U extends T>(predicate: any) {
-    /**
-     * This is as brittle as it gets and a terrible hack...
-     * TODO: test if it's possible to violate type constraints by providing a
-     * generic a type argument to a simple predicate, which isn't a type guard
-     * TODO: clarify if it would be better to have two distinct methods
-     * like `refine` and `filter`
-     */
     if (predicate(this.#value)) return this as unknown as Some<U>;
     return None;
   }
@@ -1411,7 +1406,7 @@ class _Some<T> implements IOption<T> {
  * Please checkout {@linkcode None} for the opposite case.
  *
  * @implements {IOption<T>} - {@linkcode IOption} Base interface
- * @throws {AssertionError}
+ * @throws {Panic}
  *
  * @example
  * ```typescript
@@ -1423,23 +1418,17 @@ class _Some<T> implements IOption<T> {
  * const rec = { some };
  * const arr = [ ...some ]; //`String.prototype[@@iterator]()` -> UTF-8 codepoints
  *
- * const encode = JSON.stringify;
- *
  * assert(some instanceof Some === true);
  * assert(some.isSome() === true);
  * assert(some.isNone() === false);
  * assert(some.unwrap() === str);
  * assert(String(some) === str);
  * assert(arr.join("") === str);
- * assert(encode(some) === encode({ some: "thing" }));
+ * assert(JSON.stringify(some) === JSON.stringify({ some: "thing" }));
  * ```
  */
 export type Some<T> = _Some<T>;
 export function Some<T>(value: NonNullish<T>): Some<NonNullish<T>> {
-  assert(
-    isNotNullish(value),
-    `${Some} -> Cannot construct Some with a nullish value`,
-  );
   return new _Some(value);
 }
 //deno-lint-ignore no-namespace

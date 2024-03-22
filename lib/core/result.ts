@@ -4,9 +4,9 @@
  * method parameter names are symetrical
  */
 import type { Empty, Fallible, NonNullish } from "./type_utils.ts";
-import { AssertionError } from "./assert.ts";
 import { EMPTY } from "./type_utils.ts";
 import { None, Option } from "./option.ts";
+import { Panic } from "./errors.ts";
 
 /**
  * ==============
@@ -1407,7 +1407,7 @@ export namespace Result {
    * In case, the supplied function panics, an exception is thrown, wrapping
    * the original exception.
    *
-   * @throws AssertionError
+   * @throws {Panic}
    *
    * @category Result::Basic
    *
@@ -1713,7 +1713,7 @@ export type InferredErrUnion<
  * If the lifted function or Promise throws an exception, the error will be
  * propagated
  *
- * @throws AssertionError
+ * @throws {Panic}
  *
  * @category Result::Intermediate
  *
@@ -1734,8 +1734,5 @@ export type InferredErrUnion<
  * ```
  */
 export function asInfallible(e: unknown): never {
-  throw new AssertionError(
-    `eitherway::core -> A function you've passed as infallible threw an exception: ${e}`,
-    { cause: e },
-  );
+  throw Panic.causedBy(e, "A function you've passed as infallible panicked");
 }
