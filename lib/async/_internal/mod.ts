@@ -144,28 +144,28 @@ export async function zipTask<T, E, T2, E2>(
   return (await task1).zip(await task2);
 }
 
-export async function tripTask<T, E, T2, E2>(
+export async function andEnsureTask<T, E, T2, E2>(
   task: Either<T, E>,
-  tripFn: (value: T) => Either<T2, E2>,
+  ensureFn: (value: T) => Either<T2, E2>,
 ): Promise<Result<T, E | E2>> {
   const original = await task;
 
   if (original.isErr()) return original;
 
-  const res = await tripFn(original.unwrap());
+  const res = await ensureFn(original.unwrap());
 
   return res.and(original);
 }
 
-export async function riseTask<T, E, T2, E2>(
+export async function orEnsureTask<T, E, T2, E2>(
   task: Either<T, E>,
-  riseFn: (value: E) => Either<T2, E2>,
+  ensureFn: (value: E) => Either<T2, E2>,
 ): Promise<Result<T | T2, E>> {
   const original = await task;
 
   if (original.isOk()) return original;
 
-  const res = await riseFn(original.unwrap());
+  const res = await ensureFn(original.unwrap());
 
   return res.or(original);
 }

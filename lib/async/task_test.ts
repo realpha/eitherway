@@ -373,7 +373,7 @@ Deno.test("eitherway::Task", async (t) => {
       );
 
       await t.step(
-        ".trip() -> derailts the successful Task if tripFn succeeds",
+        ".trip() -> derails the successful Task if tripFn fails",
         async () => {
           const re = RangeError("Cannot do that");
           const success: Task<number, TypeError> = Task.succeed(41);
@@ -409,6 +409,127 @@ Deno.test("eitherway::Task", async (t) => {
 
         assertStrictEquals(err.isErr(), true);
         assertStrictEquals(err.unwrap(), te);
+      });
+
+      await t.step(
+        ".andEnsure() -> returns Ok value as is if ensureFn succeeds",
+        async () => {
+          const success: Task<number, TypeError> = Task.succeed(42);
+          const ensureFn = (n: number): Result<Empty, RangeError> =>
+            n % 2 === 0 ? Ok.empty() : Err(RangeError());
+
+          const okTask = success.andEnsure(ensureFn);
+
+          assertType<
+            IsExact<typeof okTask, Task<number, TypeError | RangeError>>
+          >(true);
+
+          const ok = await okTask;
+
+          assertStrictEquals(ok.isOk(), true);
+          assertStrictEquals(ok.unwrap(), 42);
+        },
+      );
+
+      await t.step(
+        ".andEnsure() -> derails the successful Task if ensureFn fails",
+        async () => {
+          const re = RangeError("Cannot do that");
+          const success: Task<number, TypeError> = Task.succeed(41);
+          const ensureFn = (n: number): Result<Empty, RangeError> =>
+            n % 2 === 0 ? Ok.empty() : Err(re);
+
+          const okTask = success.andEnsure(ensureFn);
+
+          assertType<
+            IsExact<typeof okTask, Task<number, TypeError | RangeError>>
+          >(true);
+
+          const ok = await okTask;
+
+          assertStrictEquals(ok.isOk(), false);
+          assertStrictEquals(ok.unwrap(), re);
+        },
+      );
+
+      await t.step(".andEnsure() -> is a no-op in case of Err", async () => {
+        const te = TypeError("Cannot do that");
+        const failure: Task<number, TypeError> = Task.fail(te);
+        const ensureFn = (n: number): Result<Empty, RangeError> =>
+          n % 2 === 0 ? Ok.empty() : Err(RangeError());
+
+        const errTask = failure.andEnsure(ensureFn);
+
+        assertType<
+          IsExact<typeof errTask, Task<number, TypeError | RangeError>>
+        >(true);
+
+        const err = await errTask;
+
+        assertStrictEquals(err.isErr(), true);
+        assertStrictEquals(err.unwrap(), te);
+      });
+
+      await t.step(
+        ".orEnsure() -> returns the original Err if ensureFn fails",
+        async () => {
+          const te = TypeError("Cannot do that");
+          const failure: Task<number, TypeError> = Task.fail(te);
+          const ensureFn = (err: TypeError): Result<Empty, RangeError> =>
+            err.message.length % 2 !== 0 ? Ok.empty() : Err(RangeError());
+
+          const errTask = failure.orEnsure(ensureFn);
+
+          assertType<
+            IsExact<typeof errTask, Task<number | Empty, TypeError>>
+          >(true);
+
+          const err = await errTask;
+
+          assertStrictEquals(err.isErr(), true);
+          assertStrictEquals(err.unwrap(), te);
+        },
+      );
+
+      await t.step(
+        ".orEnsure() -> recovers the failed Task if ensureFn succeeds",
+        async () => {
+          const te = TypeError("Cannot do that");
+          const failure: Task<number, TypeError> = Task.fail(te);
+          const ensureFn = (err: TypeError): Result<bigint, RangeError> =>
+            err.message.length % 2 === 0 ? Ok(42n) : Err(RangeError());
+
+          const okTask = failure.orEnsure(ensureFn);
+
+          assertType<
+            IsExact<
+              typeof okTask,
+              Task<number | bigint, TypeError | RangeError>
+            >
+          >(true);
+
+          const ok = await okTask;
+
+          assertStrictEquals(ok.isOk(), true);
+          assertStrictEquals(ok.unwrap(), 42n);
+        },
+      );
+
+      await t.step(".orEnsure() -> is a no-op in case of Ok", async () => {
+        const success: Task<number, TypeError> = Task.succeed(42);
+        const ensureFn = (err: TypeError): Result<Empty, RangeError> =>
+          err instanceof TypeError ? Ok.empty() : Err(RangeError());
+
+        const okTask = success.orEnsure(ensureFn);
+
+        assertType<
+          IsExact<typeof okTask, Task<number | Empty, TypeError>>
+        >(true);
+
+        const ok = await okTask;
+
+        assertStrictEquals(ok.isOk(), true);
+        assertStrictEquals(ok.unwrap(), 42);
       });
     });
 
