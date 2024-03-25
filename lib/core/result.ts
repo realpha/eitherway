@@ -320,24 +320,24 @@ export interface IResult<T, E> {
 
   /**
    * Use this to conditionally pass-through the encapsulated value `<T>`
-   * based upon the outcome of the supplied `tripFn`.
+   * based upon the outcome of the supplied `ensureFn`.
    *
    * In case of `Err<E>`, this method short-circuits.
    *
-   * In case of `Ok<T>`, the supplied `tripFn` is called with the encapsulated
+   * In case of `Ok<T>`, the supplied `ensureFn` is called with the encapsulated
    * value `<T>` and if the return value is:
    *  - `Ok<T2>`: it is discarded and the original `Ok<T>` is returned
    *  - `Err<E2>`: `Err<E2>` is returned
    *
-   * See {@linkcode IResult#rise} for the opposite case.
+   * See {@linkcode IResult#orEnsure} for the opposite case.
    *
    * This is equivalent to chaining:
-   * `original.andThen(tripFn).and(original)`
+   * `original.andThen(ensureFn).and(original)`
    *
-   * |**LHS `trip` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
-   * |:----------------:|:-------------:|:--------------:|
-   * |  **LHS: Ok<T>**  |     Ok<T>     |     Err<E2>    |
-   * |  **LHS: Err<E>** |     Err<E>    |     Err<E>     |
+   * |**LHS andEnsure RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:-------------------:|:-------------:|:--------------:|
+   * |  **LHS: Ok<T>**     |     Ok<T>     |     Err<E2>    |
+   * |  **LHS: Err<E>**    |     Err<E>    |     Err<E>     |
    *
    * @category Result::Advanced
    *
@@ -372,7 +372,7 @@ export interface IResult<T, E> {
    * }
    *
    * const res = getPath()  // here we try get a path...
-   *   .trip(prepareDir)    // ...and if THIS works, we pass it on...
+   *   .andEnsure(prepareDir)    // ...and if THIS works, we pass it on...
    *   .andThen(writeBlobs) // ...so that we can process it here.
    *   .inspect((_) => console.log("done"))
    *   .inspectErr(console.error);
@@ -380,28 +380,35 @@ export interface IResult<T, E> {
    * assert(res.unwrap() != null);
    * ```
    */
+  andEnsure<T2, E2>(
+    ensureFn: (value: T) => Result<T2, E2>,
+  ): Result<T, E> | Err<E2>;
+
+  /**
+   * @deprecated (will be removed in 1.0.0) Use {@linkcode IResult#andEnsure} instead
+   */
   trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Result<T, E> | Err<E2>;
 
   /**
    * Use this to conditionally pass-through the encapsulated value `<E>`
-   * based upon the outcome of the supplied `riseFn`.
+   * based upon the outcome of the supplied `ensureFn`.
    *
    * In case of `Ok<T>`, this method short-circuits.
    *
-   * In case of `Err<E>`, the supplied `riseFn` is called with the encapsulated
+   * In case of `Err<E>`, the supplied `ensureFn` is called with the encapsulated
    * value `<E>` and if the return value is:
    *  - `Ok<T2>`: it is returned
    *  - `Err<T2>`: it is discarded and the original `Err<E>` is returned
    *
-   * See {@linkcode IResult#trip} for the opposite case.
+   * See {@linkcode IResult#andEnsure} for the opposite case.
    *
    * This is equivalent to chaining:
-   * `original.orElse(riseFn).or(original)`
+   * `original.orElse(ensureFn).or(original)`
    *
-   * |**LHS `rise` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
-   * |:----------------:|:-------------:|:--------------:|
-   * |  **LHS: Ok<T>**  |     Ok<T>     |     Ok<T>      |
-   * |  **LHS: Err<E>** |     Ok<T2>    |     Err<E>     |
+   * |**LHS orEnsure RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:------------------:|:-------------:|:--------------:|
+   * |  **LHS: Ok<T>**    |     Ok<T>     |     Ok<T>      |
+   * |  **LHS: Err<E>**   |     Ok<T2>    |     Err<E>     |
    *
    * @category Result::Advanced
    *
@@ -433,12 +440,17 @@ export interface IResult<T, E> {
    * }
    *
    * const res = readConfig()      // Let's try to read the config...
-   *   .rise(readFallbackConfig)   // ...try the fallback...
+   *   .orEnsure(readFallbackConfig)   // ...try the fallback...
    *   .andThen(doSomething)       // ...but we retain the original error
    *   .inspect(console.log)       // Ok<string>
    *   .inspectErr(console.error); // Err<NotFound> | Err<BadResource>
    *
    * assert(res.isErr() === true);
+   */
+  orEnsure<T2, E2>(ensureFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
+
+  /**
+   * @deprecated (will be removed in 1.0.0) Use {@linkcode IResult#orEnsure} instead
    */
   rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Result<T, E> | Ok<T2>;
 
@@ -446,10 +458,10 @@ export interface IResult<T, E> {
    * Logical AND (`&&`)
    * Returns RHS if LHS is `Ok`, otherwise returns LHS
    *
-   * |**LHS `&&` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
-   * |:--------------:|:-------------:|:--------------:|
-   * |**LHS: Ok<T>**  |     Ok<T2>    |     Err<E2>    |
-   * |**LHS: Err<E>** |     Err<E>    |     Err<E>     |
+   * |**LHS AND RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:-------------:|:-------------:|:--------------:|
+   * |**LHS: Ok<T>** |     Ok<T2>    |     Err<E2>    |
+   * |**LHS: Err<E>**|     Err<E>    |     Err<E>     |
    *
    * @category Result::Intermediate
    *
@@ -474,10 +486,10 @@ export interface IResult<T, E> {
    * Logical OR (`||`)
    * Returns RHS if LHS is `Err`, otherwise returns LHS
    *
-   * |**LHS `||` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
-   * |:--------------:|:-------------:|:--------------:|
-   * |**LHS: Ok<T>**  |     Ok<T>     |     Ok<T>      |
-   * |**LHS: Err<E>** |     Ok<T2>    |     Err<E2>    |
+   * |**LHS || RHS** |**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:------------: |:-------------:|:--------------:|
+   * |**LHS: Ok<T>** |     Ok<T>     |     Ok<T>      |
+   * |**LHS: Err<E>**|     Ok<T2>    |     Err<E2>    |
    *
    * @category Result::Intermediate
    *
@@ -505,10 +517,10 @@ export interface IResult<T, E> {
    * In case any of the two `Result` instances is `Err`, the respective
    * `Err` instance is returned in left-to-right evaluation order.
    *
-   * |**LHS `zip` RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
-   * |:---------------:|:-------------:|:--------------:|
-   * | **LHS: Ok<T>**  |  Ok<[T, T2]>  |     Err<E2>    |
-   * | **LHS: Err<E>** |     Err<E>    |     Err<E>     |
+   * |**LHS zip RHS** |**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:--------------:|:-------------:|:--------------:|
+   * | **LHS: Ok<T>** |  Ok<[T, T2]>  |     Err<E2>    |
+   * | **LHS: Err<E>**|     Err<E>    |     Err<E>     |
    *
    * This is not only useful to produce tuples, but also to collect
    * arguments to be passed to a function down the line.
@@ -1074,10 +1086,18 @@ class _Ok<T> implements IResult<T, never> {
 
     return Ok([this.#value, rhs.unwrap()]);
   }
-  trip<T2, E2>(thenFn: (value: T) => Result<T2, E2>): Ok<T> | Err<E2> {
-    const lhs = thenFn(this.#value);
+  andEnsure<T2, E2>(ensureFn: (value: T) => Result<T2, E2>): Ok<T> | Err<E2> {
+    const lhs = ensureFn(this.#value);
 
     return lhs.and(this);
+  }
+  trip<T2, E2>(tripFn: (value: T) => Result<T2, E2>): Ok<T> | Err<E2> {
+    const lhs = tripFn(this.#value);
+
+    return lhs.and(this);
+  }
+  orEnsure<T2, E2>(ensureFn: (err: never) => Result<T2, E2>): Ok<T> {
+    return this;
   }
   rise<T2, E2>(riseFn: (err: never) => Result<T2, E2>): Ok<T> {
     return this;
@@ -1152,8 +1172,23 @@ class _Err<E> implements IResult<never, E> {
   orElse<T2, E2>(elseFn: (err: E) => Result<T2, E2>): Result<T2, E2> {
     return elseFn(this.#err);
   }
-  tap(tapFn: (value: Result<never, E>) => void): Err<E> {
-    tapFn(this.clone());
+  andEnsure<T2, E2>(ensureFn: (value: never) => Result<T2, E2>): Err<E> {
+    return this;
+  }
+  trip<T2, E2>(tripFn: (value: never) => Result<T2, E2>): Err<E> {
+    return this;
+  }
+  orEnsure<T2, E2>(ensureFn: (err: E) => Result<T2, E2>): Ok<T2> | Err<E> {
+    const lhs = ensureFn(this.#err);
+
+    return lhs.or(this);
+  }
+  rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Ok<T2> | Err<E> {
+    const lhs = riseFn(this.#err);
+
+    return lhs.or(this);
+  }
+  zip<T2, E2>(rhs: Result<T2, E2>): Err<E> {
     return this;
   }
   unwrap(): E {
@@ -1174,32 +1209,25 @@ class _Err<E> implements IResult<never, E> {
   into<T2>(intoFn: (res: Err<E>) => T2): T2 {
     return intoFn(this);
   }
+  //deno-lint-ignore require-yield
+  *iter(): IterableIterator<never> {
+    return;
+  }
   ok(): None {
     return None;
   }
   err(): Option<NonNullish<E>> {
     return Option(this.#err);
   }
-  //deno-lint-ignore require-yield
-  *iter(): IterableIterator<never> {
-    return;
-  }
-  zip<T2, E2>(rhs: Result<T2, E2>): Err<E> {
-    return this;
-  }
-  trip<T2, E2>(tripFn: (value: never) => Result<T2, E2>): Err<E> {
-    return this;
-  }
-  rise<T2, E2>(riseFn: (err: E) => Result<T2, E2>): Ok<T2> | Err<E> {
-    const lhs = riseFn(this.#err);
-
-    return lhs.or(this);
-  }
   inspect(inspectFn: (value: never) => void): Err<E> {
     return this;
   }
   inspectErr(inspectFn: (err: E) => void): Err<E> {
     inspectFn(this.#err);
+    return this;
+  }
+  tap(tapFn: (value: Result<never, E>) => void): Err<E> {
+    tapFn(this.clone());
     return this;
   }
   //deno-lint-ignore require-yield

@@ -532,6 +532,47 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       },
     );
 
+    await t.step(
+      ".andEnsure() -> returns a new Err instance upon failure of ensureFn",
+      () => {
+        const checkIfEven = function (n: number): Result<Empty, TypeError> {
+          if (n % 2 === 0) return Ok.empty();
+          return Err(TypeError());
+        };
+
+        const ok = Ok(41) as Result<number, Error>;
+
+        const ensured = ok.andEnsure(checkIfEven);
+
+        assertType<IsExact<typeof ensured, Result<number, Error | TypeError>>>(
+          true,
+        );
+        assertStrictEquals(ensured.isErr(), true);
+        assertInstanceOf(ensured.unwrap(), TypeError);
+      },
+    );
+
+    await t.step(
+      ".andEnsure() -> retains original Ok instance upon success of ensureFn",
+      () => {
+        const checkIfEven = function (n: number): Result<Empty, TypeError> {
+          if (n % 2 === 0) return Ok.empty();
+          return Err(TypeError());
+        };
+
+        const ok = Ok(42) as Result<number, Error>;
+
+        const ensured = ok.andEnsure(checkIfEven);
+
+        assertType<IsExact<typeof ensured, Result<number, Error | TypeError>>>(
+          true,
+        );
+        assertStrictEquals(ensured, ok);
+        assertStrictEquals(ensured.isOk(), true);
+        assertStrictEquals(ensured.unwrap(), 42);
+      },
+    );
+
     await t.step(".rise() -> short-circuits and returns immediately", () => {
       const recover = function (e: Error): Result<string, TypeError> {
         const recovered = e.cause as string ?? "xDefaultx";
@@ -549,6 +590,27 @@ Deno.test("eitherway::Result::Ok", async (t) => {
       assertStrictEquals(risen.isOk(), true);
       assertStrictEquals(risen.unwrap(), "thing");
     });
+
+    await t.step(
+      ".orEnsure() -> short-circuits and returns immediately",
+      () => {
+        const recover = function (e: Error): Result<string, TypeError> {
+          const recovered = e.cause as string ?? "xDefaultx";
+          return Ok(recovered);
+        };
+
+        const ok = Ok("thing") as Result<string, Error>;
+
+        const ensured = ok.orEnsure(recover);
+
+        assertType<IsExact<typeof ensured, Result<string, Error | TypeError>>>(
+          true,
+        );
+        assertStrictEquals(ensured, ok);
+        assertStrictEquals(ensured.isOk(), true);
+        assertStrictEquals(ensured.unwrap(), "thing");
+      },
+    );
   });
 
   await t.step("Ok<T> -> Combination Methods", async (t) => {
@@ -1046,6 +1108,27 @@ Deno.test("eitherway::Result::Err", async (t) => {
     });
 
     await t.step(
+      ".andEnsure() -> short-circuits and returns immediately",
+      () => {
+        let count = 0;
+        const noop = function (): Result<Empty, TypeError> {
+          count += 1;
+          return Ok.empty();
+        };
+
+        const err = Err(Error()) as Result<string, Error>;
+
+        const ensured = err.andEnsure(noop);
+
+        assertType<IsExact<typeof ensured, Result<string, Error | TypeError>>>(
+          true,
+        );
+        assertStrictEquals(count, 0);
+        assertStrictEquals(ensured, err);
+      },
+    );
+
+    await t.step(
       ".rise() -> returns the new Ok instance upon success of riseFn",
       () => {
         const recover = function (e: Error): Result<string, TypeError> {
@@ -1080,6 +1163,44 @@ Deno.test("eitherway::Result::Err", async (t) => {
         );
         assertStrictEquals(risen.isErr(), true);
         assertStrictEquals(risen, err);
+      },
+    );
+
+    await t.step(
+      ".orEnsure() -> returns the new Ok instance upon success of ensureFn",
+      () => {
+        const recover = function (e: Error): Result<string, TypeError> {
+          const recovered = e.cause as string ?? "xDefaultx";
+          return Ok(recovered);
+        };
+
+        const err = Err(Error()) as Result<number, Error>;
+
+        const ensured = err.orEnsure(recover);
+
+        assertType<IsExact<typeof ensured, Ok<string> | Result<number, Error>>>(
+          true,
+        );
+        assertStrictEquals(ensured.isOk(), true);
+      },
+    );
+
+    await t.step(
+      ".orEnsure() -> passes on the original Err variant if ensureFn fails",
+      () => {
+        const recover = function (_: Error): Result<string, TypeError> {
+          return Err(TypeError());
+        };
+
+        const err = Err(Error()) as Result<number, Error>;
+
+        const ensured = err.orEnsure(recover);
+
+        assertType<IsExact<typeof ensured, Ok<string> | Result<number, Error>>>(
+          true,
+        );
+        assertStrictEquals(ensured.isErr(), true);
+        assertStrictEquals(ensured, err);
       },
     );
   });
