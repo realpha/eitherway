@@ -1,5 +1,5 @@
-import { Err, Ok } from "../../core/mod.ts";
-import type { Result } from "../../core/mod.ts";
+import { Err, Ok } from "../core/mod.ts";
+import type { Result } from "../core/mod.ts";
 
 /**
  * These are only used internally to save some chars
@@ -14,22 +14,24 @@ export type ExecutorFn<T, E> = ConstructorParameters<
 >[0];
 
 /**
- * Helper functions to leverage the same functionality in operators
- * and instance methods
- *
  * @internal
  */
-
 export async function idTask<T, E>(task: Either<T, E>): Promise<Result<T, E>> {
   return await task;
 }
 
+/**
+ * @internal
+ */
 export async function cloneTask<T, E>(
   task: Either<T, E>,
 ): Promise<Result<T, E>> {
   return (await task).clone();
 }
 
+/**
+ * @internal
+ */
 export async function mapTaskSuccess<T, E, T2>(
   task: Either<T, E>,
   mapFn: (v: T) => T2 | PromiseLike<T2>,
@@ -42,6 +44,9 @@ export async function mapTaskSuccess<T, E, T2>(
   return Ok(mapped);
 }
 
+/**
+ * @internal
+ */
 export async function mapTaskSuccessOr<T, E, T2>(
   task: Either<T, E>,
   mapFn: (v: T) => T2 | PromiseLike<T2>,
@@ -54,6 +59,9 @@ export async function mapTaskSuccessOr<T, E, T2>(
   return Ok(mapped);
 }
 
+/**
+ * @internal
+ */
 export async function mapTaskSuccessOrElse<T, E, T2>(
   task: Either<T, E>,
   mapFn: (v: T) => T2 | PromiseLike<T2>,
@@ -68,6 +76,9 @@ export async function mapTaskSuccessOrElse<T, E, T2>(
   return Ok(mapped);
 }
 
+/**
+ * @internal
+ */
 export async function mapTaskFailure<T, E, E2>(
   task: Either<T, E>,
   mapFn: (v: E) => E2 | PromiseLike<E2>,
@@ -80,6 +91,9 @@ export async function mapTaskFailure<T, E, E2>(
   return Err(mappedErr);
 }
 
+/**
+ * @internal
+ */
 export async function chainTaskSuccess<T, E, T2, E2>(
   task: Either<T, E>,
   thenFn: (v: T) => Either<T2, E2>,
@@ -90,6 +104,9 @@ export async function chainTaskSuccess<T, E, T2, E2>(
   return thenFn(res.unwrap());
 }
 
+/**
+ * @internal
+ */
 export async function chainTaskFailure<T, E, T2, E2>(
   task: Either<T, E>,
   elseFn: (v: E) => Either<T2, E2>,
@@ -100,6 +117,9 @@ export async function chainTaskFailure<T, E, T2, E2>(
   return elseFn(res.unwrap());
 }
 
+/**
+ * @internal
+ */
 export async function tapTask<T, E>(
   task: Either<T, E>,
   tapFn: (v: Result<T, E>) => void | PromiseLike<void>,
@@ -111,6 +131,9 @@ export async function tapTask<T, E>(
   return task;
 }
 
+/**
+ * @internal
+ */
 export async function inspectTaskSuccess<T, E>(
   task: Either<T, E>,
   inspectFn: (v: T) => void | PromiseLike<void>,
@@ -124,6 +147,9 @@ export async function inspectTaskSuccess<T, E>(
   return task;
 }
 
+/**
+ * @internal
+ */
 export async function inspectTaskFailure<T, E>(
   task: Either<T, E>,
   inspectFn: (v: E) => void | PromiseLike<void>,
@@ -137,6 +163,9 @@ export async function inspectTaskFailure<T, E>(
   return task;
 }
 
+/**
+ * @internal
+ */
 export async function zipTask<T, E, T2, E2>(
   task1: Either<T, E>,
   task2: Either<T2, E2>,
@@ -144,6 +173,9 @@ export async function zipTask<T, E, T2, E2>(
   return (await task1).zip(await task2);
 }
 
+/**
+ * @internal
+ */
 export async function andEnsureTask<T, E, T2, E2>(
   task: Either<T, E>,
   ensureFn: (value: T) => Either<T2, E2>,
@@ -157,6 +189,9 @@ export async function andEnsureTask<T, E, T2, E2>(
   return res.and(original);
 }
 
+/**
+ * @internal
+ */
 export async function orEnsureTask<T, E, T2, E2>(
   task: Either<T, E>,
   ensureFn: (value: E) => Either<T2, E2>,
@@ -170,10 +205,16 @@ export async function orEnsureTask<T, E, T2, E2>(
   return res.or(original);
 }
 
+/**
+ * @internal
+ */
 export async function unwrapTask<T, E>(task: Either<T, E>): Promise<T | E> {
   return (await task).unwrap();
 }
 
+/**
+ * @internal
+ */
 export async function unwrapTaskOr<T, E, T2>(
   task: Either<T, E>,
   orValue: T2 | PromiseLike<T2>,
@@ -184,6 +225,9 @@ export async function unwrapTaskOr<T, E, T2>(
   return orValue;
 }
 
+/**
+ * @internal
+ */
 export async function unwrapTaskOrElse<T, E, T2>(
   task: Either<T, E>,
   orFn: (e: E) => T2 | PromiseLike<T2>,
@@ -194,6 +238,9 @@ export async function unwrapTaskOrElse<T, E, T2>(
   return orFn(res.unwrap());
 }
 
+/**
+ * @internal
+ */
 export async function* iterTask<T, E>(
   task: Either<T, E>,
 ): AsyncIterableIterator<T> {
