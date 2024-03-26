@@ -572,19 +572,19 @@ export interface IOption<T> {
 
   /**
    * Use this to conditionally pass-through the encapsulated value of
-   * type `<T>` based upon the outcome of the supplied `tripFn`
+   * type `<T>` based upon the outcome of the supplied ensureFn`
    *
    * In case of `None` this method short-circuits and returns `None`
    *
-   * In case of `Some<T>`, the provided `tripFn` gets called with a value
+   * In case of `Some<T>`, the provided `ensureFn` gets called with a value
    * of type `<T>` and if the return value is:
    *  - `Some<U>`: it is discarded and the original `Some<T>` is returned
    *  - `None`: `None` is returned
    *
    * This is equivalent to chaining:
-   * `original.andThen(tripFn).and(original)`
+   * `original.andThen(ensureFn).and(original)`
    *
-   * | LHS `trip` RHS | RHS: Some<U> |  RHS: None  |
+   * | LHS `ensure` RHS | RHS: Some<U> |  RHS: None  |
    * |----------------|--------------|-------------|
    * |  LHS: Some<T>  |    Some<T>   |     None    |
    * |  LHS:  None    |      None    |     None    |
@@ -624,11 +624,16 @@ export interface IOption<T> {
    * const path = Some("~/.dotfiles/README.md)
    *
    * const maybeConfig = path
-   *   .trip(isReadableDir)
+   *   .andEnsure(isReadableDir)
    *   .andThen(finalizeConfig);
    *
    * assert(maybeConfig.isNone() === true);
    * ```
+   */
+  andEnsure<U>(ensureFn: (value: T) => Option<U>): Option<T>;
+
+  /**
+   * @deprecated (will be removed in 1.0.0) Use {@link IOption#andEnsure} instead
    */
   trip<U>(tripFn: (value: T) => Option<U>): Option<T>;
 
@@ -1194,6 +1199,9 @@ class _None<T = never> implements IOption<never> {
   inspect(inspectFn: (value: never) => void): None {
     return this;
   }
+  andEnsure<U>(ensureFn: (value: never) => Option<U>): None {
+    return this;
+  }
   trip<U>(tripFn: (value: never) => Option<U>): None {
     return this;
   }
@@ -1282,6 +1290,14 @@ class _Some<T> implements IOption<T> {
   orElse<U>(elseFn: () => Option<U>): Some<T> {
     return this;
   }
+  andEnsure<U>(ensureFn: (value: T) => Option<U>): Option<T> {
+    const lhs = ensureFn(this.#value);
+    return lhs.and(this);
+  }
+  trip<U>(tripFn: (value: T) => Option<U>): Option<T> {
+    const lhs = tripFn(this.#value);
+    return lhs.and(this);
+  }
   unwrap(): T {
     return this.#value;
   }
@@ -1317,10 +1333,6 @@ class _Some<T> implements IOption<T> {
   inspect(inspectFn: (value: T) => void): Some<T> {
     inspectFn(this.#value);
     return this;
-  }
-  trip<U>(tripFn: (value: T) => Option<U>): Option<T> {
-    const lhs = tripFn(this.#value);
-    return lhs.and(this);
   }
   toTag(): string {
     return Object.prototype.toString.call(this);

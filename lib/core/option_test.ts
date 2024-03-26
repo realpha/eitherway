@@ -580,6 +580,30 @@ Deno.test("eitherway::Option::Some", async (t) => {
       assertStrictEquals(same, some);
       assertStrictEquals(same.unwrap(), some.unwrap());
     });
+
+    await t.step(
+      ".andEnsure() -> returns original instance of Some<T> if ensureFn succeeds",
+      () => {
+        const some = Some(1);
+
+        const ensureFn = (n: number) => n === 1 ? Some.empty() : None;
+
+        const same = some.andEnsure(ensureFn);
+
+        assertStrictEquals(same, some);
+        assertStrictEquals(same.unwrap(), some.unwrap());
+      },
+    );
+
+    await t.step(".andEnsure() -> returns None if ensureFn fails", () => {
+      const some = Some(1);
+
+      const ensureFn = (n: number) => n === 1 ? None : Some.empty();
+
+      const same = some.andEnsure(ensureFn);
+
+      assertStrictEquals(same, None);
+    });
   });
 
   await t.step("Some<T> -> Unwrap Methods", async (t) => {
@@ -1195,6 +1219,20 @@ Deno.test("eitherway::Option::None", async (t) => {
       const opt = Option.fromCoercible(0);
 
       const same = opt.trip(tripFn);
+
+      assertStrictEquals(gotCalled, false);
+      assertStrictEquals(same, opt);
+    });
+
+    await t.step(".andEnsure() -> is a no-op", () => {
+      let gotCalled = false;
+      const ensureFn = () => {
+        gotCalled = true;
+        return Option(42);
+      };
+      const opt = Option.fromCoercible(0);
+
+      const same = opt.andEnsure(ensureFn);
 
       assertStrictEquals(gotCalled, false);
       assertStrictEquals(same, opt);

@@ -1,5 +1,6 @@
 import type { Result } from "../core/mod.ts";
 import {
+  andEnsureTask,
   chainTaskFailure,
   chainTaskSuccess,
   cloneTask,
@@ -11,9 +12,8 @@ import {
   mapTaskSuccess,
   mapTaskSuccessOr,
   mapTaskSuccessOrElse,
-  riseTask,
+  orEnsureTask,
   tapTask,
-  tripTask,
   unwrapTask,
   unwrapTaskOr,
   unwrapTaskOrElse,
@@ -128,7 +128,7 @@ export function trip<T, T2, E2, E>(
   tripFn: (e: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
 ) {
   return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
-    return tripTask(res, tripFn);
+    return andEnsureTask(res, tripFn);
   };
 }
 
@@ -136,7 +136,7 @@ export function rise<E, T2, E2, T>(
   riseFn: (e: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
 ) {
   return function (res: Result<T, E> | PromiseLike<Result<T, E>>) {
-    return riseTask(res, riseFn);
+    return orEnsureTask(res, riseFn);
   };
 }
 

@@ -267,7 +267,7 @@ Some notable additions, which you may have been missing in other libraries:
 
 - **Composable side-effects**: `.tap()`, `.inspect()` and `.inspectErr()`
   methods.
-- **Pass-through conditionals**: `.trip()` and `.rise()` methods.
+- **Pass-through conditionals**: `.andEnsure()` & `.orEnsure()` methods.
 - **Sync & Async feature parity**: `Result<T, E>` and `Task<T, E>` provide the
   same API for composing operations. Only the predicates `.isOk()` and
   `.isErr()` are not implemented on `Task<T, E>` (for obvious reasons).

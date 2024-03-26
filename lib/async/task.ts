@@ -1,6 +1,7 @@
 import { asInfallible, Err, Ok, Result, Results } from "../core/mod.ts";
 import type { ExecutorFn } from "./_internal/mod.ts";
 import {
+  andEnsureTask,
   chainTaskFailure,
   chainTaskSuccess,
   cloneTask,
@@ -11,9 +12,8 @@ import {
   mapTaskSuccess,
   mapTaskSuccessOr,
   mapTaskSuccessOrElse,
-  riseTask,
+  orEnsureTask,
   tapTask,
-  tripTask,
   unwrapTask,
   unwrapTaskOr,
   unwrapTaskOrElse,
@@ -273,6 +273,94 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return Task.of(chainTaskFailure(this, elseFn));
   }
 
+  /**
+   * Use this to conditionally pass-through the encapsulated value `<T>`
+   * based upon the outcome of the supplied `ensureFn`.
+   *
+   * In case of `Err<E>`, this method short-circuits.
+   *
+   * In case of `Ok<T>`, the supplied `ensureFn` is called with the encapsulated
+   * value `<T>` and if the return value is:
+   *  - `Ok<T2>`: it is discarded and the original `Ok<T>` is returned
+   *  - `Err<E2>`: `Err<E2>` is returned
+   *
+   * See {@linkcode Task#orEnsure} for the opposite case.
+   *
+   * This is equivalent to chaining:
+   * `original.andThen(ensureFn).and(original)`
+   *
+   * |**LHS andEnsure RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:-------------------:|:-------------:|:--------------:|
+   * |  **LHS: Ok<T>**     |     Ok<T>     |     Err<E2>    |
+   * |  **LHS: Err<E>**    |     Err<E>    |     Err<E>     |
+   *
+   * @category Task::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { Task } from "./task.ts";
+   *
+   * declare function getPath(): Task<string, Error>;
+   * declare function isReadableDir(path: string): Task<void, TypeError>;
+   * declare function getFileExtensions(path: string): Task<string[], Error>;
+   *
+   * getPath()
+   *   .andEnsure(isReadableDir)
+   *   .andThen(getFileExtensions)
+   *   .inspect((exts: string[]) => console.log(exts))
+   *   .inspectErr((err: Error | TypeError) => console.log(err))
+   * ```
+   */
+  andEnsure<T2, E2>(
+    ensureFn: (v: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T, E | E2> {
+    return Task.of(andEnsureTask(this, ensureFn));
+  }
+
+  /**
+   * Use this to conditionally pass-through the encapsulated value `<E>`
+   * based upon the outcome of the supplied `ensureFn`.
+   *
+   * In case of `Ok<T>`, this method short-circuits.
+   *
+   * In case of `Err<E>`, the supplied `ensureFn` is called with the encapsulated
+   * value `<E>` and if the return value is:
+   *  - `Ok<T2>`: it is returned
+   *  - `Err<T2>`: it is discarded and the original `Err<E>` is returned
+   *
+   * See {@linkcode Task#andEnsure} for the opposite case.
+   *
+   * This is equivalent to chaining:
+   * `original.orElse(ensureFn).or(original)`
+   *
+   * |**LHS orEnsure RHS**|**RHS: Ok<T2>**|**RHS: Err<E2>**|
+   * |:------------------:|:-------------:|:--------------:|
+   * |  **LHS: Ok<T>**    |     Ok<T>     |     Ok<T>      |
+   * |  **LHS: Err<E>**   |     Ok<T2>    |     Err<E>     |
+   *
+   * @category Task::Advanced
+   *
+   * @example
+   * ```typescript
+   * import { Task } from "./task.ts";
+   *
+   * declare function getConfig(): Task<string, RangeError>;
+   * declare function getFallback(err: RangeError): Task<string, Error>;
+   * declare function configureService(path: string): Task<void, TypeError>;
+   *
+   * getConfig()
+   *   .orEnsure(getFallback)
+   *   .andThen(configureService)
+   *   .inspect((_: void) => console.log("Done!"))
+   *   .inspectErr((err: RangeError | TypeError) => console.log(err))
+   * ```
+   */
+  orEnsure<T2, E2>(
+    ensureFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
+  ): Task<T | T2, E> {
+    return Task.of(orEnsureTask(this, ensureFn));
+  }
+
   zip<T2, E2>(
     rhs: Result<T2, E2> | PromiseLike<Result<T2, E2>>,
   ): Task<[T, T2], E | E2> {
@@ -291,16 +379,22 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return Task.of(inspectTaskFailure(this, inspectFn));
   }
 
+  /**
+   * @deprecated (will be removed in 1.0.0) use {@linkcode Task#andEnsure} instead
+   */
   trip<T2, E2>(
     tripFn: (v: T) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
   ): Task<T, E | E2> {
-    return Task.of(tripTask(this, tripFn));
+    return Task.of(andEnsureTask(this, tripFn));
   }
 
+  /**
+   * @deprecated (will be removed in 1.0.0) use {@linkcode Task#orEnsure} instead
+   */
   rise<T2, E2>(
     riseFn: (v: E) => Result<T2, E2> | PromiseLike<Result<T2, E2>>,
   ): Task<T | T2, E> {
-    return Task.of(riseTask(this, riseFn));
+    return Task.of(orEnsureTask(this, riseFn));
   }
 
   unwrap(): Promise<T | E> {
