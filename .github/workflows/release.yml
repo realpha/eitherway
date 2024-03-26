@@ -15,7 +15,7 @@ jobs:
       - name: Setup deno
         uses: denoland/setup-deno@ef28d469f16304cf29da2bd31413743cc0c768e7 # v1.1.4
         with:
-          deno-version: v1.39.4 # SWC Bug on deno >= 1.40.0
+          deno-version: v1.41.3
 
       - name: Check fmt
         run: deno fmt --check
@@ -35,7 +35,7 @@ jobs:
       - name: Setup deno
         uses: denoland/setup-deno@ef28d469f16304cf29da2bd31413743cc0c768e7 # v1.1.4
         with:
-          deno-version: v1.39.4 # SWC Bug on deno >= 1.40.0
+          deno-version: v1.41.3
 
       - name: Extract tag version
         if: startsWith(github.ref, 'refs/tags/')
@@ -54,7 +54,7 @@ jobs:
   #publish-release
   #TODO: Setup changelog and extract changes to populate release notes
 
-  publish-pkg:
+  publish-npm:
     runs-on: ubuntu-latest
     needs: [check, build]
     steps:
@@ -83,3 +83,30 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         working-directory: npm
         run: npm publish
+
+  # publish-jsr:
+  #   runs-on: ubuntu-latest
+  #   needs: [check, build]
+  #   permissions:
+  #     contents: read
+  #     id-token: write
+  #   steps:
+  #     - name: Setup repo
+  #       uses: actions/checkout@v3
+  #
+  #     - name: Setup deno
+  #       uses: denoland/setup-deno@ef28d469f16304cf29da2bd31413743cc0c768e7 # v1.1.4
+  #       with:
+  #         deno-version: v1.41.3
+  #
+  #     - name: Extract tag version
+  #       if: startsWith(github.ref, 'refs/tags/')
+  #       id: tag_version
+  #       run: echo ::set-output name=TAG_VERSION::${GITHUB_REF/refs\/tags\//}
+  #
+  #     - name: Build jsr manifest 
+  #       run: deno task build:jsr ${{steps.tag_version.outputs.TAG_VERSION}}
+  #
+  #     - name: Publish
+  #       run: deno publish
+

@@ -1,7 +1,11 @@
-import { Err, Ok, Option, Result, Task } from "../mod.ts";
-import { build, emptyDir, semver } from "../dev_deps.ts";
-
-type SemVer = semver.SemVer;
+import { Err, Ok, Result, Task } from "../mod.ts";
+import {
+  dirIsEmpty,
+  parseVersion,
+  ScriptErrors,
+  SemVer,
+} from "./build_helpers.ts";
+import { build, semver } from "../dev_deps.ts";
 
 const PKG_NAME = "eitherway";
 const ENTRY_POINT = "./mod.ts";
@@ -10,29 +14,6 @@ const LICENSE = "./LICENSE.md";
 const README = "./README.md";
 const GIT_URL = "git+https://github.com/realpha/eitherway.git";
 const ISSUE_URL = "https://github.com/realpha/eitherway/issues";
-
-const ScriptErrors = {
-  NoVersionProvided: TypeError("Expected version specifier, received none"),
-  CouldNotCreateOutputDir: (e: unknown) =>
-    Error(`Could not create output directory`, { cause: e }),
-  BuildFailed: (e: unknown) => Error(`Build failed`, { cause: e }),
-} as const;
-
-const tryParse = Result.liftFallible(
-  semver.parse,
-  (e: unknown) => e as TypeError,
-);
-const createOutputDir = Task.liftFallible(
-  emptyDir,
-  ScriptErrors.CouldNotCreateOutputDir,
-);
-
-function parseVersion(): Result<SemVer, TypeError> {
-  return Option.fromCoercible(Deno.args[0])
-    .okOr(ScriptErrors.NoVersionProvided)
-    .inspect((v) => console.log(`Using version specifier: ${v}`))
-    .andThen(tryParse);
-}
 
 async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
   try {
@@ -65,9 +46,13 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
         keywords: [
           "async",
           "either",
+          "error",
+          "error-handling",
           "fsharp",
           "fallible",
+          "functional",
           "maybe",
+          "monad",
           "option",
           "result",
           "rust",
@@ -93,16 +78,17 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
 
 function main() {
   return parseVersion()
-    .into((res) => Task.of(res))
-    .trip((_v) => createOutputDir(OUT_DIR))
+    .into(Task.of<SemVer, TypeError>)
+    .andEnsure(() => dirIsEmpty(OUT_DIR))
     .andThen(buildPackage);
 }
 
 main().then((res) => {
-  if (res.isErr()) {
-    console.error(res.unwrap());
-    Deno.exit(1);
-  }
-  console.log("Build succeeded!");
-  Deno.exit(0);
+  const code = res
+    .inspect(() => console.log("Build succeeded!"))
+    .inspectErr(console.error)
+    .mapOr(() => 0, 1)
+    .unwrap();
+
+  Deno.exit(code);
 });
