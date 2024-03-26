@@ -1,5 +1,5 @@
-import { asInfallible, Err, Ok, Result, Results } from "../core/mod.ts";
-import type { ExecutorFn } from "./_internal/mod.ts";
+import { asInfallible, Err, Ok, Result } from "../core/mod.ts";
+import type { ExecutorFn } from "./_internal.ts";
 import {
   andEnsureTask,
   chainTaskFailure,
@@ -18,8 +18,11 @@ import {
   unwrapTaskOr,
   unwrapTaskOrElse,
   zipTask,
-} from "./_internal/mod.ts";
+} from "./_internal.ts";
 
+/**
+ * This is the interface of the return value of {@linkcode Task.deferred}
+ */
 export interface DeferredTask<T, E> {
   task: Task<T, E>;
   succeed: (value: T) => void;
@@ -108,7 +111,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   }
 
   /**
-   * Use this to create a deferred `Task<T, E>` which will either succedd with
+   * Use this to create a deferred `Task<T, E>` which will either succeed with
    * a value of type `<T>` or fail with a value of type `<E>`
    *
    * You have to provide the generic types explicitly, otherwise `<T, E>` will
@@ -145,6 +148,27 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return { task, succeed, fail };
   }
 
+  /**
+   * Use this to create a task from a function which returns a `Result<T, E>`
+   * or `PromiseLike<Result<T, E>` value.
+   *
+   * This function should be infallible by contract.
+   *
+   * Use {@linkcode Task.fromFallible} if this is not the case.
+   *
+   * @category Task::Basic
+   *
+   * @example
+   * ```typescript
+   * import { Ok, Result, Task } from "https://deno.land/x/eitherway/mod.ts";
+   *
+   * async function produceRes(): Promise<Result<number, TypeError>> {
+   *  return Ok(42);
+   * }
+   *
+   * const task = Task.from(produceRes);
+   * ```
+   */
   static from<T, E>(
     fn: () => Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
@@ -154,6 +178,31 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return new Task<T, E>((resolve) => resolve(p));
   }
 
+  /**
+   * Use this to create a `Task<T, E>` from a `Promise<T>`.
+   *
+   * You have to provide an `errorMapFn` in case the promise rejects, so that
+   * the type can be inferred.
+   *
+   * If you are certain(!) that the provided promise will never reject, you can
+   * provide the {@linkcode asInfallible} helper from the core module.
+   *
+   * @category Task::Basic
+   *
+   * @example
+   * ```typescript
+   * import { asInfallible, Task } from "https://deno.land/x/eitherway/mod.ts";
+   *
+   * const willBeString = new Promise<string>((resolve) => {
+   *   setTimeout(() => resolve("42"), 500);
+   * });
+   *
+   * const task: Task<string, never> = Task.fromPromise(
+   *   willBeString,
+   *   asInfallible,
+   * );
+   * ```
+   */
   static fromPromise<T, E>(
     promise: Promise<T>,
     errorMapFn: (reason: unknown) => E,
@@ -161,6 +210,31 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return Task.fromFallible(() => promise, errorMapFn);
   }
 
+  /**
+   * Use this to construct a `Task<T, E>` from the return value of a fallible
+   * function.
+   *
+   * @category Task::Basic
+   *
+   * @example
+   * ```typescript
+   * import { Task } from "https://deno.land/x/eitherway/mod.ts";
+   *
+   * async function rand(): Promise<number> {
+   *   throw new TypeError("Oops");
+   * }
+   *
+   * function toTypeError(e: unknown): TypeError {
+   *   if (e instanceof TypeError) return e;
+   *   return TypeError("Unexpected error", { cause: e });
+   * }
+   *
+   * const task: Task<number, TypeError> = Task.fromFallible(
+   *   rand,
+   *   toTypeError,
+   * )
+   * ```
+   */
   static fromFallible<T, E>(
     fn: () => T | PromiseLike<T>,
     errorMapFn: (reason: unknown) => E,
@@ -539,97 +613,3 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     yield* target;
   }
 }
-
-/**
- * Utilities to work with collections of Task<T, E>
- *
- * @category Task::Intermediate
- */
-//deno-lint-ignore no-namespace
-export namespace Tasks {
-  export function all<
-    P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
-  >(
-    tasks: P,
-  ): Task<InferredSuccessTuple<P>, InferredFailureUnion<P>>;
-  export function all<T, E>(
-    tasks: Readonly<Iterable<PromiseLike<Result<T, E>>>>,
-  ): Task<T[], E>;
-  //deno-lint-ignore no-explicit-any
-  export function all(tasks: any): any {
-    return Task.of(Promise.all(tasks).then((res) => Results.all(res)));
-  }
-
-  export function any<
-    P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
-  >(
-    tasks: P,
-  ): Task<InferredSuccessUnion<P>, InferredFailureTuple<P>>;
-  export function any<T, E>(
-    tasks: Readonly<Iterable<PromiseLike<Result<T, E>>>>,
-  ): Task<T, E[]>;
-  //deno-lint-ignore no-explicit-any
-  export function any(tasks: any): any {
-    return Task.of(Promise.all(tasks).then((res) => Results.any(res)));
-  }
-}
-
-/**
- * Use this to infer the encapsulated `<T>` type from a `Task<T,E>`
- *
- * @category Task::Basic
- */
-export type InferredSuccessType<P> = P extends
-  PromiseLike<Result<infer T, unknown>> ? T
-  : never;
-
-/**
- * Use this to infer the encapsulated `<E>` type from a `Task<T,E>`
- *
- * @category Task::Basic
- */
-export type InferredFailureType<P> = P extends
-  PromiseLike<Result<unknown, infer E>> ? E
-  : never;
-
-/**
- * Use this to infer the encapsulated `<T>` types from a tuple of `Task<T,E>`
- *
- * @category Task::Intermediate
- */
-export type InferredSuccessTuple<
-  P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
-> = {
-  [i in keyof P]: P[i] extends PromiseLike<Result<infer T, unknown>> ? T
-    : never;
-};
-
-/**
- * Use this to infer the encapsulated `<E>` types from a tuple of `Task<T,E>`
- *
- * @category Task::Intermediate
- */
-export type InferredFailureTuple<
-  P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
-> = {
-  [i in keyof P]: P[i] extends PromiseLike<Result<unknown, infer E>> ? E
-    : never;
-};
-
-/**
- * Use this to infer a union of all encapsulated `<T>` types from a tuple of `Task<T,E>`
- *
- * @category Task::Intermediate
- */
-export type InferredSuccessUnion<
-  P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
-> = InferredSuccessTuple<P>[number];
-
-/**
- * Use this to infer a union of all encapsulated `<E>` types from a tuple of `Task<T,E>`
- *
- * @category Task::Intermediate
- */
-export type InferredFailureUnion<
-  P extends Readonly<ArrayLike<PromiseLike<Result<unknown, unknown>>>>,
-> = InferredFailureTuple<P>[number];
