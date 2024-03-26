@@ -19,7 +19,7 @@ jobs:
       - name: Setup deno
         uses: denoland/setup-deno@ef28d469f16304cf29da2bd31413743cc0c768e7 # v1.1.4
         with:
-          deno-version: v1.39.4 # SWC Bug on deno >= 1.40.0
+          deno-version: v1.41.3
 
       - name: Check fmt
         run: deno fmt --check
@@ -28,7 +28,7 @@ jobs:
         run: deno lint
 
       - name: Run tests & generate coverage
-        run: deno task test:cov
+        run: deno task test:ci
 
       - name: Generate coverage report
         run: deno task build:cov
