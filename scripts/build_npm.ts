@@ -65,9 +65,13 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
         keywords: [
           "async",
           "either",
+          "error",
+          "error-handling",
           "fsharp",
           "fallible",
+          "functional",
           "maybe",
+          "monad",
           "option",
           "result",
           "rust",
@@ -94,7 +98,7 @@ async function buildPackage(v: SemVer): Promise<Result<void, Error>> {
 function main() {
   return parseVersion()
     .into((res) => Task.of(res))
-    .trip((_v) => createOutputDir(OUT_DIR))
+    .andEnsure((_v) => createOutputDir(OUT_DIR))
     .andThen(buildPackage);
 }
 
