@@ -75,7 +75,10 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   static of<T, E>(
     value: Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
-    return Task.from(() => value);
+    const p = new Promise<Result<T, E>>((resolve) => resolve(value)).catch(
+      asInfallible,
+    );
+    return new Task<T, E>((resolve) => resolve(p));
   }
 
   /**
