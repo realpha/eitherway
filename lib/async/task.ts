@@ -513,7 +513,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * import { Task } from "./task.ts";
    *
    * const err = Result(Error()) as Result<number, Error>;
-   * const task = Task.of(ok);
+   * const task = Task.of(err);
    *
    * const union: number | string = await task.unwrapOr(Promise.resolve("foo"));
    *
@@ -537,7 +537,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
    * import { Task } from "./task.ts";
    *
    * const err = Result(Error("foo")) as Result<number, Error>;
-   * const task = Task.of(ok);
+   * const task = Task.of(err);
    *
    * const union: number | string = await task.unwrapOrElse(
    *   async (err) => err.message
