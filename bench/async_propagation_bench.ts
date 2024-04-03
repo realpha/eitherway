@@ -1,6 +1,10 @@
 //deno-lint-ignore-file
 import { Task } from "../lib/async/mod.ts";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 Deno.bench({
   name: "Async Exception Propagation",
   group: "Async::Propagation",
@@ -23,10 +27,12 @@ Deno.bench({
 
 export namespace AsyncExceptions {
   async function fail() {
+    await sleep(1);
     throw TypeError("Fail!");
   }
   async function propagate() {
     try {
+      await sleep(1);
       return await fail();
     } catch (e) {
       throw e;
@@ -34,6 +40,7 @@ export namespace AsyncExceptions {
   }
   export async function rethrow() {
     try {
+      await sleep(1);
       return await propagate();
     } catch (e) {
       throw e;
@@ -42,13 +49,16 @@ export namespace AsyncExceptions {
 }
 
 export namespace TaskErrors {
-  function fail() {
+  async function fail() {
+    await sleep(1);
     return Task.fail(TypeError("Fail!"));
   }
   async function propagate() {
+    await sleep(1);
     return await fail();
   }
   export async function linearReturn() {
+    await sleep(1);
     return await propagate();
   }
 }

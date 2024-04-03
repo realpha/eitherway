@@ -4,11 +4,15 @@ import { Task } from "../lib/async/task.ts";
 import * as TaskOps from "../lib/async/operators.ts";
 
 const INPUTS = [
+  "casio",
   undefined,
-  "fortytwo",
   "lenghtySuperLenghtyGibberishString",
   "",
   "5",
+  undefined,
+  "houseknifes",
+  undefined,
+  "doordashed",
 ];
 
 Deno.bench({
@@ -108,7 +112,7 @@ namespace TaskFlows {
   function toUpperCase(input: string | undefined): Task<string, TypeError> {
     return Option(input)
       .okOrElse(() => TypeError("Input is undefined"))
-      .into((res) => Task.of(res))
+      .into(Task.of<string, TypeError>)
       .map(async (str) => {
         await sleep(1);
         return str.toUpperCase();
@@ -118,7 +122,7 @@ namespace TaskFlows {
   function stringToLength(input: string): Task<number, TypeError> {
     return Option.fromCoercible(input)
       .okOrElse(() => TypeError("Input string is empty"))
-      .into((res) => Task.of(res))
+      .into(Task.of<string, TypeError>)
       .map(async (str) => {
         await sleep(1);
         return str.length;
@@ -128,7 +132,7 @@ namespace TaskFlows {
   function powerOfSelf(input: number): Task<number, TypeError> {
     return Option.fromCoercible(input)
       .okOrElse(() => TypeError("Input is not a valid number"))
-      .into((res) => Task.of(res))
+      .into(Task.of<number, TypeError>)
       .andThen(async (n) => {
         await sleep(1);
         return Option.fromCoercible(Math.pow(n, n))
