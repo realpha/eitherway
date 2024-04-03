@@ -531,29 +531,37 @@ Deno.test("eitherway::Task", async (t) => {
         const unwrapped = task.unwrap();
         const value = await unwrapped;
 
-        assertType<IsExact<typeof unwrapped, Promise<number | TypeError>>>(true);
+        assertType<IsExact<typeof unwrapped, Promise<number | TypeError>>>(
+          true,
+        );
         assertStrictEquals(value, 42);
       });
 
-      await t.step(".unwrapOr() -> returns the fallback value in case of Err<E>", async () => {
-        const task: Task<number, TypeError> = Task.fail(TypeError());
+      await t.step(
+        ".unwrapOr() -> returns the fallback value in case of Err<E>",
+        async () => {
+          const task: Task<number, TypeError> = Task.fail(TypeError());
 
-        const unwrapped = task.unwrapOr("foo");
-        const value = await unwrapped;
+          const unwrapped = task.unwrapOr("foo");
+          const value = await unwrapped;
 
-        assertType<IsExact<typeof unwrapped, Promise<number | string>>>(true);
-        assertStrictEquals(value, "foo");
-      });
+          assertType<IsExact<typeof unwrapped, Promise<number | string>>>(true);
+          assertStrictEquals(value, "foo");
+        },
+      );
 
-      await t.step(".unwrapOrElse() -> returns the constructed fallback value in case of Err<E>", async () => {
-        const task: Task<number, TypeError> = Task.fail(TypeError("foo"));
+      await t.step(
+        ".unwrapOrElse() -> returns the constructed fallback value in case of Err<E>",
+        async () => {
+          const task: Task<number, TypeError> = Task.fail(TypeError("foo"));
 
-        const unwrapped = task.unwrapOrElse(async (err) => err.message);
-        const value = await unwrapped;
+          const unwrapped = task.unwrapOrElse(async (err) => err.message);
+          const value = await unwrapped;
 
-        assertType<IsExact<typeof unwrapped, Promise<number | string>>>(true);
-        assertStrictEquals(value, "foo");
-      });
+          assertType<IsExact<typeof unwrapped, Promise<number | string>>>(true);
+          assertStrictEquals(value, "foo");
+        },
+      );
     });
 
     await t.step("Task<T, E> -> Transformation Methods", async (t) => {

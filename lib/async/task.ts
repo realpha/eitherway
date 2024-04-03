@@ -240,7 +240,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     errorMapFn: (reason: unknown) => E,
   ): Task<T, E> {
     const p = new Promise<T>((resolve) => resolve(fn()))
-      .then((v) => Ok(v), (e) => Err(errorMapFn(e)))
+      .then((v) => Ok(v), (e) => Err(errorMapFn(e)));
 
     return new Task<T, E>((resolve) => resolve(p));
   }
@@ -526,7 +526,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
 
   /**
    * Same as {@linkcode Task#unwrap} but returns a fallback value, which can based
-   * constructed from the underlying value of type `<E>` in case of `Err<E>` 
+   * constructed from the underlying value of type `<E>` in case of `Err<E>`
    *
    * @category Task::Basic
    *
