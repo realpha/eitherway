@@ -1,4 +1,4 @@
-import { asInfallible, Err, Ok, Result } from "../core/mod.ts";
+import { asInfallible, Err, Ok, Result } from "../core/result.ts";
 import type { ExecutorFn } from "./_internal.ts";
 import {
   andEnsureTask,
@@ -75,10 +75,7 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   static of<T, E>(
     value: Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
-    const p = new Promise<Result<T, E>>((resolve) => resolve(value)).catch(
-      asInfallible,
-    );
-    return new Task<T, E>((resolve) => resolve(p));
+    return new Task<T, E>((resolve) => resolve(value));
   }
 
   /**
@@ -175,9 +172,9 @@ export class Task<T, E> extends Promise<Result<T, E>> {
   static from<T, E>(
     fn: () => Result<T, E> | PromiseLike<Result<T, E>>,
   ): Task<T, E> {
-    const p = new Promise<Result<T, E>>((resolve) => resolve(fn())).catch(
-      asInfallible,
-    );
+    const p = new Promise<Result<T, E>>((resolve) => resolve(fn()))
+      .catch(asInfallible);
+
     return new Task<T, E>((resolve) => resolve(p));
   }
 
@@ -242,8 +239,9 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     fn: () => T | PromiseLike<T>,
     errorMapFn: (reason: unknown) => E,
   ): Task<T, E> {
-    const p = new Promise<T>((resolve) => resolve(fn())).then((v) => Ok(v))
-      .catch((e) => Err(errorMapFn(e)));
+    const p = new Promise<T>((resolve) => resolve(fn()))
+      .then((v) => Ok(v), (e) => Err(errorMapFn(e)))
+
     return new Task<T, E>((resolve) => resolve(p));
   }
 
@@ -285,10 +283,9 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     ) => Result<T, E>,
   ): (...args: Args) => Task<T, E> {
     return function (...args: Args) {
-      const p = new Promise<R>((resolve) => resolve(fn(...args))).then((v) =>
-        ctor(v)
-      )
-        .catch((e) => Err(errorMapFn(e)));
+      const p = new Promise<R>((resolve) => resolve(fn(...args)))
+        .then((v) => ctor(v), (e) => Err(errorMapFn(e)));
+
       return new Task<T, E>((resolve) => resolve(p));
     };
   }
@@ -474,14 +471,81 @@ export class Task<T, E> extends Promise<Result<T, E>> {
     return Task.of(orEnsureTask(this, riseFn));
   }
 
+  /**
+   * Use this to get the wrapped value out of an `Task<T, E>` instance
+   *
+   * Returns the wrapped value of type `<T>` in case of `Ok<T>` OR
+   * `<E>` in case of `Err<E>`.
+   *
+   * In contrast to other implementations, this method NEVER throws an
+   * exception
+   *
+   * @category Task::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../core/assert.ts";
+   * import { Result } from "../core/result.ts";
+   * import { Task } from "./task.ts";
+   *
+   * const ok = Result(42) as Result<number, string>;
+   * const task = Task.of(ok);
+   *
+   * const union: number | string = await task.unwrap();
+   *
+   * assert(union === 42);
+   * ```
+   */
   unwrap(): Promise<T | E> {
     return unwrapTask(this);
   }
 
+  /**
+   * Same as {@linkcode Task#unwrap} but returns a default value in case the
+   * underlying `Result<T, E>` is an `Err<E>`
+   *
+   * @category Task::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../core/assert.ts";
+   * import { Result } from "../core/result.ts";
+   * import { Task } from "./task.ts";
+   *
+   * const err = Result(Error()) as Result<number, Error>;
+   * const task = Task.of(ok);
+   *
+   * const union: number | string = await task.unwrapOr(Promise.resolve("foo"));
+   *
+   * assert(union === "foo");
+   * ```
+   */
   unwrapOr<T2>(orValue: T2 | PromiseLike<T2>): Promise<T | T2> {
     return unwrapTaskOr(this, orValue);
   }
 
+  /**
+   * Same as {@linkcode Task#unwrap} but returns a fallback value, which can based
+   * constructed from the underlying value of type `<E>` in case of `Err<E>` 
+   *
+   * @category Task::Basic
+   *
+   * @example
+   * ```typescript
+   * import { assert } from "../core/assert.ts";
+   * import { Result } from "../core/result.ts";
+   * import { Task } from "./task.ts";
+   *
+   * const err = Result(Error("foo")) as Result<number, Error>;
+   * const task = Task.of(ok);
+   *
+   * const union: number | string = await task.unwrapOrElse(
+   *   async (err) => err.message
+   * );
+   *
+   * assert(union === "foo");
+   * ```
+   */
   unwrapOrElse<T2>(orFn: (e: E) => T2 | PromiseLike<T2>): Promise<T | T2> {
     return unwrapTaskOrElse(this, orFn);
   }

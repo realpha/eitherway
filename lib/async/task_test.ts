@@ -24,7 +24,7 @@ Deno.test("eitherway::Task", async (t) => {
 
         const task = Task.of(promiseRes);
 
-        task.catch((e) => assertStrictEquals(e?.cause, te));
+        task.catch((e) => assertStrictEquals(e, te));
       },
     );
 
@@ -521,6 +521,38 @@ Deno.test("eitherway::Task", async (t) => {
 
         assertStrictEquals(ok.isOk(), true);
         assertStrictEquals(ok.unwrap(), 42);
+      });
+    });
+
+    await t.step("Task<T, E> -> Unwrap Methods", async (t) => {
+      await t.step(".unwrap() -> returns the wrapped value", async () => {
+        const task: Task<number, TypeError> = Task.succeed(42);
+
+        const unwrapped = task.unwrap();
+        const value = await unwrapped;
+
+        assertType<IsExact<typeof unwrapped, Promise<number | TypeError>>>(true);
+        assertStrictEquals(value, 42);
+      });
+
+      await t.step(".unwrapOr() -> returns the fallback value in case of Err<E>", async () => {
+        const task: Task<number, TypeError> = Task.fail(TypeError());
+
+        const unwrapped = task.unwrapOr("foo");
+        const value = await unwrapped;
+
+        assertType<IsExact<typeof unwrapped, Promise<number | string>>>(true);
+        assertStrictEquals(value, "foo");
+      });
+
+      await t.step(".unwrapOrElse() -> returns the constructed fallback value in case of Err<E>", async () => {
+        const task: Task<number, TypeError> = Task.fail(TypeError("foo"));
+
+        const unwrapped = task.unwrapOrElse(async (err) => err.message);
+        const value = await unwrapped;
+
+        assertType<IsExact<typeof unwrapped, Promise<number | string>>>(true);
+        assertStrictEquals(value, "foo");
       });
     });
 
